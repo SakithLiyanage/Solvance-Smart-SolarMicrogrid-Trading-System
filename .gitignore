@@ -1,0 +1,25 @@
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Build & Dependencies
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/.gradle/
+**/.idea/
+**/build/
+**/local.properties
+*.log
+
+# Submission zips and raw course documents
+*.zip
+Lecture*.html
+EAD Shortnote.pdf
+EAD mid Answers.pdf
+EAD_SE4040_Assignment_2026.pdf
