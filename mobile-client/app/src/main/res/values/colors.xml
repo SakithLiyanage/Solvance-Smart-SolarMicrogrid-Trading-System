@@ -1,0 +1,56 @@
+<resources>
+    <!-- Brand Solar Gold -->
+    <color name="primary">#F59E0B</color>
+    <color name="primary_dark">#D97706</color>
+    <color name="primary_light">#FDE68A</color>
+    <color name="primary_glow">#33F59E0B</color>
+
+    <!-- Clean Energy Emerald -->
+    <color name="accent">#10B981</color>
+    <color name="accent_dark">#059669</color>
+    <color name="accent_light">#A7F3D0</color>
+    <color name="accent_glow">#3310B981</color>
+
+    <!-- Aerospace Midnight Surfaces (Glassmorphic Base) -->
+    <color name="background_dark">#070B14</color>
+    <color name="surface_dark">#0D1527</color>
+    <color name="surface_card">#131D33</color>
+    <color name="surface_card_glow">#182642</color>
+    <color name="surface_elevated">#1E2E4E</color>
+    <color name="card_border">#223354</color>
+    <color name="card_border_glow">#3B82F6</color>
+    <color name="card_border_solar">#4DF59E0B</color>
+    <color name="card_border_emerald">#4D10B981</color>
+
+    <!-- Typography -->
+    <color name="text_primary">#F8FAFC</color>
+    <color name="text_secondary">#94A3B8</color>
+    <color name="text_muted">#64748B</color>
+    <color name="white">#FFFFFF</color>
+
+    <!-- Functional Accents -->
+    <color name="danger">#EF4444</color>
+    <color name="danger_dark">#B91C1C</color>
+    <color name="danger_glow">#33EF4444</color>
+    <color name="success">#10B981</color>
+    <color name="info">#0EA5E9</color>
+    <color name="cyan_accent">#06B6D4</color>
+    <color name="purple_accent">#A855F7</color>
+
+    <!-- Status Badge Colors -->
+    <color name="badge_approved_bg">#064E3B</color>
+    <color name="badge_approved_text">#34D399</color>
+    <color name="badge_approved_stroke">#059669</color>
+
+    <color name="badge_pending_bg">#451A03</color>
+    <color name="badge_pending_text">#FBBF24</color>
+    <color name="badge_pending_stroke">#D97706</color>
+
+    <color name="badge_completed_bg">#082F49</color>
+    <color name="badge_completed_text">#38BDF8</color>
+    <color name="badge_completed_stroke">#0284C7</color>
+
+    <color name="badge_cancelled_bg">#4C0519</color>
+    <color name="badge_cancelled_text">#FB7185</color>
+    <color name="badge_cancelled_stroke">#E11D48</color>
+</resources>
