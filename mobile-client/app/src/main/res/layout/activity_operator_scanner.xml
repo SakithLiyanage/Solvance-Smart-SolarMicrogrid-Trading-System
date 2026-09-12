@@ -1,0 +1,1082 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/background_dark">
+
+    <!-- Top Operator App Bar -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="0dp"
+        app:cardElevation="6dp"
+        app:cardBackgroundColor="@color/surface_card"
+        app:strokeColor="@color/card_border"
+        app:strokeWidth="1dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_alignParentStart="true"
+                android:layout_toStartOf="@+id/layoutTopActions"
+                android:layout_marginEnd="10dp">
+
+                <ImageView
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:src="@drawable/ic_solvance_mark"
+                    android:scaleType="fitCenter"
+                    android:layout_marginEnd="10dp" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Grid Operator Console"
+                        android:textColor="@color/accent"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvOperatorNic"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="OPERATOR001"
+                        android:textColor="@color/text_primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:singleLine="true"
+                        android:ellipsize="end"
+                        android:layout_marginTop="1dp" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="2dp">
+
+                        <View
+                            android:layout_width="6dp"
+                            android:layout_height="6dp"
+                            android:background="@drawable/bg_status_live"
+                            android:layout_marginEnd="6dp" />
+
+                        <TextView
+                            android:id="@+id/tvOperatorStatusSub"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Station Terminal Active"
+                            android:textColor="@color/accent"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layoutTopActions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true">
+
+                <ImageButton
+                    android:id="@+id/btnOperatorRefresh"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:src="@drawable/ic_refresh"
+                    app:tint="@color/text_secondary"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Refresh Data"
+                    android:padding="8dp" />
+
+                <ImageButton
+                    android:id="@+id/btnOperatorLogout"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:src="@drawable/ic_logout"
+                    app:tint="@color/text_secondary"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Logout"
+                    android:padding="8dp" />
+            </LinearLayout>
+        </RelativeLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- KPI Summary Strip -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="14dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="6dp">
+
+        <!-- KPI 1: In Queue -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@color/surface_card"
+            app:strokeColor="@color/card_border"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="8dp"
+                android:gravity="center">
+
+                <TextView
+                    android:id="@+id/tvKpiQueueCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="@color/primary"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="IN QUEUE"
+                    android:textColor="@color/text_muted"
+                    android:textSize="9sp"
+                    android:letterSpacing="0.04" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- KPI 2: Verified -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="3dp"
+            app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@color/surface_card"
+            app:strokeColor="@color/card_border"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="8dp"
+                android:gravity="center">
+
+                <TextView
+                    android:id="@+id/tvKpiVerifiedCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="@color/accent"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="VERIFIED"
+                    android:textColor="@color/text_muted"
+                    android:textSize="9sp"
+                    android:letterSpacing="0.04" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- KPI 3: Available Slots -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@color/surface_card"
+            app:strokeColor="@color/card_border"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="8dp"
+                android:gravity="center">
+
+                <TextView
+                    android:id="@+id/tvKpiBatterySlots"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="--"
+                    android:textColor="@color/cyan_accent"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SLOTS AVAIL"
+                    android:textColor="@color/text_muted"
+                    android:textSize="9sp"
+                    android:letterSpacing="0.04" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+
+    <!-- Segmented Navigation Bar -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="14dp"
+        android:layout_marginVertical="6dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="2dp"
+        app:cardBackgroundColor="#0B1220"
+        app:strokeColor="@color/card_border"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:orientation="horizontal"
+            android:padding="3dp">
+
+            <!-- Tab 1: Scanner -->
+            <TextView
+                android:id="@+id/btnTabScanner"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="QR Scanner"
+                android:textColor="@color/background_dark"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="@drawable/bg_tab_selected"
+                android:drawableStart="@drawable/ic_qr_code"
+                android:drawableTint="@color/background_dark"
+                android:drawablePadding="6dp"
+                android:paddingHorizontal="8dp"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <!-- Tab 2: Queue -->
+            <TextView
+                android:id="@+id/btnTabQueue"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="Live Queue"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:gravity="center"
+                android:background="@drawable/bg_tab_unselected"
+                android:drawableStart="@drawable/ic_clock"
+                android:drawableTint="@color/text_secondary"
+                android:drawablePadding="6dp"
+                android:paddingHorizontal="8dp"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <!-- Tab 3: Storage -->
+            <TextView
+                android:id="@+id/btnTabStorage"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="Storage Hub"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:gravity="center"
+                android:background="@drawable/bg_tab_unselected"
+                android:drawableStart="@drawable/ic_battery_charging"
+                android:drawableTint="@color/text_secondary"
+                android:drawablePadding="6dp"
+                android:paddingHorizontal="8dp"
+                android:clickable="true"
+                android:focusable="true" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Global Progress Bar for Operations -->
+    <ProgressBar
+        android:id="@+id/progressBarOperator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:layout_gravity="center"
+        android:indeterminateTint="@color/accent"
+        android:layout_marginVertical="6dp" />
+
+    <!-- Container Frame for 3 Tab Sections -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- ============================================================ -->
+        <!-- SECTION 1: QR SCANNER & INSTANT VALIDATION                   -->
+        <!-- ============================================================ -->
+        <ScrollView
+            android:id="@+id/layoutSectionScanner"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingBottom="24dp">
+
+                <!-- Framed Camera Card with Torch Toggle -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardCameraFrame"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="6dp"
+                    app:cardBackgroundColor="@color/surface_card"
+                    app:strokeColor="@color/card_border"
+                    app:strokeWidth="1.5dp">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="250dp">
+
+                        <com.journeyapps.barcodescanner.DecoratedBarcodeView
+                            android:id="@+id/barcodeScannerView"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent" />
+
+                        <!-- Torch Button Floating in Top-Right Corner -->
+                        <ImageButton
+                            android:id="@+id/btnToggleTorch"
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
+                            android:layout_gravity="top|end"
+                            android:layout_margin="10dp"
+                            android:src="@drawable/ic_zap"
+                            app:tint="@color/primary"
+                            android:background="@drawable/bg_stat_pending"
+                            android:contentDescription="Toggle Torch"
+                            android:padding="8dp" />
+                    </FrameLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Camera Permission Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardCameraPermission"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardBackgroundColor="@color/surface_card"
+                    app:strokeColor="@color/primary"
+                    app:strokeWidth="1.2dp"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp"
+                        android:gravity="center">
+
+                        <ImageView
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:src="@drawable/ic_qr_code"
+                            app:tint="@color/primary"
+                            android:layout_marginBottom="8dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Camera Permission Required"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Enable camera to scan driver QR transaction passes at the solar station."
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp"
+                            android:gravity="center"
+                            android:layout_marginBottom="12dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnGrantCamera"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:text="Allow Camera Access"
+                            app:icon="@drawable/ic_check_circle"
+                            app:iconTint="@color/background_dark"
+                            app:iconGravity="textStart"
+                            app:iconSize="14dp"
+                            android:backgroundTint="@color/primary"
+                            android:textColor="@color/background_dark"
+                            android:textAllCaps="false"
+                            android:textStyle="bold"
+                            app:cornerRadius="10dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Verified Result Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardVerifiedResult"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="6dp"
+                    app:cardBackgroundColor="@color/surface_card"
+                    app:strokeColor="@color/accent"
+                    app:strokeWidth="1.8dp"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="6dp">
+
+                            <ImageView
+                                android:layout_width="22dp"
+                                android:layout_height="22dp"
+                                android:src="@drawable/ic_check_circle"
+                                app:tint="@color/accent"
+                                android:layout_marginEnd="8dp" />
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Transaction Verified &amp; Finalized!"
+                                android:textColor="@color/accent"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvResultDetails"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Payload: SOLAR-TX-101 | Status: Completed"
+                            android:textColor="@color/text_primary"
+                            android:textSize="12sp"
+                            android:layout_marginTop="4dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Battery storage and power grid inventory synchronized with central Web API."
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp"
+                            android:layout_marginTop="4dp"
+                            android:layout_marginBottom="12dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnScanNext"
+                            android:layout_width="match_parent"
+                            android:layout_height="42dp"
+                            android:text="Ready for Next Transaction"
+                            app:icon="@drawable/ic_refresh"
+                            app:iconTint="@color/background_dark"
+                            app:iconGravity="textStart"
+                            app:iconSize="14dp"
+                            android:backgroundTint="@color/accent"
+                            android:textColor="@color/background_dark"
+                            android:textStyle="bold"
+                            android:textAllCaps="false"
+                            app:cornerRadius="10dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Manual Verification Entry Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="3dp"
+                    app:cardBackgroundColor="@color/surface_card"
+                    app:strokeColor="@color/card_border"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="MANUAL TOKEN VALIDATION"
+                            android:textColor="@color/primary"
+                            android:textSize="10sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.06"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Enter QR Payload Token or Res #:"
+                            android:textColor="@color/text_primary"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="10dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <EditText
+                                android:id="@+id/etManualQr"
+                                android:layout_width="0dp"
+                                android:layout_height="46dp"
+                                android:layout_weight="1"
+                                android:hint="SOLAR-TX:... or RES-..."
+                                android:textColorHint="@color/text_muted"
+                                android:textColor="@color/text_primary"
+                                android:background="@drawable/bg_search_input"
+                                android:paddingHorizontal="14dp"
+                                android:textSize="12sp"
+                                android:layout_marginEnd="8dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnVerifyManual"
+                                android:layout_width="wrap_content"
+                                android:layout_height="46dp"
+                                android:text="Verify"
+                                app:icon="@drawable/ic_check_circle"
+                                app:iconTint="@color/background_dark"
+                                app:iconGravity="textStart"
+                                app:iconSize="14dp"
+                                android:textAllCaps="false"
+                                android:backgroundTint="@color/accent"
+                                android:textColor="@color/background_dark"
+                                android:paddingHorizontal="14dp"
+                                app:cornerRadius="10dp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 2: LIVE STATION QUEUE & DISPATCH                     -->
+        <!-- ============================================================ -->
+        <LinearLayout
+            android:id="@+id/layoutSectionQueue"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:visibility="gone">
+
+            <!-- Search Box -->
+            <EditText
+                android:id="@+id/etQueueSearch"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:hint="Search by Prosumer NIC, Res # or Station..."
+                android:textColorHint="@color/text_muted"
+                android:textColor="@color/text_primary"
+                android:background="@drawable/bg_search_input"
+                android:drawableStart="@drawable/ic_search"
+                android:drawableTint="@color/text_muted"
+                android:drawablePadding="10dp"
+                android:paddingHorizontal="14dp"
+                android:textSize="13sp"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Filter Chips Horizontal Scroll -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:layout_marginBottom="10dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/chipFilterAll"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="All"
+                        android:textColor="@color/primary"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/bg_pill_chip_active"
+                        android:layout_marginEnd="6dp"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <TextView
+                        android:id="@+id/chipFilterPending"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Pending"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:background="@drawable/bg_pill_chip"
+                        android:layout_marginEnd="6dp"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <TextView
+                        android:id="@+id/chipFilterApproved"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Approved"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:background="@drawable/bg_pill_chip"
+                        android:layout_marginEnd="6dp"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <TextView
+                        android:id="@+id/chipFilterCompleted"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Completed"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:background="@drawable/bg_pill_chip"
+                        android:layout_marginEnd="6dp"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <TextView
+                        android:id="@+id/chipFilterCancelled"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Cancelled"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp"
+                        android:background="@drawable/bg_pill_chip"
+                        android:clickable="true"
+                        android:focusable="true" />
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <!-- SwipeRefreshLayout with RecyclerView -->
+            <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+                android:id="@+id/swipeRefreshQueue"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1">
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvOperatorQueue"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:clipToPadding="false"
+                        android:paddingBottom="16dp" />
+
+                    <!-- Empty State Card -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardEmptyQueue"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_marginHorizontal="20dp"
+                        app:cardCornerRadius="16dp"
+                        app:cardBackgroundColor="@color/surface_card"
+                        app:strokeColor="@color/card_border"
+                        app:strokeWidth="1dp"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="24dp"
+                            android:gravity="center">
+
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:src="@drawable/ic_alert_circle"
+                                app:tint="@color/text_muted"
+                                android:layout_marginBottom="10dp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="No Reservations in Queue"
+                                android:textColor="@color/text_primary"
+                                android:textSize="15sp"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="4dp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="No active bookings match this status or search filter."
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12sp"
+                                android:gravity="center" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </FrameLayout>
+            </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+        </LinearLayout>
+
+        <!-- ============================================================ -->
+        <!-- SECTION 3: BATTERY STORAGE & GRID NODE INVENTORY            -->
+        <!-- ============================================================ -->
+        <ScrollView
+            android:id="@+id/layoutSectionStorage"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingBottom="24dp">
+
+                <!-- Station Selector Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="3dp"
+                    app:cardBackgroundColor="@color/surface_card"
+                    app:strokeColor="@color/card_border"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="MANAGED STATION NODE"
+                            android:textColor="@color/primary"
+                            android:textSize="10sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.06"
+                            android:layout_marginBottom="8dp" />
+
+                        <Spinner
+                            android:id="@+id/spinnerStations"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:background="@drawable/bg_search_input"
+                            android:paddingHorizontal="12dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Selected Station Specs Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="3dp"
+                    app:cardBackgroundColor="@color/surface_card"
+                    app:strokeColor="@color/card_border"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <RelativeLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="8dp">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:layout_alignParentStart="true"
+                                android:layout_toStartOf="@+id/tvStationNodeStatus"
+                                android:layout_marginEnd="10dp">
+
+                                <TextView
+                                    android:id="@+id/tvStationSelectedName"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Colombo Central Solar Hub"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="15sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tvStationSelectedCode"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Code: STN-COL-01"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="11sp"
+                                    android:fontFamily="monospace"
+                                    android:layout_marginTop="2dp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tvStationNodeStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Active Node"
+                                android:textColor="@color/badge_approved_text"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:background="@drawable/bg_badge_approved"
+                                android:layout_alignParentEnd="true" />
+                        </RelativeLayout>
+
+                        <TextView
+                            android:id="@+id/tvStationSelectedAddress"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="45 Galle Road, Colombo 03"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp"
+                            android:drawableStart="@drawable/ic_map_pin"
+                            android:drawableTint="@color/text_muted"
+                            android:drawablePadding="6dp"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="6dp" />
+
+                        <TextView
+                            android:id="@+id/tvStationSelectedCapacity"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="150.0 kWh Storage Capacity"
+                            android:textColor="@color/primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:drawableStart="@drawable/ic_zap"
+                            android:drawableTint="@color/primary"
+                            android:drawablePadding="6dp"
+                            android:gravity="center_vertical" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Battery Slot Inventory & Stepper Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="4dp"
+                    app:cardBackgroundColor="@color/surface_card"
+                    app:strokeColor="@color/accent"
+                    app:strokeWidth="1.2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="BATTERY STORAGE ALLOCATION"
+                            android:textColor="@color/accent"
+                            android:textSize="10sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.06"
+                            android:layout_marginBottom="4dp" />
+
+                        <RelativeLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="8dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Available Storage Slots"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:layout_alignParentStart="true" />
+
+                            <TextView
+                                android:id="@+id/tvStorageRatio"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="8 / 10 Slots (80%)"
+                                android:textColor="@color/accent"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:layout_alignParentEnd="true" />
+                        </RelativeLayout>
+
+                        <!-- Visual Progress Bar -->
+                        <ProgressBar
+                            android:id="@+id/pbBatteryGauge"
+                            style="@android:style/Widget.ProgressBar.Horizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="8dp"
+                            android:max="100"
+                            android:progress="80"
+                            android:progressTint="@color/accent"
+                            android:progressBackgroundTint="#1E2E4A"
+                            android:layout_marginBottom="16dp" />
+
+                        <!-- Interactive Slot Adjuster Stepper -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="16dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Adjust Available Slots:"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <!-- Decrement Button -->
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnSlotMinus"
+                                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                    android:layout_width="44dp"
+                                    android:layout_height="44dp"
+                                    android:insetLeft="0dp"
+                                    android:insetTop="0dp"
+                                    android:insetRight="0dp"
+                                    android:insetBottom="0dp"
+                                    app:icon="@drawable/ic_minus"
+                                    app:iconTint="@color/text_primary"
+                                    app:iconGravity="textStart"
+                                    app:iconPadding="0dp"
+                                    app:iconSize="16dp"
+                                    app:strokeColor="@color/card_border"
+                                    app:strokeWidth="1.2dp"
+                                    app:cornerRadius="12dp" />
+
+                                <!-- Current Available Count Text -->
+                                <TextView
+                                    android:id="@+id/tvSlotCount"
+                                    android:layout_width="48dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="8"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="20sp"
+                                    android:textStyle="bold"
+                                    android:gravity="center"
+                                    android:fontFamily="monospace" />
+
+                                <!-- Increment Button -->
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnSlotPlus"
+                                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                    android:layout_width="44dp"
+                                    android:layout_height="44dp"
+                                    android:insetLeft="0dp"
+                                    android:insetTop="0dp"
+                                    android:insetRight="0dp"
+                                    android:insetBottom="0dp"
+                                    app:icon="@drawable/ic_plus"
+                                    app:iconTint="@color/text_primary"
+                                    app:iconGravity="textStart"
+                                    app:iconPadding="0dp"
+                                    app:iconSize="16dp"
+                                    app:strokeColor="@color/card_border"
+                                    app:strokeWidth="1.2dp"
+                                    app:cornerRadius="12dp" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- Occupied Slots Display -->
+                        <TextView
+                            android:id="@+id/tvOccupiedSlots"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Occupied / Reserved Slots: 2"
+                            android:textColor="@color/text_muted"
+                            android:textSize="12sp"
+                            android:layout_marginBottom="16dp" />
+
+                        <!-- Sync Button -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSyncBatteryStorage"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:text="Sync Central Grid Inventory"
+                            app:icon="@drawable/ic_refresh"
+                            app:iconTint="@color/background_dark"
+                            app:iconGravity="textStart"
+                            app:iconSize="16dp"
+                            android:backgroundTint="@color/accent"
+                            android:textColor="@color/background_dark"
+                            android:textStyle="bold"
+                            android:textAllCaps="false"
+                            app:cornerRadius="12dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+        </ScrollView>
+    </FrameLayout>
+</LinearLayout>
