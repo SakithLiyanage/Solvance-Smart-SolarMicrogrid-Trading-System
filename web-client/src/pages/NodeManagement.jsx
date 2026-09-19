@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, Cpu, MapPin, Battery, Calendar, AlertCircle, 
   CheckCircle2, ShieldAlert, Edit3, Power, RefreshCw, 
-  Clock, Navigation, ShieldCheck 
+  Clock, Navigation, ShieldCheck, ExternalLink, Eye, Map
 } from 'lucide-react';
 import api from '../api/client';
 import Modal from '../components/Modal';
@@ -14,6 +14,8 @@ export default function NodeManagement({ theme }) {
   const [editingStation, setEditingStation] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'map'
+  const [selectedMapStation, setSelectedMapStation] = useState(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -33,7 +35,11 @@ export default function NodeManagement({ theme }) {
     try {
       setLoading(true);
       const res = await api.get('/stations');
-      setStations(res.data || []);
+      const data = res.data || [];
+      setStations(data);
+      if (data.length > 0) {
+        setSelectedMapStation((prev) => prev ? data.find(s => s.id === prev.id) || data[0] : data[0]);
+      }
     } catch (err) {
       console.error('Failed to load solar stations', err);
     } finally {
@@ -154,7 +160,35 @@ export default function NodeManagement({ theme }) {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* View Mode Switcher */}
+          <div className="flex bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-inner">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                viewMode === 'grid'
+                  ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Grid View
+            </button>
+            <button
+              onClick={() => {
+                setViewMode('map');
+                if (!selectedMapStation && stations.length > 0) setSelectedMapStation(stations[0]);
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'map'
+                  ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Map className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
+              Google Map View
+            </button>
+          </div>
+
           <button
             onClick={fetchStations}
             disabled={loading}
@@ -202,124 +236,207 @@ export default function NodeManagement({ theme }) {
         </div>
       )}
 
-      {/* Stations Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {stations.map((station) => {
-          const slotPercent = Math.round((station.availableBatterySlots / (station.totalBatterySlots || 1)) * 100);
-          return (
-            <div
-              key={station.id}
-              className={`rounded-3xl border transition-all duration-300 overflow-hidden backdrop-blur-xl shadow-sm dark:shadow-xl ${
-                station.isActive
-                  ? 'bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800 hover:border-amber-500/40 hover:shadow-lg dark:hover:shadow-2xl dark:hover:shadow-amber-500/5 hover:-translate-y-1'
-                  : 'bg-slate-50 dark:bg-slate-950/60 border-red-200 dark:border-red-900/30 opacity-75'
-              }`}
-            >
-              {/* Card Header */}
-              <div className="p-6 border-b border-slate-100 dark:border-slate-800/80">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs font-bold px-2.5 py-1 bg-slate-100 dark:bg-slate-800/80 text-amber-600 dark:text-amber-400 border border-slate-200 dark:border-slate-700/60 rounded-lg">
-                    {station.stationCode}
-                  </span>
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold ${
-                      station.isActive
-                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                        : 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30'
+      {/* Stations View: Map or Cards Grid */}
+      {viewMode === 'map' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Interactive Google Map Panel */}
+          <div className="lg:col-span-8 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 overflow-hidden shadow-sm dark:shadow-xl backdrop-blur-xl flex flex-col">
+            <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/40">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                  <MapPin className="h-4 w-4" />
+                </span>
+                <div>
+                  <h3 className="font-display font-bold text-slate-900 dark:text-white text-sm">
+                    {selectedMapStation ? selectedMapStation.name : 'Interactive Solar Map'}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {selectedMapStation ? `${selectedMapStation.latitude}° N, ${selectedMapStation.longitude}° E • ${selectedMapStation.address}` : 'Select a hub node to focus GPS coordinates'}
+                  </p>
+                </div>
+              </div>
+              {selectedMapStation && (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${selectedMapStation.latitude},${selectedMapStation.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg transition border border-slate-200 dark:border-slate-700"
+                >
+                  <span>Open in Google Maps</span>
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+            </div>
+
+            <div className="relative w-full h-[450px] sm:h-[520px] bg-slate-100 dark:bg-slate-950">
+              {selectedMapStation ? (
+                <iframe
+                  title="Google Maps Station Explorer"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={`https://maps.google.com/maps?q=${selectedMapStation.latitude},${selectedMapStation.longitude}&hl=en&z=14&output=embed`}
+                />
+              ) : (
+                <div className="h-full flex items-center justify-center text-slate-400 text-xs">
+                  Select a station node from the list to view on Google Maps.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Station Selector & Telemetry List */}
+          <div className="lg:col-span-4 space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-1">
+              Active Microgrid Nodes ({stations.length})
+            </h3>
+            <div className="space-y-3 max-h-[580px] overflow-y-auto pr-1">
+              {stations.map((s) => {
+                const isSelected = selectedMapStation && selectedMapStation.id === s.id;
+                return (
+                  <div
+                    key={s.id}
+                    onClick={() => setSelectedMapStation(s)}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-amber-500/10 border-amber-500/50 shadow-md ring-1 ring-amber-500/30'
+                        : 'bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
                   >
-                    <span className={`h-1.5 w-1.5 rounded-full ${station.isActive ? 'bg-emerald-500 dark:bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
-                    <span>{station.isActive ? 'Operational' : 'Deactivated'}</span>
-                  </span>
-                </div>
-
-                <h3 className="mt-3.5 text-lg font-display font-bold text-slate-900 dark:text-white">{station.name}</h3>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                  <span className="truncate">{station.address}</span>
-                </p>
-              </div>
-
-              {/* Card Specs */}
-              <div className="p-6 space-y-4 text-xs">
-                {/* Gen Capacity */}
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                    <Cpu className="h-4 w-4 text-amber-500 dark:text-amber-400" /> Photovoltaic Output:
-                  </span>
-                  <span className="font-bold text-slate-900 dark:text-white font-mono">{station.capacityKwh} kW</span>
-                </div>
-
-                {/* Battery Slots with Visual Progress Bar */}
-                <div>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                      <Battery className="h-4 w-4 text-emerald-500 dark:text-emerald-400" /> Battery Storage Slots:
-                    </span>
-                    <span className="font-bold font-mono text-slate-900 dark:text-white">
-                      {station.availableBatterySlots} / {station.totalBatterySlots} Free
-                    </span>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">
+                        {s.stationCode}
+                      </span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        s.isActive ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/15 text-red-600 dark:text-red-400'
+                      }`}>
+                        {s.isActive ? 'Operational' : 'Inactive'}
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-slate-900 dark:text-white text-sm truncate">{s.name}</h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{s.address}</p>
+                    
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300 font-mono">
+                      <span>{s.capacityKwh} kW Output</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">{s.availableBatterySlots} slots free</span>
+                    </div>
                   </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        slotPercent > 50
-                          ? 'bg-gradient-to-r from-emerald-500 to-emerald-400'
-                          : slotPercent > 20
-                          ? 'bg-gradient-to-r from-amber-500 to-amber-400'
-                          : 'bg-gradient-to-r from-red-500 to-red-400'
-                      }`}
-                      style={{ width: `${slotPercent}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Operating Window */}
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                    <Clock className="h-4 w-4 text-cyan-500 dark:text-cyan-400" /> Schedule:
-                  </span>
-                  <span className="font-medium text-slate-700 dark:text-slate-300">
-                    {station.schedule?.openTime} - {station.schedule?.closeTime}
-                  </span>
-                </div>
-
-                {/* GPS Coordinates */}
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-slate-400 dark:text-slate-500 font-mono text-[11px]">
-                  <span className="flex items-center gap-1">
-                    <Navigation className="h-3 w-3" /> GPS:
-                  </span>
-                  <span>{station.latitude?.toFixed(4)}, {station.longitude?.toFixed(4)}</span>
-                </div>
-              </div>
-
-              {/* Card Actions */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2">
-                <button
-                  onClick={() => openEditModal(station)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition cursor-pointer"
-                >
-                  <Edit3 className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
-                  <span>Configure</span>
-                </button>
-
-                <button
-                  onClick={() => handleToggleActive(station)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                    station.isActive
-                      ? 'bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/30'
-                      : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
-                  }`}
-                  title={station.isActive ? 'Deactivation blocked if active reservations exist' : 'Reactivate station'}
-                >
-                  <Power className="h-3.5 w-3.5" />
-                  <span>{station.isActive ? 'Deactivate' : 'Reactivate'}</span>
-                </button>
-              </div>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
+          </div>
+        </div>
+      ) : (
+        /* Stations Cards Grid */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {stations.map((station) => {
+            const slotPercent = Math.round((station.availableBatterySlots / (station.totalBatterySlots || 1)) * 100);
+            return (
+              <div
+                key={station.id}
+                className={`rounded-3xl border transition-all duration-300 overflow-hidden backdrop-blur-xl shadow-sm dark:shadow-xl ${
+                  station.isActive
+                    ? 'bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800 hover:border-amber-500/40 hover:shadow-lg dark:hover:shadow-2xl dark:hover:shadow-amber-500/5 hover:-translate-y-1'
+                    : 'bg-slate-50 dark:bg-slate-950/60 border-red-200 dark:border-red-900/30 opacity-75'
+                }`}
+              >
+                {/* Card Header */}
+                <div className="p-6 border-b border-slate-100 dark:border-slate-800/80">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold px-2.5 py-1 bg-slate-100 dark:bg-slate-800/80 text-amber-600 dark:text-amber-400 border border-slate-200 dark:border-slate-700/60 rounded-lg">
+                      {station.stationCode}
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold ${
+                        station.isActive
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                          : 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30'
+                      }`}
+                    >
+                      <span className={`h-1.5 w-1.5 rounded-full ${station.isActive ? 'bg-emerald-500 dark:bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
+                      <span>{station.isActive ? 'Operational' : 'Deactivated'}</span>
+                    </span>
+                  </div>
+
+                  <h3 className="mt-3.5 text-lg font-display font-bold text-slate-900 dark:text-white">{station.name}</h3>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate">{station.address}</span>
+                  </p>
+                </div>
+
+                {/* Card Specs */}
+                <div className="p-6 space-y-4 text-xs">
+                  {/* Gen Capacity */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                      <Cpu className="h-4 w-4 text-amber-500 dark:text-amber-400" /> Photovoltaic Output:
+                    </span>
+                    <span className="font-bold text-slate-900 dark:text-white font-mono">{station.capacityKwh} kW</span>
+                  </div>
+
+                  {/* Battery Storage Slots */}
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                        <Battery className="h-4 w-4 text-emerald-500 dark:text-emerald-400" /> Battery Storage Slots:
+                      </span>
+                      <span className="font-bold text-slate-900 dark:text-white font-mono">
+                        {station.availableBatterySlots} / {station.totalBatterySlots} free
+                      </span>
+                    </div>
+                    {/* Capacity Bar */}
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          slotPercent > 50 ? 'bg-emerald-500' : slotPercent > 20 ? 'bg-amber-500' : 'bg-red-500'
+                        }`}
+                        style={{ width: `${slotPercent}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Operating Schedule Window */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                      <Clock className="h-4 w-4 text-sky-500 dark:text-sky-400" /> Daily Window:
+                    </span>
+                    <span className="font-bold text-slate-700 dark:text-slate-300 font-mono">
+                      {station.schedule ? `${station.schedule.openTime} - ${station.schedule.closeTime}` : '06:00 - 22:00'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Card Actions */}
+                <div className="p-6 pt-0 flex gap-2">
+                  <button
+                    onClick={() => openEditModal(station)}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition border border-slate-200 dark:border-slate-700"
+                  >
+                    <Edit3 className="h-3.5 w-3.5 text-slate-400" />
+                    <span>Configure Specs</span>
+                  </button>
+                  <button
+                    onClick={() => handleToggleActive(station)}
+                    className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition ${
+                      station.isActive
+                        ? 'bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/30'
+                        : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
+                    }`}
+                    title={station.isActive ? 'Deactivation blocked if active reservations exist' : 'Reactivate station'}
+                  >
+                    <Power className="h-3.5 w-3.5" />
+                    <span>{station.isActive ? 'Deactivate' : 'Reactivate'}</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Create / Edit Modal */}
       <Modal
