@@ -1,3 +1,18 @@
+// ============================================================================
+// File: ProsumerManagement.jsx
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: M.L. Booso (IT23452916)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
+// Description: Backoffice prosumer lifecycle management interface (NIC primary key, account approval, and deactivation/reactivation).
+// References & Citations:
+//   - React 18 Lifecycle & Asynchronous Data Fetching (useEffect, useState):
+//     https://react.dev/reference/react/useEffect
+//   - Tailwind CSS Component Layout & Tables:
+//     https://tailwindcss.com/docs/table-layout
+//   - Lucide React Iconography:
+//     https://lucide.dev/
+// ============================================================================
+
 import React, { useState, useEffect } from 'react';
 import { 
   Search, Filter, Check, XCircle, RefreshCw, UserCheck, 

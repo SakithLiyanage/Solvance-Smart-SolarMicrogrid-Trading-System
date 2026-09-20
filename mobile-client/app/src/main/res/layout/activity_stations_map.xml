@@ -132,7 +132,7 @@
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="#1E2E4A"
+                android:background="@color/card_border"
                 android:layout_marginBottom="12dp" />
 
             <LinearLayout

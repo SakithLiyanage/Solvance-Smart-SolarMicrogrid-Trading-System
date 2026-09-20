@@ -1,8 +1,12 @@
 // ============================================================================
 // File: StationService.cs
-// Project: Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: G.L.S. Chanlaka (IT23151260)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Implements microgrid node CRUD, GPS locations, and active reservation deactivation blocker.
+// References & Citations:
+//   - MongoDB.Driver .NET CRUD Operations:
+//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/crud/
 // ============================================================================
 
 using MongoDB.Driver;

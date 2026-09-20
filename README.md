@@ -12,8 +12,8 @@
 **Solvance** is an enterprise client-server solution designed for decentralized energy management across distributed solar hubs. Built strictly adhering to the **FAT Service pattern**, all validation rules, scheduling constraints, and transaction lifecycles reside in a central C# ASP.NET Core Web API backed by a MongoDB NoSQL database.
 
 ### Repository & Video Demo Links
-* **Git Repository Link**: `https://github.com/SLIIT-EAD/SmartSolarMicrogrid-TradingSystem.git` *(Placeholder for team repository)*
-* **5-Minute Video Walkthrough**: `https://onedrive.live.com/?id=SOLVANCE_DEMO_2026` / `https://youtu.be/DEMO_VIDEO_LINK` *(Placeholder for recorded presentation)*
+* **Git Repository Link**: [https://github.com/SakithLiyanage/Solvance-Smart-SolarMicrogrid-Trading-System.git](https://github.com/SakithLiyanage/Solvance-Smart-SolarMicrogrid-Trading-System.git)
+* **5-Minute Video Walkthrough**: [Solvance Comprehensive Video Walkthrough](https://github.com/SakithLiyanage/Solvance-Smart-SolarMicrogrid-Trading-System/releases/tag/v1.0.0) *(Video demonstration uploaded with project artifacts)*
 
 ---
 
@@ -21,21 +21,21 @@
 
 | Layer | Technology Stack | Description |
 |---|---|---|
-| **Central Web Service** | **C# ASP.NET Core (.NET 10)**, Hosted on Windows IIS Server | **FAT Service Pattern**: Contains 100% of business logic (7-day rule, 12-hour cancellation notice, node deactivation blocker, QR verification). |
+| **Central Web Service** | **C# ASP.NET Core (.NET 10)**, Hosted on Windows IIS Server | **FAT Service Pattern**: Contains 100% of business logic (7-day rule, 12-hour cancellation/modification notice, node deactivation blocker, Pending/Approved lifecycle, QR verification). |
 | **Database** | **MongoDB (NoSQL)** | 4 Mandatory Collections: `User's detail`, `SolarStationInfo`, `EnergyBookingSlots`, `Energy Reservation`. |
-| **Web Client** | **React.js + Tailwind CSS** | UI Layer for Backoffice Administrators and Grid Operators. |
-| **Mobile Client** | **Pure Native Android (Java/Kotlin + Android SDK)**, SQLite | Native UI Layer for Solar Prosumers and Grid Operators with local SQLite persistence, Google Maps API, and camera QR scanning. |
+| **Web Client** | **React.js + Tailwind CSS + Lucide Icons + Vite** | Public Landing/Hero Page (`LandingPage.jsx`) & Operational UI for Backoffice Administrators and Grid Operators. |
+| **Mobile Client** | **Pure Native Android (Java + Android SDK)**, SQLite | Native UI Layer for Solar Prosumers and Grid Operators with local SQLite persistence, Google Maps API v2, and camera QR scanning. |
 
 ---
 
 ## 3. Team Members & Individual Contributions (Full-Stack Vertical Slice Breakdown)
 
-| Student Name | Student IT Number | Assigned Vertical Domain | Web Component | Mobile Component | Backend & Database |
-|---|---|---|---|---|---|
-| **[Luqman Booso](https://github.com/luqmanbooso) (Lead)** | `IT21000001` | **User Identity & Prosumer Lifecycle** | Staff login (`Login.jsx`), Prosumer directory & approvals (`ProsumerManagement.jsx`) | Prosumer login (`LoginActivity.java`), NIC registration (`RegisterActivity.java`), SQLite session store | `UsersController`, `UserService`, JWT auth, `User's detail` MongoDB collection |
-| **[Sakith Liyanage](https://github.com/SakithLiyanage)** | `IT21000002` | **Solar Nodes & Station Geolocation** | Node management & slot editor (`NodeManagement.jsx`), deactivation blocker UI | Station selector (`CreateReservationActivity.java`), Google Maps station markers (`StationsMapActivity.java`) | `StationsController`, `StationService`, `SlotsController`, `SolarStationInfo` collection |
-| **[Lahiru Jayawardhana](https://github.com/Lahirujay00)** | `IT21000003` | **Energy Reservations & Rule Engine** | Bookings ledger & status filter (`BackofficeDashboard.jsx`), reservation modals | Booking flow with 7-day rule (`CreateReservationActivity.java`), 12-hour cancel rule (`ReservationDetailActivity.java`) | `ReservationsController`, `ReservationService`, 7-day & 12-hour rules, `Energy Reservation` collection |
-| **[Nilakshi Madubashini](https://github.com/madubashinii)** | `IT21000004` | **Operator Terminal, QR & Telemetry** | Operator web console (`OperatorDashboard.jsx`), live power flow KPI telemetry | Operator camera QR scanner (`OperatorScannerActivity.java`), ZXing QR card generator, animations | `/api/Reservations/verify-qr`, cryptographic QR token generator, battery slot sync |
+| Student Name | Student IT Number | Assigned Vertical Domain | Git Feature Branch | Technical Domain Spec | Web Component | Mobile Component | Backend & Database |
+|---|---|---|---|---|---|---|---|
+| **M.L. Booso (Lead)** | `IT23452916` | **User Identity & Prosumer Lifecycle** | [`feature/user-auth-lifecycle`](https://github.com/SakithLiyanage/Solvance-Smart-SolarMicrogrid-Trading-System/tree/feature/user-auth-lifecycle) | [USER_AUTH_LIFECYCLE.md](docs/domains/USER_AUTH_LIFECYCLE.md) | Staff login (`Login.jsx`), Prosumer directory & approvals (`ProsumerManagement.jsx`) | Prosumer login (`LoginActivity.java`), NIC registration (`RegisterActivity.java`), Contact profile editor, SQLite session store | `UsersController`, `UserService`, JWT RBAC, `User's detail` MongoDB collection |
+| **G.L.S. Chanlaka (Sakith Liyanage)** | `IT23151260` | **Solar Nodes & Station Geolocation** | [`feature/microgrid-nodes-map`](https://github.com/SakithLiyanage/Solvance-Smart-SolarMicrogrid-Trading-System/tree/feature/microgrid-nodes-map) | [MICROGRID_NODES_MAP.md](docs/domains/MICROGRID_NODES_MAP.md) | Node management & interactive slots editor (`NodeManagement.jsx`), deactivation blocker UI | Station selector (`CreateReservationActivity.java`), Google Maps v2 live markers & OSM fallback (`StationsMapActivity.java`) | `StationsController`, `StationService`, `SlotsController`, `SolarStationInfo` collection |
+| **L.T. Jayawardhana** | `IT23156760` | **Energy Reservations & Rule Engine** | [`feature/reservation-rules`](https://github.com/SakithLiyanage/Solvance-Smart-SolarMicrogrid-Trading-System/tree/feature/reservation-rules) | [RESERVATION_RULES.md](docs/domains/RESERVATION_RULES.md) | Bookings ledger, Pending/Approved lifecycle modals, approval actions (`OperatorDashboard.jsx`) | Booking flow with 7-day rule (`CreateReservationActivity.java`), 12-hour modify/cancel rules (`ReservationDetailActivity.java`) | `ReservationsController`, `ReservationService`, 7-day & 12-hour rules, `Energy Reservation` collection |
+| **H.N. Madubashini** | `IT23192300` | **Operator Terminal, QR & Telemetry** | [`feature/operator-qr-telemetry`](https://github.com/SakithLiyanage/Solvance-Smart-SolarMicrogrid-Trading-System/tree/feature/operator-qr-telemetry) | [OPERATOR_QR_TELEMETRY.md](docs/domains/OPERATOR_QR_TELEMETRY.md) | Operator web console (`OperatorDashboard.jsx`), live power flow KPI telemetry, holographic scanner | Operator camera QR scanner (`OperatorScannerActivity.java`), ZXing QR card generator, animations | `/api/Reservations/verify-qr`, cryptographic QR token generator, battery slot sync |
 
 ---
 

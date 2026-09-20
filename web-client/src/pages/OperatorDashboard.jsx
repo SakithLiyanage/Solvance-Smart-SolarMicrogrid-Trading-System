@@ -1,10 +1,26 @@
+// ============================================================================
+// File: OperatorDashboard.jsx
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: H.N. Madubashini (IT23192300)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
+// Description: Site Operator workstation for cryptographic QR verification, booking approval, and battery telemetry.
+// References & Citations:
+//   - React 18 Dynamic Refs & Modal Portals (useRef, useState):
+//     https://react.dev/
+//   - Cryptographic QR Verification & Business Logic Finalization:
+//     https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography
+//   - Tailwind CSS Complex Operational Terminal Dashboard:
+//     https://tailwindcss.com/
+// ============================================================================
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Battery, QrCode, CheckCircle2, AlertCircle, Search, RefreshCw, 
   Zap, Clock, ShieldCheck, Filter, Scan, Check, BatteryCharging,
-  ArrowRight, Radio, Eye
+  ArrowRight, Radio, Eye, Plus, Edit3, XCircle, Trash2, Calendar
 } from 'lucide-react';
 import api from '../api/client';
+import Modal from '../components/Modal';
 
 export default function OperatorDashboard({ user, theme, activeTab }) {
   const qrSectionRef = useRef(null);
@@ -28,6 +44,34 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
   const [loadingReservations, setLoadingReservations] = useState(true);
   const [statusFilter, setStatusFilter] = useState('All');
   const [searchNic, setSearchNic] = useState('');
+
+  // Create / Edit / Cancel / Approve State
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    prosumerNic: '',
+    stationId: '',
+    scheduledDateTime: '',
+    energyAmountKwh: 15,
+    tradeType: 'DropOff'
+  });
+  const [createError, setCreateError] = useState('');
+  const [createSuccess, setCreateSuccess] = useState('');
+
+  const [editingReservation, setEditingReservation] = useState(null);
+  const [editForm, setEditForm] = useState({
+    scheduledDateTime: '',
+    energyAmountKwh: 15,
+    tradeType: 'DropOff'
+  });
+  const [editError, setEditError] = useState('');
+  const [editSuccess, setEditSuccess] = useState('');
+
+  const [cancellingReservation, setCancellingReservation] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelError, setCancelError] = useState('');
+  const [cancelSuccess, setCancelSuccess] = useState('');
+
+  const [approvalMsg, setApprovalMsg] = useState('');
 
   // QR Verification
   const [qrToken, setQrToken] = useState('');
@@ -109,6 +153,104 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
       setQrError(err.response?.data?.message || 'Verification failed. Invalid or already processed QR token.');
     } finally {
       setVerifying(false);
+    }
+  };
+
+  const handleApproveReservation = async (id) => {
+    try {
+      await api.post(`/reservations/${id}/approve`);
+      setApprovalMsg(`Reservation approved successfully! Cryptographic QR code pass issued.`);
+      setTimeout(() => setApprovalMsg(''), 4000);
+      loadOperationalData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to approve reservation.');
+    }
+  };
+
+  const handleCreateReservation = async (e) => {
+    e.preventDefault();
+    setCreateError('');
+    setCreateSuccess('');
+    try {
+      if (!createForm.stationId) {
+        setCreateError('Please select a solar station hub.');
+        return;
+      }
+      const payload = {
+        ...createForm,
+        energyAmountKwh: parseFloat(createForm.energyAmountKwh),
+        scheduledDateTime: new Date(createForm.scheduledDateTime).toISOString()
+      };
+      const res = await api.post('/reservations', payload);
+      setCreateSuccess(`Booking ${res.data.reservationNumber} created successfully.`);
+      setTimeout(() => {
+        setIsCreateModalOpen(false);
+        setCreateSuccess('');
+      }, 1500);
+      loadOperationalData();
+    } catch (err) {
+      setCreateError(err.response?.data?.message || 'Failed to create reservation.');
+    }
+  };
+
+  const handleOpenEdit = (res) => {
+    setEditingReservation(res);
+    const d = new Date(res.scheduledDateTime);
+    const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    setEditForm({
+      scheduledDateTime: localIso,
+      energyAmountKwh: res.energyAmountKwh,
+      tradeType: res.tradeType || 'DropOff'
+    });
+    setEditError('');
+    setEditSuccess('');
+  };
+
+  const handleUpdateReservation = async (e) => {
+    e.preventDefault();
+    setEditError('');
+    setEditSuccess('');
+    try {
+      const payload = {
+        scheduledDateTime: new Date(editForm.scheduledDateTime).toISOString(),
+        energyAmountKwh: parseFloat(editForm.energyAmountKwh),
+        tradeType: editForm.tradeType
+      };
+      await api.put(`/reservations/${editingReservation.id}`, payload);
+      setEditSuccess('Reservation modified successfully.');
+      setTimeout(() => {
+        setEditingReservation(null);
+        setEditSuccess('');
+      }, 1500);
+      loadOperationalData();
+    } catch (err) {
+      setEditError(err.response?.data?.message || 'Failed to modify reservation.');
+    }
+  };
+
+  const handleOpenCancel = (res) => {
+    setCancellingReservation(res);
+    setCancelReason('');
+    setCancelError('');
+    setCancelSuccess('');
+  };
+
+  const handleCancelReservation = async (e) => {
+    e.preventDefault();
+    setCancelError('');
+    setCancelSuccess('');
+    try {
+      await api.post(`/reservations/${cancellingReservation.id}/cancel`, {
+        reason: cancelReason || 'Cancelled by Operator / Backoffice'
+      });
+      setCancelSuccess('Reservation cancelled successfully.');
+      setTimeout(() => {
+        setCancellingReservation(null);
+        setCancelSuccess('');
+      }, 1500);
+      loadOperationalData();
+    } catch (err) {
+      setCancelError(err.response?.data?.message || 'Failed to cancel reservation.');
     }
   };
 
@@ -331,15 +473,42 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
         </div>
       </div>
 
+      {/* Approval Success Banner */}
+      {approvalMsg && (
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-200 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+          <span>{approvalMsg}</span>
+        </div>
+      )}
+
       {/* Bookings Monitoring Table */}
       <div className="rounded-3xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/60 backdrop-blur-xl overflow-hidden shadow-sm dark:shadow-xl transition-colors duration-300">
         <div className="p-6 border-b border-slate-200 dark:border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-display font-bold text-slate-900 dark:text-white">Live Microgrid Trading Ledger</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Real-time schedule of prosumer energy drop-offs and battery draws.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Real-time schedule of prosumer energy drop-offs, approvals, and battery draws.</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={() => {
+                setCreateForm({
+                  prosumerNic: '',
+                  stationId: stations[0]?.id || '',
+                  scheduledDateTime: new Date(Date.now() + 3600000).toISOString().slice(0, 16),
+                  energyAmountKwh: 15,
+                  tradeType: 'DropOff'
+                });
+                setCreateError('');
+                setCreateSuccess('');
+                setIsCreateModalOpen(true);
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>New Booking</span>
+            </button>
+
             <div className="relative">
               <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
@@ -386,7 +555,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                   <th className="px-6 py-4">Station &amp; Trade Type</th>
                   <th className="px-6 py-4">Scheduled Window</th>
                   <th className="px-6 py-4">Lifecycle Status</th>
-                  <th className="px-6 py-4 text-right">Quick Verify</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-slate-700 dark:text-slate-200">
@@ -419,18 +588,51 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {r.status === 'Approved' && r.qrCodeToken ? (
-                        <button
-                          onClick={() => handleVerifyQr(r.qrCodeToken)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold transition active:scale-95 cursor-pointer"
-                          title="Simulate immediate optical scan"
-                        >
-                          <Scan className="h-3.5 w-3.5" />
-                          <span>Verify QR</span>
-                        </button>
-                      ) : (
-                        <span className="text-slate-400 dark:text-slate-600 font-mono text-[11px]">Finalized</span>
-                      )}
+                      <div className="flex items-center justify-end gap-1.5">
+                        {r.status === 'Pending' && (
+                          <button
+                            onClick={() => handleApproveReservation(r.id)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold text-[11px] transition active:scale-95 cursor-pointer"
+                            title="Approve Reservation & Issue QR"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <span>Approve</span>
+                          </button>
+                        )}
+                        {r.status === 'Approved' && r.qrCodeToken && (
+                          <button
+                            onClick={() => handleVerifyQr(r.qrCodeToken)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 font-bold text-[11px] transition active:scale-95 cursor-pointer"
+                            title="Simulate immediate optical scan"
+                          >
+                            <Scan className="h-3.5 w-3.5" />
+                            <span>Verify QR</span>
+                          </button>
+                        )}
+                        {(r.status === 'Pending' || r.status === 'Approved') && (
+                          <>
+                            <button
+                              onClick={() => handleOpenEdit(r)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[11px] transition active:scale-95 cursor-pointer"
+                              title="Modify scheduled window or energy"
+                            >
+                              <Edit3 className="h-3.5 w-3.5" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              onClick={() => handleOpenCancel(r)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 font-bold text-[11px] transition active:scale-95 cursor-pointer"
+                              title="Cancel reservation"
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                              <span>Cancel</span>
+                            </button>
+                          </>
+                        )}
+                        {(r.status === 'Completed' || r.status === 'Cancelled') && (
+                          <span className="text-slate-400 dark:text-slate-600 font-mono text-[11px]">Finalized</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -439,6 +641,242 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
           </div>
         )}
       </div>
+
+      {/* Modal: Create Reservation */}
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="Schedule Prosumer Reservation"
+        maxWidth="max-w-lg"
+      >
+        <form onSubmit={handleCreateReservation} className="space-y-4 text-xs">
+          {createError && (
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{createError}</span>
+            </div>
+          )}
+          {createSuccess && (
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{createSuccess}</span>
+            </div>
+          )}
+
+          <div>
+            <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Prosumer NIC</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. 200012345678 or 987654321V"
+              value={createForm.prosumerNic}
+              onChange={(e) => setCreateForm({ ...createForm, prosumerNic: e.target.value })}
+              className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+            />
+          </div>
+
+          <div>
+            <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Solar Microgrid Hub</label>
+            <select
+              value={createForm.stationId}
+              onChange={(e) => setCreateForm({ ...createForm, stationId: e.target.value })}
+              required
+              className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+            >
+              <option value="">Select station...</option>
+              {stations.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.location})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Energy Quota (kWh)</label>
+              <input
+                type="number"
+                step="0.5"
+                min="1"
+                max="500"
+                required
+                value={createForm.energyAmountKwh}
+                onChange={(e) => setCreateForm({ ...createForm, energyAmountKwh: e.target.value })}
+                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Trade Type</label>
+              <select
+                value={createForm.tradeType}
+                onChange={(e) => setCreateForm({ ...createForm, tradeType: e.target.value })}
+                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+              >
+                <option value="DropOff">DropOff (Feed to Grid)</option>
+                <option value="PickUp">PickUp (Draw from Grid)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Scheduled Date &amp; Time</label>
+            <input
+              type="datetime-local"
+              required
+              value={createForm.scheduledDateTime}
+              onChange={(e) => setCreateForm({ ...createForm, scheduledDateTime: e.target.value })}
+              className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(false)}
+              className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold transition cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer"
+            >
+              Submit Booking
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal: Edit Reservation */}
+      <Modal
+        isOpen={editingReservation !== null}
+        onClose={() => setEditingReservation(null)}
+        title={`Modify Reservation #${editingReservation?.reservationNumber || ''}`}
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleUpdateReservation} className="space-y-4 text-xs">
+          {editError && (
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{editError}</span>
+            </div>
+          )}
+          {editSuccess && (
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{editSuccess}</span>
+            </div>
+          )}
+
+          <div>
+            <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Energy Quota (kWh)</label>
+            <input
+              type="number"
+              step="0.5"
+              min="1"
+              max="500"
+              required
+              value={editForm.energyAmountKwh}
+              onChange={(e) => setEditForm({ ...editForm, energyAmountKwh: e.target.value })}
+              className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+            />
+          </div>
+
+          <div>
+            <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Trade Type</label>
+            <select
+              value={editForm.tradeType}
+              onChange={(e) => setEditForm({ ...editForm, tradeType: e.target.value })}
+              className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+            >
+              <option value="DropOff">DropOff (Feed to Grid)</option>
+              <option value="PickUp">PickUp (Draw from Grid)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Scheduled Date &amp; Time</label>
+            <input
+              type="datetime-local"
+              required
+              value={editForm.scheduledDateTime}
+              onChange={(e) => setEditForm({ ...editForm, scheduledDateTime: e.target.value })}
+              className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setEditingReservation(null)}
+              className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold transition cursor-pointer"
+            >
+              Close
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer"
+            >
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal: Cancel Reservation */}
+      <Modal
+        isOpen={cancellingReservation !== null}
+        onClose={() => setCancellingReservation(null)}
+        title={`Cancel Reservation #${cancellingReservation?.reservationNumber || ''}`}
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleCancelReservation} className="space-y-4 text-xs">
+          {cancelError && (
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{cancelError}</span>
+            </div>
+          )}
+          {cancelSuccess && (
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{cancelSuccess}</span>
+            </div>
+          )}
+
+          <p className="text-slate-600 dark:text-slate-300">
+            Are you sure you want to cancel this reservation? This will release reserved capacity back to the microgrid node.
+          </p>
+
+          <div>
+            <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Cancellation Reason</label>
+            <textarea
+              rows={3}
+              placeholder="e.g. Schedule conflict, equipment offline, customer request..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setCancellingReservation(null)}
+              className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold transition cursor-pointer"
+            >
+              Back
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold shadow-md shadow-red-500/20 transition active:scale-95 cursor-pointer"
+            >
+              Confirm Cancel
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

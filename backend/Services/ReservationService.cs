@@ -1,8 +1,14 @@
 // ============================================================================
 // File: ReservationService.cs
-// Project: Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: L.T. Jayawardhana (IT23156760)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Core FAT-service enterprise logic for 7-day rule, 12-hour notice, and QR verification.
+// References & Citations:
+//   - MongoDB.Driver LINQ & Filter Definition Builder:
+//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/crud/read-operations/
+//   - System.Security.Cryptography HMAC / SHA256 Token Signing:
+//     https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography
 // ============================================================================
 
 using System.Security.Cryptography;
@@ -69,13 +75,11 @@ namespace SolarMicrogridApi.Services
                 ScheduledDateTime = dto.ScheduledDateTime,
                 EnergyAmountKwh = dto.EnergyAmountKwh,
                 TradeType = dto.TradeType,
-                Status = "Approved", // Approved immediately when valid slot available
+                Status = "Pending", // Set as Pending until approved by Backoffice/Operator
+                QrCodeToken = string.Empty,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
-
-            // Generate secure QR token for approved transaction
-            reservation.QrCodeToken = GenerateSecureQrToken(reservation);
 
             await _context.Reservations.InsertOneAsync(reservation);
             return reservation;
@@ -272,6 +276,7 @@ namespace SolarMicrogridApi.Services
 
         private static FilterDefinition<EnergyReservation> BuildIdOrResNumberFilter(string id)
         {
+            // Method: BuildIdOrResNumberFilter - Resolves entity ID or human-readable ReservationNumber filter.
             if (MongoDB.Bson.ObjectId.TryParse(id, out _))
             {
                 return Builders<EnergyReservation>.Filter.Or(

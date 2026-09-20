@@ -30,7 +30,7 @@ public interface SolarApiService {
     Call<ResponseBody> createReservation(@Body AuthDtos.CreateReservationRequest request);
 
     @PUT("reservations/{id}")
-    Call<ResponseBody> updateReservation(@Path("id") String id, @Body Object request);
+    Call<ResponseBody> updateReservation(@Path("id") String id, @Body AuthDtos.UpdateReservationRequest request);
 
     @POST("reservations/{id}/cancel")
     Call<ResponseBody> cancelReservation(@Path("id") String id, @Body AuthDtos.CancelRequest request);
@@ -49,6 +49,9 @@ public interface SolarApiService {
 
     @PUT("stations/{id}/battery-slots")
     Call<ResponseBody> updateBatterySlots(@Path("id") String id, @Body AuthDtos.UpdateBatterySlotsRequest request);
+
+    @PUT("users/profile")
+    Call<ResponseBody> updateProfile(@Body AuthDtos.UpdateProfileRequest request);
 
     @POST("users/deactivate-self")
     Call<ResponseBody> deactivateSelf();

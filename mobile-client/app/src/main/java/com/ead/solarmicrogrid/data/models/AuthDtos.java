@@ -110,4 +110,34 @@ public class AuthDtos {
             this.availableSlots = availableSlots;
         }
     }
+
+    public static class UpdateProfileRequest {
+        @SerializedName("fullName")
+        public String fullName;
+        @SerializedName("email")
+        public String email;
+        @SerializedName("phone")
+        public String phone;
+
+        public UpdateProfileRequest(String fullName, String email, String phone) {
+            this.fullName = fullName;
+            this.email = email;
+            this.phone = phone;
+        }
+    }
+
+    public static class UpdateReservationRequest {
+        @SerializedName("scheduledDateTime")
+        public String scheduledDateTime;
+        @SerializedName("energyAmountKwh")
+        public double energyAmountKwh;
+        @SerializedName("tradeType")
+        public String tradeType;
+
+        public UpdateReservationRequest(String scheduledDateTime, double energyAmountKwh, String tradeType) {
+            this.scheduledDateTime = scheduledDateTime;
+            this.energyAmountKwh = energyAmountKwh;
+            this.tradeType = tradeType;
+        }
+    }
 }

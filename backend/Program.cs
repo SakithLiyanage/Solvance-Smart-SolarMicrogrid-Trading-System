@@ -1,8 +1,18 @@
 // ============================================================================
 // File: Program.cs
-// Project: Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Authors:
+//   - M.L. Booso (IT23452916) - Identity & Security Lead
+//   - G.L.S. Chanlaka (IT23151260) - Microgrid Stations & Maps Lead
+//   - L.T. Jayawardhana (IT23156760) - Reservations & Rules Lead
+//   - H.N. Madubashini (IT23192300) - Operator & QR Telemetry Lead
+// Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Application entry point configuring dependency injection, JWT auth, and CORS.
+// References & Citations:
+//   - Microsoft ASP.NET Core 8 Web API & Security (JWT Bearer Authentication):
+//     https://learn.microsoft.com/en-us/aspnet/core/security/authentication/
+//   - MongoDB.Driver .NET API (Official Mongo Driver):
+//     https://www.mongodb.com/docs/drivers/csharp/
 // ============================================================================
 
 using System.Text;

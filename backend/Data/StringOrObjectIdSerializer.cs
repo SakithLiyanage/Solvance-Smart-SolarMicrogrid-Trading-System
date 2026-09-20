@@ -1,8 +1,12 @@
 // ============================================================================
 // File: StringOrObjectIdSerializer.cs
-// Project: Smart Solar Microgrid Trading System
+// Project: Solvance — Smart Solar Microgrid Trading System
 // Author: Enterprise Application Development Team
+// Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Custom BSON serializer deserializing both BsonType.ObjectId and BsonType.String to C# string.
+// References & Citations:
+//   - MongoDB.Bson.Serialization.Serializers API:
+//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/serialization/
 // ============================================================================
 
 using System;
@@ -19,6 +23,7 @@ namespace SolarMicrogridApi.Data
     {
         public override string Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
         {
+            // Method: Deserialize - Deserializes BSON ObjectId or String into a C# string.
             var bsonType = context.Reader.CurrentBsonType;
             if (bsonType == BsonType.ObjectId)
             {
@@ -40,6 +45,7 @@ namespace SolarMicrogridApi.Data
 
         public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, string value)
         {
+            // Method: Serialize - Writes C# string value to BSON writer.
             if (string.IsNullOrEmpty(value))
             {
                 context.Writer.WriteString(string.Empty);

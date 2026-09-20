@@ -1,8 +1,14 @@
 // ============================================================================
 // File: ReservationsController.cs
-// Project: Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: L.T. Jayawardhana (IT23156760)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: API controller executing 7-day and 12-hour business rules, QR generation and scanner verification.
+// References & Citations:
+//   - Microsoft ASP.NET Core Controllers & Action Results:
+//     https://learn.microsoft.com/en-us/aspnet/core/web-api/
+//   - Microsoft.AspNetCore.Authorization (Role-based policies):
+//     https://learn.microsoft.com/en-us/aspnet/core/security/authorization/roles
 // ============================================================================
 
 using System.Security.Claims;
@@ -132,6 +138,33 @@ namespace SolarMicrogridApi.Controllers
             catch (KeyNotFoundException ex)
             {
                 return NotFound(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Approves a pending reservation and generates the cryptographically signed QR code pass.
+        /// </summary>
+        [HttpPost("{id}/approve")]
+        [Authorize(Roles = "Backoffice,GridOperator")]
+        public async Task<IActionResult> Approve(string id)
+        {
+            // Method: Approve - Transitions reservation from Pending to Approved and issues cryptographic QR code pass.
+            try
+            {
+                var approved = await _reservationService.ApproveReservationAsync(id);
+                return Ok(new
+                {
+                    message = "Reservation approved successfully. Cryptographic QR pass generated.",
+                    reservation = approved
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
 

@@ -1,8 +1,12 @@
 // ============================================================================
 // File: UsersController.cs
-// Project: Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: M.L. Booso (IT23452916)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: API controller for user administration, prosumer approval, and account status updates.
+// References & Citations:
+//   - Microsoft ASP.NET Core Authorization & Security Policies:
+//     https://learn.microsoft.com/en-us/aspnet/core/security/authorization/
 // ============================================================================
 
 using System.Security.Claims;

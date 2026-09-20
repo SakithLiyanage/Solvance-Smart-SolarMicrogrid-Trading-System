@@ -14,6 +14,21 @@ import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
+/**
+ * REST API Client connecting Native Android to ASP.NET Core FAT Backend.
+ * Authors:
+ *   - M.L. Booso (IT23452916) - Auth Interceptors & Token Headers
+ *   - G.L.S. Chanlaka (IT23151260) - Station & Geolocation Endpoints
+ *   - L.T. Jayawardhana (IT23156760) - Reservation Endpoints
+ *   - H.N. Madubashini (IT23192300) - Operator & QR Endpoints
+ * Module: SE4040 - Enterprise Application Development (SLIIT)
+ *
+ * References & Third-Party SDKs:
+ * - Square Retrofit 2 Type-Safe HTTP Client:
+ *   https://square.github.io/retrofit/
+ * - OkHttp 3 Interceptor & Connection Pool:
+ *   https://square.github.io/okhttp/
+ */
 public class ApiClient {
 
     private static Retrofit retrofit = null;
@@ -75,7 +90,9 @@ public class ApiClient {
             final DatabaseHelper dbHelper = new DatabaseHelper(context.getApplicationContext());
 
             HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
-            logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+            logging.setLevel(com.ead.solarmicrogrid.BuildConfig.DEBUG 
+                    ? HttpLoggingInterceptor.Level.BODY 
+                    : HttpLoggingInterceptor.Level.BASIC);
 
             OkHttpClient client = new OkHttpClient.Builder()
                     .connectTimeout(12, TimeUnit.SECONDS)

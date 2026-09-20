@@ -121,6 +121,53 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Pending Approval Notice Card (Shown when status is Pending) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardPendingNotice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="6dp"
+            app:cardBackgroundColor="@color/surface_card"
+            app:strokeColor="@color/accent"
+            app:strokeWidth="1.5dp"
+            android:visibility="gone"
+            android:layout_marginBottom="20dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="24dp">
+
+                <ImageView
+                    android:layout_width="54dp"
+                    android:layout_height="54dp"
+                    android:src="@drawable/ic_clock"
+                    app:tint="@color/accent"
+                    android:layout_marginBottom="12dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Awaiting Grid Operator Approval"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="6dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Your scheduled appointment is currently pending review. Cryptographic QR dispatch token will be generated immediately once the station operator verifies node capacity."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:gravity="center"
+                    android:lineSpacingExtra="3dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Status & Specs Card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
@@ -170,7 +217,7 @@
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:background="#1E2E4A"
+                    android:background="@color/card_border"
                     android:layout_marginBottom="14dp" />
 
                 <!-- Station Info -->
@@ -254,7 +301,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="16dp"
-            app:cardBackgroundColor="#1A1810"
+            app:cardBackgroundColor="@color/stat_active_start"
             app:strokeColor="@color/primary"
             app:strokeWidth="1dp"
             android:layout_marginBottom="20dp">
@@ -277,12 +324,30 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="12-Hour Rule: Cancellations strictly require at least 12 hours' advance notice. Within 12 hours, please request Operator assistance."
+                    android:text="12-Hour Rule: Modifications and cancellations require at least 12 hours' advance notice per Microgrid policy."
                     android:textColor="@color/text_secondary"
                     android:textSize="11sp"
                     android:lineSpacingExtra="2dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
+        <!-- Modify Booking Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnEditReservation"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="Modify Booking Schedule / Quota"
+            app:icon="@drawable/ic_edit"
+            app:iconTint="@color/accent"
+            app:iconGravity="textStart"
+            app:iconSize="16dp"
+            android:textAllCaps="false"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:textColor="@color/accent"
+            app:cornerRadius="16dp"
+            app:strokeColor="@color/accent"
+            app:strokeWidth="1.2dp"
+            android:layout_marginBottom="10dp" />
 
         <!-- Action Buttons -->
         <LinearLayout

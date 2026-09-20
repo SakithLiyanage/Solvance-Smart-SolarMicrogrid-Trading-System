@@ -13,37 +13,55 @@
         android:padding="20dp"
         android:gravity="center_horizontal">
 
-        <!-- Top Microgrid Live Pill -->
-        <LinearLayout
-            android:layout_width="wrap_content"
+        <!-- Top Row: Live Pill & Theme Toggle Button -->
+        <RelativeLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="@drawable/bg_live_pill"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="16dp">
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="12dp">
 
-            <View
-                android:layout_width="8dp"
-                android:layout_height="8dp"
-                android:background="@drawable/bg_status_live"
-                android:layout_marginEnd="6dp" />
-
-            <TextView
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="SOLVANCE MICROGRID • LIVE"
-                android:textColor="@color/accent"
-                android:textSize="10sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.08" />
-        </LinearLayout>
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_live_pill"
+                android:layout_centerVertical="true">
 
-        <!-- Prominent Brand Logo -->
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/bg_status_live"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SOLVANCE MICROGRID • LIVE"
+                    android:textColor="@color/accent"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.08" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/btnThemeToggle"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:background="@drawable/bg_pill_chip"
+                android:src="@drawable/ic_theme_toggle"
+                app:tint="@color/text_primary"
+                android:contentDescription="Toggle Light/Dark Theme"
+                android:padding="8dp" />
+        </RelativeLayout>
+
+        <!-- Prominent Brand Logo (Auto-adapts to Light/Dark mode) -->
         <ImageView
             android:layout_width="260dp"
             android:layout_height="120dp"
-            android:src="@drawable/solvance_logo_dark_trans"
+            android:src="@drawable/app_brand_logo"
             android:scaleType="fitCenter"
             android:layout_marginBottom="4dp" />
 
@@ -109,7 +127,7 @@
                         android:id="@+id/etUsername"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/white"
+                        android:textColor="@color/text_primary"
                         android:textSize="14sp"
                         android:padding="16dp"
                         android:inputType="text" />
@@ -137,7 +155,7 @@
                         android:id="@+id/etPassword"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/white"
+                        android:textColor="@color/text_primary"
                         android:textSize="14sp"
                         android:padding="16dp"
                         android:inputType="textPassword" />

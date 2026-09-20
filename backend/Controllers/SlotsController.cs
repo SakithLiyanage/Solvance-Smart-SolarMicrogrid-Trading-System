@@ -1,8 +1,12 @@
 // ============================================================================
 // File: SlotsController.cs
-// Project: Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: G.L.S. Chanlaka (IT23151260)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: API controller managing battery swapping/charging slots within solar hubs.
+// References & Citations:
+//   - Microsoft ASP.NET Core Routing & Controller Conventions:
+//     https://learn.microsoft.com/en-us/aspnet/core/web-api/
 // ============================================================================
 
 using Microsoft.AspNetCore.Authorization;

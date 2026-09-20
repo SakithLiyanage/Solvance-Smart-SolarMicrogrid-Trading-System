@@ -18,6 +18,72 @@ The database uses MongoDB NoSQL document storage designed with consistent relati
 3. **`EnergyBookingSlots`**: Available discrete time/energy slots for each station.
 4. **`Energy Reservation`**: Prosumer booking transactions, scheduled times, trade types, approval status, and signed QR tokens.
 
+### Entity-Relationship (ER) Diagram
+```mermaid
+erDiagram
+    USERS_DETAIL {
+        ObjectId _id PK
+        string nic UK "National Identity Card (e.g. 200012345678)"
+        string fullName
+        string email
+        string phone
+        string passwordHash
+        string role "Backoffice | GridOperator | Prosumer"
+        string status "Pending | Active | Deactivated"
+        date createdAt
+        date updatedAt
+    }
+
+    SOLAR_STATION_INFO {
+        ObjectId _id PK
+        string stationCode UK "e.g. HUB-CMB-01"
+        string name
+        double latitude
+        double longitude
+        string address
+        double capacityKwh
+        int totalBatterySlots
+        int availableBatterySlots
+        object operationalSchedule
+        bool isActive
+        date createdAt
+    }
+
+    ENERGY_BOOKING_SLOTS {
+        ObjectId _id PK
+        ObjectId stationId FK
+        string date "YYYY-MM-DD"
+        string startTime "HH:mm"
+        string endTime "HH:mm"
+        double slotCapacityKwh
+        double allocatedKwh
+        int availableSlots
+        string status "Open | Full | Maintenance"
+    }
+
+    ENERGY_RESERVATION {
+        ObjectId _id PK
+        string reservationNumber UK "e.g. RES-12345678"
+        string prosumerNic FK
+        ObjectId stationId FK
+        string stationName
+        ObjectId slotId FK
+        date scheduledDateTime "Within 7-day horizon"
+        double energyAmountKwh
+        string tradeType "DropOff | Charging"
+        string status "Pending | Approved | Completed | Cancelled"
+        string qrCodeToken
+        string cancellationReason "Requires 12h notice"
+        date createdAt
+        date completedAt
+    }
+
+    USERS_DETAIL ||--o{ ENERGY_RESERVATION : "creates (1:N)"
+    SOLAR_STATION_INFO ||--o{ ENERGY_BOOKING_SLOTS : "hosts (1:N)"
+    SOLAR_STATION_INFO ||--o{ ENERGY_RESERVATION : "reserves at (1:N)"
+    ENERGY_BOOKING_SLOTS ||--o{ ENERGY_RESERVATION : "allocates (1:N)"
+```
+
 ---
 
 ## 2. Collection Schemas & Data Dictionaries

@@ -34,7 +34,7 @@
                 <ImageView
                     android:layout_width="42dp"
                     android:layout_height="42dp"
-                    android:src="@drawable/ic_solvance_mark"
+                    android:src="@drawable/app_brand_mark"
                     android:scaleType="fitCenter"
                     android:layout_marginEnd="10dp" />
 
@@ -96,6 +96,16 @@
                 android:gravity="center_vertical"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true">
+
+                <ImageButton
+                    android:id="@+id/btnThemeToggle"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:src="@drawable/ic_theme_toggle"
+                    app:tint="@color/text_secondary"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Toggle Light/Dark Theme"
+                    android:padding="8dp" />
 
                 <ImageButton
                     android:id="@+id/btnOperatorRefresh"
@@ -249,7 +259,7 @@
         android:layout_marginVertical="6dp"
         app:cardCornerRadius="14dp"
         app:cardElevation="2dp"
-        app:cardBackgroundColor="#0B1220"
+        app:cardBackgroundColor="@color/surface_card"
         app:strokeColor="@color/card_border"
         app:strokeWidth="1dp">
 
@@ -971,7 +981,7 @@
                             android:max="100"
                             android:progress="80"
                             android:progressTint="@color/accent"
-                            android:progressBackgroundTint="#1E2E4A"
+                            android:progressBackgroundTint="@color/card_border"
                             android:layout_marginBottom="16dp" />
 
                         <!-- Interactive Slot Adjuster Stepper -->
