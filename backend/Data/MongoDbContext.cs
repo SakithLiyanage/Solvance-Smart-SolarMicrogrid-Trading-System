@@ -1,8 +1,12 @@
 // ============================================================================
 // File: MongoDbContext.cs
-// Project: Smart Solar Microgrid Trading System
+// Project: Solvance — Smart Solar Microgrid Trading System
 // Author: Enterprise Application Development Team
+// Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: MongoDB database context establishing resilient connection to 4 required collections.
+// References & Citations:
+//   - MongoDB.Driver MongoClient & IMongoDatabase:
+//     https://www.mongodb.com/docs/drivers/csharp/
 // ============================================================================
 
 using System;

@@ -1,3 +1,16 @@
+// ============================================================================
+// File: RegisterActivity.java
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: M.L. Booso (IT23452916)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
+// Description: Prosumer onboarding activity implementing NIC primary key validation and central API registration.
+// References & Citations:
+//   - Material Design Text Fields & Input Validation:
+//     https://material.io/components/text-fields/android
+//   - Square Retrofit 2 HTTP Network Processing:
+//     https://square.github.io/retrofit/
+// ============================================================================
+
 package com.ead.solarmicrogrid.ui.auth;
 
 import android.os.Bundle;

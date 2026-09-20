@@ -1,3 +1,18 @@
+// ============================================================================
+// File: LoginActivity.java
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: M.L. Booso (IT23452916)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
+// Description: Pure Android authentication controller handling multi-role login, SQLite session persistence, and API token storage.
+// References & Citations:
+//   - Android Activity Lifecycle & Intent Navigation:
+//     https://developer.android.com/guide/components/activities/activity-lifecycle
+//   - Square Retrofit 2 Network Call Enqueue:
+//     https://square.github.io/retrofit/
+//   - Android SQLite Database Session Storage:
+//     https://developer.android.com/training/data-storage/sqlite
+// ============================================================================
+
 package com.ead.solarmicrogrid.ui.auth;
 
 import android.content.Intent;
@@ -5,6 +20,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -19,6 +35,7 @@ import com.ead.solarmicrogrid.data.models.User;
 import com.ead.solarmicrogrid.data.remote.ApiClient;
 import com.ead.solarmicrogrid.ui.operator.OperatorScannerActivity;
 import com.ead.solarmicrogrid.ui.prosumer.ProsumerDashboardActivity;
+import com.ead.solarmicrogrid.util.ThemeManager;
 import com.google.android.material.textfield.TextInputEditText;
 
 import retrofit2.Call;
@@ -29,6 +46,7 @@ public class LoginActivity extends AppCompatActivity {
 
     private TextInputEditText etUsername, etPassword;
     private Button btnLogin, btnQuickProsumer, btnQuickOperator;
+    private ImageButton btnThemeToggle;
     private TextView tvRegister, tvServerConfig;
     private ProgressBar progressBar;
     private DatabaseHelper dbHelper;
@@ -71,6 +89,7 @@ public class LoginActivity extends AppCompatActivity {
         btnQuickOperator = findViewById(R.id.btnQuickOperator);
         tvServerConfig = findViewById(R.id.tvServerConfig);
         progressBar = findViewById(R.id.progressBar);
+        btnThemeToggle = findViewById(R.id.btnThemeToggle);
     }
 
     private void updateServerBadge() {
@@ -81,6 +100,11 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
+        if (btnThemeToggle != null) {
+            btnThemeToggle.setImageResource(ThemeManager.isDarkMode(this) ? R.drawable.ic_sun : R.drawable.ic_moon);
+            btnThemeToggle.setOnClickListener(v -> ThemeManager.toggleTheme(this));
+        }
+
         btnLogin.setOnClickListener(v -> performLogin());
 
         tvRegister.setOnClickListener(v -> {
@@ -142,6 +166,8 @@ public class LoginActivity extends AppCompatActivity {
     private void showCustomUrlDialog() {
         final EditText input = new EditText(this);
         input.setText(ApiClient.getBaseUrl(this));
+        input.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.text_primary));
+        input.setHintTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.text_muted));
         input.setPadding(32, 24, 32, 24);
 
         new AlertDialog.Builder(this)

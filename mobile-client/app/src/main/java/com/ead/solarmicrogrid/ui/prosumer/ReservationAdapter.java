@@ -49,7 +49,7 @@ public class ReservationAdapter extends RecyclerView.Adapter<ReservationAdapter.
 
         holder.tvResNumber.setText(item.getReservationNumber() != null ? item.getReservationNumber() : "RES-00000000");
         holder.tvStationName.setText(item.getStationName() != null ? item.getStationName() : "Solar Station Hub");
-        holder.tvScheduleTime.setText(item.getScheduledDateTime() != null ? item.getScheduledDateTime() : "-");
+        holder.tvScheduleTime.setText(formatScheduleDate(item.getScheduledDateTime()));
         holder.tvEnergyAmount.setText(String.format(Locale.US, "%.1f", item.getEnergyAmountKwh()));
 
         String tradeType = item.getTradeType() != null ? item.getTradeType() : "DropOff";
@@ -114,6 +114,33 @@ public class ReservationAdapter extends RecyclerView.Adapter<ReservationAdapter.
             tvBadge.setBackground(ContextCompat.getDrawable(context, R.drawable.bg_badge_pending));
             tvBadge.setTextColor(ContextCompat.getColor(context, R.color.badge_pending_text));
         }
+    }
+
+    private String formatScheduleDate(String rawIso) {
+        if (rawIso == null || rawIso.trim().isEmpty()) return "-";
+        try {
+            String clean = rawIso;
+            if (clean.endsWith("Z")) {
+                clean = clean.substring(0, clean.length() - 1);
+            }
+            java.text.SimpleDateFormat isoFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
+            isoFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+            java.util.Date date = isoFormat.parse(clean);
+            if (date != null) {
+                java.text.SimpleDateFormat displayFormat = new java.text.SimpleDateFormat("dd MMM yyyy • hh:mm a", Locale.US);
+                return displayFormat.format(date);
+            }
+        } catch (Exception e) {
+            try {
+                java.text.SimpleDateFormat simpleFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US);
+                java.util.Date date = simpleFormat.parse(rawIso);
+                if (date != null) {
+                    java.text.SimpleDateFormat displayFormat = new java.text.SimpleDateFormat("dd MMM yyyy • hh:mm a", Locale.US);
+                    return displayFormat.format(date);
+                }
+            } catch (Exception ignored) {}
+        }
+        return rawIso;
     }
 
     @Override

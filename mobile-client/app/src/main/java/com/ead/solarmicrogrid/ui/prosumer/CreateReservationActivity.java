@@ -1,3 +1,16 @@
+// ============================================================================
+// File: CreateReservationActivity.java
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: L.T. Jayawardhana (IT23156760)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
+// Description: Prosumer energy slot booking activity implementing 7-day advance booking window validation and dynamic capacity check.
+// References & Citations:
+//   - Android DatePicker & TimePicker Dialog Widgets:
+//     https://developer.android.com/reference/android/app/DatePickerDialog
+//   - Square Retrofit 2 HTTP Network API Client:
+//     https://square.github.io/retrofit/
+// ============================================================================
+
 package com.ead.solarmicrogrid.ui.prosumer;
 
 import android.app.DatePickerDialog;

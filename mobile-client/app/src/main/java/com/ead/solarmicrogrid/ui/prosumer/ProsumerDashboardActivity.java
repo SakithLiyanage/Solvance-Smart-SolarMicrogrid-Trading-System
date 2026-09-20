@@ -1,3 +1,18 @@
+// ============================================================================
+// File: ProsumerDashboardActivity.java
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Authors: M.L. Booso (IT23452916) & G.L.S. Chanlaka (IT23151260)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
+// Description: Central prosumer dashboard with live energy metrics, bookings list, filter chips, and executive account bottom sheet.
+// References & Citations:
+//   - Material Design 3 BottomSheetDialog & Cards:
+//     https://material.io/components/bottom-sheets/android
+//   - Android SwipeRefreshLayout & RecyclerView:
+//     https://developer.android.com/develop/ui/views/touch-and-input/swipe/add-swipe-interface
+//   - Android SQLite Database Session & Cache:
+//     https://developer.android.com/training/data-storage/sqlite
+// ============================================================================
+
 package com.ead.solarmicrogrid.ui.prosumer;
 
 import android.content.Intent;
@@ -8,6 +23,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -26,6 +42,7 @@ import com.ead.solarmicrogrid.data.models.EnergyReservation;
 import com.ead.solarmicrogrid.data.models.User;
 import com.ead.solarmicrogrid.data.remote.ApiClient;
 import com.ead.solarmicrogrid.ui.auth.LoginActivity;
+import com.ead.solarmicrogrid.util.ThemeManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +59,8 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
     private TextView tvWelcomeName, tvNicBadge;
     private TextView tvTotalKwhTraded, tvActiveCount, tvPendingCount, tvCompletedCount;
     private LinearLayout btnBookSlot, btnOpenMaps, btnActivePass, btnGridPolicy;
-    private ImageButton btnSyncLive, btnDeactivateAccount, btnLogout;
+    private ImageButton btnSyncLive, btnThemeToggle;
+    private View btnEditProfile, btnDeactivateAccount, btnLogout;
 
     // Filter Chips
     private TextView chipFilterAll, chipFilterActive, chipFilterPending, chipFilterCompleted, chipFilterCancelled;
@@ -102,7 +120,9 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
         btnActivePass = findViewById(R.id.btnActivePass);
         btnGridPolicy = findViewById(R.id.btnGridPolicy);
 
+        btnThemeToggle = findViewById(R.id.btnThemeToggle);
         btnSyncLive = findViewById(R.id.btnSyncLive);
+        btnEditProfile = findViewById(R.id.btnEditProfile);
         btnDeactivateAccount = findViewById(R.id.btnDeactivateAccount);
         btnLogout = findViewById(R.id.btnLogout);
 
@@ -121,8 +141,18 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
         tvEmptyMessage = findViewById(R.id.tvEmptyMessage);
         btnEmptyBook = findViewById(R.id.btnEmptyBook);
 
-        tvWelcomeName.setText("Welcome, " + currentUser.getFullName());
+        tvWelcomeName.setText(currentUser.getFullName());
         tvNicBadge.setText("NIC: " + currentUser.getNic());
+
+        TextView tvInitials = findViewById(R.id.tvProsumerInitials);
+        if (tvInitials != null) {
+            String name = currentUser.getFullName() != null ? currentUser.getFullName().trim() : "SP";
+            String[] parts = name.split("\\s+");
+            String initials = parts.length >= 2 
+                    ? ("" + parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase() 
+                    : ("" + name.charAt(0)).toUpperCase();
+            tvInitials.setText(initials);
+        }
 
         rvReservations.setLayoutManager(new LinearLayoutManager(this));
         adapter = new ReservationAdapter(this, new ArrayList<>());
@@ -130,9 +160,18 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
+        if (btnThemeToggle != null) {
+            btnThemeToggle.setImageResource(ThemeManager.isDarkMode(this) ? R.drawable.ic_sun : R.drawable.ic_moon);
+            btnThemeToggle.setOnClickListener(v -> ThemeManager.toggleTheme(this));
+        }
+
         swipeRefresh.setOnRefreshListener(this::refreshLiveData);
 
         btnSyncLive.setOnClickListener(v -> refreshLiveData());
+
+        if (btnEditProfile != null) {
+            btnEditProfile.setOnClickListener(v -> showEditProfileDialog());
+        }
 
         btnBookSlot.setOnClickListener(v -> openBookSlot());
 
@@ -155,6 +194,11 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
         });
 
         btnDeactivateAccount.setOnClickListener(v -> confirmDeactivateAccount());
+
+        View avatarContainer = findViewById(R.id.layoutAvatarContainer);
+        if (avatarContainer != null) {
+            avatarContainer.setOnClickListener(v -> showAccountBottomSheet());
+        }
 
         // Setup filter chips
         chipFilterAll.setOnClickListener(v -> setFilter("ALL"));
@@ -289,6 +333,23 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
                 Toast.makeText(ProsumerDashboardActivity.this, "Offline mode: Showing cached energy bookings.", Toast.LENGTH_SHORT).show();
             }
         });
+
+        // Also fetch live aggregated dashboard metrics
+        ApiClient.getService(this).getDashboardStats(currentUser.getNic()).enqueue(new Callback<AuthDtos.DashboardStats>() {
+            @Override
+            public void onResponse(Call<AuthDtos.DashboardStats> call, Response<AuthDtos.DashboardStats> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    AuthDtos.DashboardStats stats = response.body();
+                    tvActiveCount.setText(String.valueOf(stats.approvedFutureBookingsCount));
+                    tvPendingCount.setText(String.valueOf(stats.pendingBookingsCount));
+                }
+            }
+
+            @Override
+            public void onFailure(Call<AuthDtos.DashboardStats> call, Throwable t) {
+                // Keep local calculations on failure
+            }
+        });
     }
 
     private void calculateHeroMetrics() {
@@ -392,5 +453,173 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    private void showEditProfileDialog() {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(50, 40, 50, 20);
+
+        TextView tvNameLabel = new TextView(this);
+        tvNameLabel.setText("Full Name:");
+        tvNameLabel.setTextSize(13);
+        tvNameLabel.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+        layout.addView(tvNameLabel);
+
+        final EditText etName = new EditText(this);
+        etName.setText(currentUser.getFullName());
+        etName.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+        layout.addView(etName);
+
+        TextView tvEmailLabel = new TextView(this);
+        tvEmailLabel.setText("\nEmail Address:");
+        tvEmailLabel.setTextSize(13);
+        tvEmailLabel.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+        layout.addView(tvEmailLabel);
+
+        final EditText etEmail = new EditText(this);
+        etEmail.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        etEmail.setText(currentUser.getEmail());
+        etEmail.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+        layout.addView(etEmail);
+
+        TextView tvPhoneLabel = new TextView(this);
+        tvPhoneLabel.setText("\nPhone Number:");
+        tvPhoneLabel.setTextSize(13);
+        tvPhoneLabel.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+        layout.addView(tvPhoneLabel);
+
+        final EditText etPhone = new EditText(this);
+        etPhone.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
+        etPhone.setText(currentUser.getPhone());
+        etPhone.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+        layout.addView(etPhone);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Edit Contact Profile")
+                .setMessage("Update your prosumer contact details stored in the central microgrid database.")
+                .setView(layout)
+                .setPositiveButton("Save Profile", (dialog, which) -> {
+                    String name = etName.getText().toString().trim();
+                    String email = etEmail.getText().toString().trim();
+                    String phone = etPhone.getText().toString().trim();
+
+                    if (name.isEmpty() || email.isEmpty()) {
+                        Toast.makeText(this, "Full name and email are required.", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    executeEditProfile(name, email, phone);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void executeEditProfile(String name, String email, String phone) {
+        AuthDtos.UpdateProfileRequest request = new AuthDtos.UpdateProfileRequest(name, email, phone);
+        ApiClient.getService(this).updateProfile(request).enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                if (response.isSuccessful()) {
+                    currentUser.setFullName(name);
+                    currentUser.setEmail(email);
+                    currentUser.setPhone(phone);
+                    dbHelper.updateUserProfile(currentUser.getNic(), name, email, phone);
+
+                    tvWelcomeName.setText(name);
+                    TextView tvInitials = findViewById(R.id.tvProsumerInitials);
+                    if (tvInitials != null) {
+                        String[] parts = name.split("\\s+");
+                        String initials = parts.length >= 2 
+                                ? ("" + parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase() 
+                                : ("" + name.charAt(0)).toUpperCase();
+                        tvInitials.setText(initials);
+                    }
+
+                    Toast.makeText(ProsumerDashboardActivity.this, "Profile updated successfully!", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(ProsumerDashboardActivity.this, "Failed to update profile on central server.", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                Toast.makeText(ProsumerDashboardActivity.this, "Network error updating profile: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showAccountBottomSheet() {
+        com.google.android.material.bottomsheet.BottomSheetDialog sheetDialog = 
+                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        View sheetView = getLayoutInflater().inflate(R.layout.bottom_sheet_prosumer_account, null);
+        sheetDialog.setContentView(sheetView);
+
+        TextView tvSheetInitials = sheetView.findViewById(R.id.tvSheetInitials);
+        TextView tvSheetFullName = sheetView.findViewById(R.id.tvSheetFullName);
+        TextView tvSheetNic = sheetView.findViewById(R.id.tvSheetNic);
+        ImageView ivSheetThemeIcon = sheetView.findViewById(R.id.ivSheetThemeIcon);
+
+        if (currentUser != null) {
+            String name = currentUser.getFullName() != null ? currentUser.getFullName().trim() : "Prosumer";
+            tvSheetFullName.setText(name);
+            tvSheetNic.setText("NIC: " + currentUser.getNic());
+
+            String[] parts = name.split("\\s+");
+            String initials = parts.length >= 2 
+                    ? ("" + parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase() 
+                    : ("" + name.charAt(0)).toUpperCase();
+            if (tvSheetInitials != null) {
+                tvSheetInitials.setText(initials);
+            }
+        }
+
+        if (ivSheetThemeIcon != null) {
+            ivSheetThemeIcon.setImageResource(ThemeManager.isDarkMode(this) ? R.drawable.ic_sun : R.drawable.ic_moon);
+        }
+
+        View itemEdit = sheetView.findViewById(R.id.sheetItemEditProfile);
+        if (itemEdit != null) {
+            itemEdit.setOnClickListener(v -> {
+                sheetDialog.dismiss();
+                showEditProfileDialog();
+            });
+        }
+
+        View itemTheme = sheetView.findViewById(R.id.sheetItemThemeToggle);
+        if (itemTheme != null) {
+            itemTheme.setOnClickListener(v -> {
+                sheetDialog.dismiss();
+                ThemeManager.toggleTheme(this);
+            });
+        }
+
+        View itemSync = sheetView.findViewById(R.id.sheetItemSyncLive);
+        if (itemSync != null) {
+            itemSync.setOnClickListener(v -> {
+                sheetDialog.dismiss();
+                refreshLiveData();
+            });
+        }
+
+        View itemDeactivate = sheetView.findViewById(R.id.sheetItemDeactivate);
+        if (itemDeactivate != null) {
+            itemDeactivate.setOnClickListener(v -> {
+                sheetDialog.dismiss();
+                confirmDeactivateAccount();
+            });
+        }
+
+        View itemLogout = sheetView.findViewById(R.id.sheetItemLogout);
+        if (itemLogout != null) {
+            itemLogout.setOnClickListener(v -> {
+                sheetDialog.dismiss();
+                dbHelper.clearSession();
+                startActivity(new Intent(ProsumerDashboardActivity.this, LoginActivity.class));
+                overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
+                finish();
+            });
+        }
+
+        sheetDialog.show();
     }
 }

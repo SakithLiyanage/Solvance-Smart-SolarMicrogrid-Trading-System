@@ -1,3 +1,18 @@
+// ============================================================================
+// File: Login.jsx
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: M.L. Booso (IT23452916)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
+// Description: Multi-role authentication portal for Backoffice Administrators and Grid Operators.
+// References & Citations:
+//   - React 18 Hooks & Form State (useState):
+//     https://react.dev/reference/react/useState
+//   - Lucide React Iconography:
+//     https://lucide.dev/
+//   - Axios HTTP Client (Interceptors & Token injection):
+//     https://axios-http.com/docs/intro
+// ============================================================================
+
 import React, { useState } from 'react';
 import { 
   Shield, Zap, AlertCircle, ArrowRight, Sun, Moon, 
@@ -5,7 +20,7 @@ import {
 } from 'lucide-react';
 import api from '../api/client';
 
-export default function Login({ onLoginSuccess, theme, onToggleTheme }) {
+export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHome }) {
   const [usernameOrNic, setUsernameOrNic] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -58,8 +73,17 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme }) {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden select-none transition-colors duration-300">
       
-      {/* Floating Theme Toggle (Light Mode / Dark Mode) */}
-      <div className="absolute top-6 right-6 z-20">
+      {/* Floating Top Controls: Return to Landing and Theme Toggle */}
+      <div className="absolute top-6 left-6 right-6 z-20 flex items-center justify-between">
+        {onBackToHome ? (
+          <button
+            onClick={onBackToHome}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 shadow-md transition active:scale-95 cursor-pointer text-xs font-bold hover:text-amber-500"
+          >
+            <span>&larr; Public Network Portal</span>
+          </button>
+        ) : <div />}
+
         <button
           onClick={onToggleTheme}
           title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}

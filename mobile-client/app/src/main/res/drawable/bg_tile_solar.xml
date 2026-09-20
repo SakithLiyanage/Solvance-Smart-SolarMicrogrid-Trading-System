@@ -1,16 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
-    android:color="#33F59E0B">
+    android:color="@color/primary_glow">
     <item>
         <shape android:shape="rectangle">
+            <corners android:radius="16dp" />
             <gradient
                 android:angle="135"
-                android:startColor="#26210E"
-                android:endColor="#151C2C" />
-            <corners android:radius="18dp" />
+                android:startColor="@color/tile_solar_start"
+                android:endColor="@color/tile_solar_end" />
             <stroke
-                android:width="1.2dp"
-                android:color="#4DF59E0B" />
+                android:width="1dp"
+                android:color="@color/primary" />
+            <padding
+                android:left="14dp"
+                android:top="14dp"
+                android:right="14dp"
+                android:bottom="14dp" />
         </shape>
     </item>
 </ripple>

@@ -15,7 +15,18 @@ import java.util.List;
 
 /**
  * Pure SQLite Database Helper for local persistence on Android.
- * Per specification: Stores user login session, cached station coordinates, and offline booking data.
+ * Authors:
+ *   - M.L. Booso (IT23452916) - User Session & Auth Store
+ *   - G.L.S. Chanlaka (IT23151260) - Station & Geolocation Cache
+ *   - L.T. Jayawardhana (IT23156760) - Offline Reservation Store
+ *   - H.N. Madubashini (IT23192300) - Operator Sync Cache
+ * Module: SE4040 - Enterprise Application Development (SLIIT)
+ *
+ * References & Technical Citations:
+ * - Android SQLiteOpenHelper & Database Architecture:
+ *   https://developer.android.com/reference/android/database/sqlite/SQLiteOpenHelper
+ * - Cache-Aside Architectural Pattern:
+ *   https://learn.microsoft.com/en-us/azure/architecture/patterns/cache-aside
  */
 public class DatabaseHelper extends SQLiteOpenHelper {
 
@@ -156,6 +167,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public void clearSession() {
         SQLiteDatabase db = this.getWritableDatabase();
         db.delete(TABLE_USER, null, null);
+    }
+
+    public void updateUserProfile(String nic, String fullName, String email, String phone) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COL_NAME, fullName);
+        values.put(COL_EMAIL, email);
+        values.put(COL_PHONE, phone);
+        db.update(TABLE_USER, values, COL_NIC + " = ?", new String[]{nic});
     }
 
     // --- CACHED STATIONS OPERATIONS ---

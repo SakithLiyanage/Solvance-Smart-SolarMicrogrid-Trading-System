@@ -1,8 +1,14 @@
 // ============================================================================
 // File: UserService.cs
-// Project: Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: M.L. Booso (IT23452916)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Implements user authentication, JWT generation, and account role verification.
+// References & Citations:
+//   - System.IdentityModel.Tokens.Jwt (Microsoft JSON Web Token Handler):
+//     https://learn.microsoft.com/en-us/dotnet/api/system.identitymodel.tokens.jwt
+//   - BCrypt.Net Cryptographic Password Hashing:
+//     https://github.com/BcryptNet/bcrypt.net
 // ============================================================================
 
 using System.IdentityModel.Tokens.Jwt;

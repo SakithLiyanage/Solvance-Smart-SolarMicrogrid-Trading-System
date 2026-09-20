@@ -1,3 +1,18 @@
+// ============================================================================
+// File: StationsMapActivity.java
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: G.L.S. Chanlaka (IT23151260)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
+// Description: Microgrid station geolocation interface featuring live Google Maps vector tiles, GPS clustering, and station telemetry cards.
+// References & Citations:
+//   - Google Play Services Maps SDK for Android:
+//     https://developers.google.com/maps/documentation/android-sdk
+//   - OpenStreetMap Android (osmdroid) Fallback Integration:
+//     https://github.com/osmdroid/osmdroid
+//   - Android Runtime Permissions & Location Manager:
+//     https://developer.android.com/training/permissions/requesting
+// ============================================================================
+
 package com.ead.solarmicrogrid.ui.prosumer;
 
 import android.os.Bundle;
@@ -41,8 +56,16 @@ import retrofit2.Response;
 
 /**
  * Interactive Solar Microgrid Nodes Map.
- * Integrates Google Maps API (SupportMapFragment) satisfying SE4040 specification,
- * with hybrid OpenStreetMap engine support for offline/free tile browsing.
+ * Author: G.L.S. Chanlaka (IT23151260)
+ * Module: SE4040 - Enterprise Application Development (SLIIT)
+ *
+ * References & Third-Party SDKs:
+ * - Google Play Services Maps SDK (com.google.android.gms.maps):
+ *   https://developers.google.com/maps/documentation/android-sdk
+ * - Android SupportMapFragment & GoogleMap API:
+ *   https://developers.google.com/android/reference/com/google/android/gms/maps/SupportMapFragment
+ * - OpenStreetMap Android (org.osmdroid):
+ *   https://github.com/osmdroid/osmdroid
  */
 public class StationsMapActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 

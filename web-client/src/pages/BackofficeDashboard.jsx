@@ -1,3 +1,18 @@
+// ============================================================================
+// File: BackofficeDashboard.jsx
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: L.T. Jayawardhana (IT23156760)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
+// Description: Backoffice executive console displaying system-wide microgrid KPI telemetry and pending reservation management.
+// References & Citations:
+//   - React 18 Lifecycle & Asynchronous State Synchronization:
+//     https://react.dev/
+//   - Tailwind CSS Grid Layout & KPI Stat Cards:
+//     https://tailwindcss.com/
+//   - Lucide React Iconography:
+//     https://lucide.dev/
+// ============================================================================
+
 import React, { useState, useEffect } from 'react';
 import { 
   Cpu, Users, CalendarCheck, Clock, CheckCircle2, AlertTriangle, 
