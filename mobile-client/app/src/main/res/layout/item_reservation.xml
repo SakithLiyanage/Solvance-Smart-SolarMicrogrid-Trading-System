@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="4dp"
+    app:cardBackgroundColor="@color/surface_card"
+    app:strokeColor="@color/card_border"
+    app:strokeWidth="1.2dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <!-- Left Visual Trade Type Strip Indicator -->
+        <View
+            android:id="@+id/viewTradeIndicator"
+            android:layout_width="5dp"
+            android:layout_height="match_parent"
+            android:background="@color/primary" />
+
+        <!-- Card Main Content -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Top Header: Res Code + Trade Pill + Status Badge -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_alignParentStart="true"
+                    android:layout_toStartOf="@+id/tvStatusBadge"
+                    android:layout_marginEnd="8dp">
+
+                    <TextView
+                        android:id="@+id/tvResNumber"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="RES-12345678"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:fontFamily="monospace"
+                        android:letterSpacing="0.04" />
+
+                    <!-- Trade Pill (DropOff / Charging) -->
+                    <TextView
+                        android:id="@+id/tvTradePill"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="DropOff (Sell)"
+                        android:textColor="@color/primary"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/bg_pill_chip"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="2dp"
+                        android:layout_marginStart="8dp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvStatusBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Approved"
+                    android:textColor="@color/badge_approved_text"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/bg_badge_approved"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="4dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true" />
+            </RelativeLayout>
+
+            <!-- Station Info with Icon -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="6dp">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_map_pin"
+                    app:tint="@color/text_secondary"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/tvStationName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Colombo Central Solar Hub"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:singleLine="true"
+                    android:ellipsize="end" />
+            </LinearLayout>
+
+            <!-- Appointment Time with Icon -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <ImageView
+                    android:layout_width="15dp"
+                    android:layout_height="15dp"
+                    android:src="@drawable/ic_clock"
+                    app:tint="@color/text_muted"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/tvScheduleTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2026-09-14 10:00"
+                    android:textColor="@color/text_muted"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Sleek Subtle Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#1E2A42"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Bottom Row: Energy Spec & Action Prompt -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="bottom"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true">
+
+                    <ImageView
+                        android:id="@+id/ivEnergyIcon"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:src="@drawable/ic_zap"
+                        app:tint="@color/primary"
+                        android:layout_marginEnd="6dp"
+                        android:layout_marginBottom="2dp" />
+
+                    <TextView
+                        android:id="@+id/tvEnergyAmount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="15.0"
+                        android:textColor="@color/text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvEnergyUnit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=" kWh"
+                        android:textColor="@color/primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="1dp" />
+                </LinearLayout>
+
+                <!-- Digital Pass CTA pill -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:background="@drawable/bg_pill_chip"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="5dp">
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:src="@drawable/ic_qr_code"
+                        app:tint="@color/accent"
+                        android:layout_marginEnd="5dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Digital Pass"
+                        android:textColor="@color/accent"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <ImageView
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:src="@drawable/ic_arrow_right"
+                        app:tint="@color/accent"
+                        android:layout_marginStart="4dp" />
+                </LinearLayout>
+            </RelativeLayout>
+
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>
