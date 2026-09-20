@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Solvance</string>
+    <string name="title_activity_login">Sign In</string>
+    <string name="title_activity_register">Prosumer Registration</string>
+    <string name="title_activity_dashboard">Prosumer Dashboard</string>
+    <string name="title_activity_create_reservation">Book Energy Slot</string>
+    <string name="title_activity_reservation_detail">Reservation Details</string>
+    <string name="title_activity_stations_map">Nearby Solar Hubs</string>
+    <string name="title_activity_operator_scanner">Grid Operator Scanner</string>
+    <!-- Google Maps API Key for Google Play Services Maps SDK -->
+    <string name="google_maps_key" translatable="false">AIzaSySolvanceSmartMicrogridTradingSystem2026EAD</string>
+</resources>

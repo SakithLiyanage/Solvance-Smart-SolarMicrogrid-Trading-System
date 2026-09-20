@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_dark">
+
+    <!-- Google Maps Official SupportMapFragment Container -->
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/googleMapFragment"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- OpenStreetMap Secondary/Offline Tile Layer -->
+    <org.osmdroid.views.MapView
+        android:id="@+id/osmMapView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <!-- Top floating bar -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_margin="14dp"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="6dp"
+        app:cardBackgroundColor="@color/surface_card"
+        app:strokeColor="@color/card_border"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:gravity="center_vertical">
+
+            <View
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:background="@drawable/bg_status_live"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/tvMapTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Google Maps API"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSwitchEngine"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="OSM Tile"
+                app:icon="@drawable/ic_zap"
+                app:iconTint="@color/text_primary"
+                app:iconSize="14dp"
+                android:textAllCaps="false"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:backgroundTint="@color/surface_card"
+                android:textColor="@color/text_primary"
+                app:strokeColor="@color/card_border"
+                app:strokeWidth="1dp"
+                app:cornerRadius="12dp"
+                android:layout_marginEnd="6dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCloseMap"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Back"
+                app:icon="@drawable/ic_arrow_left"
+                app:iconTint="@color/background_dark"
+                app:iconGravity="textStart"
+                app:iconSize="15dp"
+                android:textAllCaps="false"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:backgroundTint="@color/primary"
+                android:textColor="@color/background_dark"
+                app:cornerRadius="12dp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Bottom station details card -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardStationDetails"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_margin="16dp"
+        app:cardCornerRadius="22dp"
+        app:cardElevation="8dp"
+        app:cardBackgroundColor="@color/surface_card"
+        app:strokeColor="@color/primary"
+        app:strokeWidth="1.5dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:id="@+id/tvMapStationName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Colombo Central Solar Hub"
+                android:textColor="@color/text_primary"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvMapStationAddress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No. 45, Galle Road, Colombo"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="12dp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#1E2E4A"
+                android:layout_marginBottom="12dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tvMapCapacity"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Capacity: 500 kWh"
+                    android:textColor="@color/primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:drawableStart="@drawable/ic_zap"
+                    android:drawableTint="@color/primary"
+                    android:drawablePadding="6dp"
+                    android:gravity="center_vertical" />
+
+                <TextView
+                    android:id="@+id/tvMapBatterySlots"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="14/20 Battery Slots Free"
+                    android:textColor="@color/accent"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:drawableStart="@drawable/ic_battery_charging"
+                    android:drawableTint="@color/accent"
+                    android:drawablePadding="6dp"
+                    android:gravity="center_vertical" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnNavigateMaps"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="14dp"
+                android:text="Turn-by-Turn Navigation"
+                app:icon="@drawable/ic_navigation"
+                app:iconTint="@color/background_dark"
+                app:iconGravity="textStart"
+                app:iconSize="18dp"
+                android:textAllCaps="false"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:backgroundTint="@color/accent"
+                android:textColor="@color/background_dark"
+                app:cornerRadius="14dp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+</RelativeLayout>
