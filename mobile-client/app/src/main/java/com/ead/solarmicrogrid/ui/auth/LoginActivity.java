@@ -1,0 +1,218 @@
+package com.ead.solarmicrogrid.ui.auth;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.ead.solarmicrogrid.R;
+import com.ead.solarmicrogrid.data.local.DatabaseHelper;
+import com.ead.solarmicrogrid.data.models.AuthDtos;
+import com.ead.solarmicrogrid.data.models.User;
+import com.ead.solarmicrogrid.data.remote.ApiClient;
+import com.ead.solarmicrogrid.ui.operator.OperatorScannerActivity;
+import com.ead.solarmicrogrid.ui.prosumer.ProsumerDashboardActivity;
+import com.google.android.material.textfield.TextInputEditText;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
+public class LoginActivity extends AppCompatActivity {
+
+    private TextInputEditText etUsername, etPassword;
+    private Button btnLogin, btnQuickProsumer, btnQuickOperator;
+    private TextView tvRegister, tvServerConfig;
+    private ProgressBar progressBar;
+    private DatabaseHelper dbHelper;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_login);
+
+        dbHelper = new DatabaseHelper(this);
+
+        String autoUser = getIntent().getStringExtra("autoUser");
+        String autoPass = getIntent().getStringExtra("autoPass");
+
+        // Check if user already logged in locally in SQLite
+        User existingUser = dbHelper.getLoggedInUser();
+        if (autoUser == null && existingUser != null && !dbHelper.getAuthToken().isEmpty()) {
+            navigateForRole(existingUser.getRole());
+            return;
+        }
+
+        initViews();
+        setupListeners();
+        updateServerBadge();
+
+        if (autoUser != null && autoPass != null) {
+            dbHelper.clearSession();
+            etUsername.setText(autoUser);
+            etPassword.setText(autoPass);
+            performLogin();
+        }
+    }
+
+    private void initViews() {
+        etUsername = findViewById(R.id.etUsername);
+        etPassword = findViewById(R.id.etPassword);
+        btnLogin = findViewById(R.id.btnLogin);
+        tvRegister = findViewById(R.id.tvRegister);
+        btnQuickProsumer = findViewById(R.id.btnQuickProsumer);
+        btnQuickOperator = findViewById(R.id.btnQuickOperator);
+        tvServerConfig = findViewById(R.id.tvServerConfig);
+        progressBar = findViewById(R.id.progressBar);
+    }
+
+    private void updateServerBadge() {
+        if (tvServerConfig != null) {
+            String currentUrl = ApiClient.getBaseUrl(this);
+            tvServerConfig.setText("Server: " + currentUrl);
+        }
+    }
+
+    private void setupListeners() {
+        btnLogin.setOnClickListener(v -> performLogin());
+
+        tvRegister.setOnClickListener(v -> {
+            startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
+            overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+        });
+
+        btnQuickProsumer.setOnClickListener(v -> {
+            etUsername.setText("200012345678");
+            etPassword.setText("Prosumer@123");
+        });
+
+        btnQuickOperator.setOnClickListener(v -> {
+            etUsername.setText("OPERATOR001");
+            etPassword.setText("Operator@123");
+        });
+
+        if (tvServerConfig != null) {
+            tvServerConfig.setOnClickListener(v -> showServerConfigDialog());
+        }
+    }
+
+    private void showServerConfigDialog() {
+        String[] options = {
+                "USB Cable Reverse (127.0.0.1:5000) [Default USB]",
+                "Wi-Fi LAN (192.168.8.102:5000) [Wireless]",
+                "Android Emulator (10.0.2.2:5000)",
+                "Custom URL..."
+        };
+
+        new AlertDialog.Builder(this)
+                .setTitle("Select Server API Endpoint")
+                .setItems(options, (dialog, which) -> {
+                    switch (which) {
+                        case 0:
+                            ApiClient.setBaseUrl(this, "http://127.0.0.1:5000/api/");
+                            updateServerBadge();
+                            Toast.makeText(this, "Switched to USB Reverse (127.0.0.1:5000)", Toast.LENGTH_SHORT).show();
+                            break;
+                        case 1:
+                            ApiClient.setBaseUrl(this, "http://192.168.8.102:5000/api/");
+                            updateServerBadge();
+                            Toast.makeText(this, "Switched to Wi-Fi LAN (192.168.8.102:5000)", Toast.LENGTH_SHORT).show();
+                            break;
+                        case 2:
+                            ApiClient.setBaseUrl(this, "http://10.0.2.2:5000/api/");
+                            updateServerBadge();
+                            Toast.makeText(this, "Switched to Emulator (10.0.2.2:5000)", Toast.LENGTH_SHORT).show();
+                            break;
+                        case 3:
+                            showCustomUrlDialog();
+                            break;
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showCustomUrlDialog() {
+        final EditText input = new EditText(this);
+        input.setText(ApiClient.getBaseUrl(this));
+        input.setPadding(32, 24, 32, 24);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Enter Custom Web API URL")
+                .setView(input)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String url = input.getText().toString().trim();
+                    if (!url.isEmpty()) {
+                        ApiClient.setBaseUrl(this, url);
+                        updateServerBadge();
+                        Toast.makeText(this, "Server updated to: " + url, Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void performLogin() {
+        String username = etUsername.getText() != null ? etUsername.getText().toString().trim() : "";
+        String password = etPassword.getText() != null ? etPassword.getText().toString().trim() : "";
+
+        if (username.isEmpty() || password.isEmpty()) {
+            Toast.makeText(this, "Please enter your National ID / Email and password.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        progressBar.setVisibility(View.VISIBLE);
+        btnLogin.setEnabled(false);
+
+        AuthDtos.LoginRequest request = new AuthDtos.LoginRequest(username, password);
+        ApiClient.getService(this).login(request).enqueue(new Callback<AuthDtos.AuthResponse>() {
+            @Override
+            public void onResponse(Call<AuthDtos.AuthResponse> call, Response<AuthDtos.AuthResponse> response) {
+                progressBar.setVisibility(View.GONE);
+                btnLogin.setEnabled(true);
+
+                if (response.isSuccessful() && response.body() != null) {
+                    AuthDtos.AuthResponse authData = response.body();
+
+                    // Save session to local SQLite database
+                    User user = new User(authData.nic, authData.fullName, authData.email, "", authData.role, authData.status);
+                    dbHelper.saveUserSession(user, authData.token);
+
+                    Toast.makeText(LoginActivity.this, "Welcome " + authData.fullName, Toast.LENGTH_SHORT).show();
+                    navigateForRole(authData.role);
+                } else {
+                    Toast.makeText(LoginActivity.this, "Authentication failed. Invalid credentials or pending approval.", Toast.LENGTH_LONG).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<AuthDtos.AuthResponse> call, Throwable t) {
+                progressBar.setVisibility(View.GONE);
+                btnLogin.setEnabled(true);
+                String currentEndpoint = ApiClient.getBaseUrl(LoginActivity.this);
+                Toast.makeText(LoginActivity.this, "Unable to reach Web API at: " + currentEndpoint + "\nTap Server at bottom to switch.", Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void navigateForRole(String role) {
+        if ("GridOperator".equalsIgnoreCase(role)) {
+            Intent intent = new Intent(this, OperatorScannerActivity.class);
+            startActivity(intent);
+            overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+            finish();
+        } else {
+            Intent intent = new Intent(this, ProsumerDashboardActivity.class);
+            startActivity(intent);
+            overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+            finish();
+        }
+    }
+}
