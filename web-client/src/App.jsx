@@ -3,7 +3,6 @@ import {
   Shield, Zap, Users, Building2, Calendar, LogOut, 
   Sun, Moon, Activity, Cpu, Sparkles 
 } from 'lucide-react';
-import BrandLogo from './components/BrandLogo';
 import Login from './pages/Login';
 import ProsumerManagement from './pages/ProsumerManagement';
 import StationManagement from './pages/StationManagement';
@@ -87,7 +86,11 @@ export default function App() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center gap-3">
-              <BrandLogo className="h-9 w-auto" showTagline={false} isDark={theme === 'dark'} />
+              <img
+                src={theme === 'dark' ? '/solvance_logo_dark_trans.png' : '/solvance_logo_light_trans.png'}
+                alt="Solvance"
+                className="h-9 w-auto object-contain"
+              />
               <span className="hidden sm:inline-block text-[11px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold">
                 ENTERPRISE CONSOLE
               </span>
