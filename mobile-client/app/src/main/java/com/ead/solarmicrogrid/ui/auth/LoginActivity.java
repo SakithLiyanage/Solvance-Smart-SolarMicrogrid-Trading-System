@@ -207,14 +207,65 @@ public class LoginActivity extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     AuthDtos.AuthResponse authData = response.body();
 
-                    // Save session to local SQLite database
-                    User user = new User(authData.nic, authData.fullName, authData.email, "", authData.role, authData.status);
+                    // Save session to local SQLite database with solar hardware specs
+                    User user = new User(
+                            authData.nic,
+                            authData.fullName,
+                            authData.email,
+                            authData.phone != null ? authData.phone : "",
+                            authData.address != null ? authData.address : "",
+                            authData.role,
+                            authData.status,
+                            authData.solarCapacityKw,
+                            authData.inverterSerial != null ? authData.inverterSerial : ""
+                    );
                     dbHelper.saveUserSession(user, authData.token);
 
                     Toast.makeText(LoginActivity.this, "Welcome " + authData.fullName, Toast.LENGTH_SHORT).show();
                     navigateForRole(authData.role);
                 } else {
-                    Toast.makeText(LoginActivity.this, "Authentication failed. Invalid credentials or pending approval.", Toast.LENGTH_LONG).show();
+                    int statusCode = response.code();
+                    String errorCode = "";
+                    String errorMessage = "Authentication failed. Please verify your credentials.";
+
+                    try {
+                        if (response.errorBody() != null) {
+                            String raw = response.errorBody().string();
+                            org.json.JSONObject obj = new org.json.JSONObject(raw);
+                            if (obj.has("code")) errorCode = obj.getString("code");
+                            if (obj.has("message")) errorMessage = obj.getString("message");
+                        }
+                    } catch (Exception ignored) {}
+
+                    if (statusCode == 403) {
+                        if ("ACCOUNT_PENDING".equalsIgnoreCase(errorCode) || errorMessage.toLowerCase().contains("pending")) {
+                            new AlertDialog.Builder(LoginActivity.this)
+                                    .setTitle("Account Pending KYC Review")
+                                    .setMessage("Your solar prosumer account is currently in 'Pending' status.\n\nPer system specification, a Backoffice administrator must verify and approve your registration before login.")
+                                    .setPositiveButton("Understood", null)
+                                    .show();
+                        } else if ("ACCOUNT_DEACTIVATED".equalsIgnoreCase(errorCode) || errorMessage.toLowerCase().contains("deactivated")) {
+                            new AlertDialog.Builder(LoginActivity.this)
+                                    .setTitle("Account Deactivated")
+                                    .setMessage("Your account has been deactivated.\n\nPer Microgrid security policy, deactivated accounts can ONLY be reactivated by a Backoffice officer.")
+                                    .setPositiveButton("Contact Support", null)
+                                    .show();
+                        } else {
+                            new AlertDialog.Builder(LoginActivity.this)
+                                    .setTitle("Access Forbidden")
+                                    .setMessage(errorMessage)
+                                    .setPositiveButton("OK", null)
+                                    .show();
+                        }
+                    } else if (statusCode == 423 || "ACCOUNT_LOCKED".equalsIgnoreCase(errorCode)) {
+                        new AlertDialog.Builder(LoginActivity.this)
+                                .setTitle("Account Locked Out")
+                                .setMessage(errorMessage + "\n\nPlease wait before attempting to sign in again.")
+                                .setPositiveButton("OK", null)
+                                .show();
+                    } else {
+                        Toast.makeText(LoginActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+                    }
                 }
             }
 

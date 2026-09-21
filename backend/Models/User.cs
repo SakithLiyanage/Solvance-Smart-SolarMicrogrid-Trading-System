@@ -22,10 +22,13 @@ namespace SolarMicrogridApi.Models
         public string? Id { get; set; }
 
         /// <summary>
-        /// National Identity Card number. Acts as natural key for prosumers.
+        /// National Identity Card number or staff identifier. Acts as natural key.
         /// </summary>
         [BsonElement("nic")]
         public string Nic { get; set; } = string.Empty;
+
+        [BsonElement("username")]
+        public string Username { get; set; } = string.Empty;
 
         [BsonElement("fullName")]
         public string FullName { get; set; } = string.Empty;
@@ -35,6 +38,9 @@ namespace SolarMicrogridApi.Models
 
         [BsonElement("phone")]
         public string Phone { get; set; } = string.Empty;
+
+        [BsonElement("address")]
+        public string Address { get; set; } = string.Empty;
 
         [BsonElement("passwordHash")]
         public string PasswordHash { get; set; } = string.Empty;
@@ -51,6 +57,33 @@ namespace SolarMicrogridApi.Models
         [BsonElement("status")]
         public string Status { get; set; } = "Pending";
 
+        /// <summary>
+        /// Solar array specs for prosumers (capacity in kW).
+        /// </summary>
+        [BsonElement("solarCapacityKw")]
+        public double SolarCapacityKw { get; set; } = 0.0;
+
+        /// <summary>
+        /// Solar inverter hardware serial number.
+        /// </summary>
+        [BsonElement("inverterSerial")]
+        public string InverterSerial { get; set; } = string.Empty;
+
+        [BsonElement("registeredAt")]
+        public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
+
+        [BsonElement("activatedAt")]
+        public DateTime? ActivatedAt { get; set; }
+
+        [BsonElement("approvedBy")]
+        public string? ApprovedBy { get; set; }
+
+        [BsonElement("failedLoginAttempts")]
+        public int FailedLoginAttempts { get; set; } = 0;
+
+        [BsonElement("lockoutEnd")]
+        public DateTime? LockoutEnd { get; set; }
+
         [BsonElement("createdAt")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
@@ -63,6 +96,7 @@ namespace SolarMicrogridApi.Models
         public User()
         {
             // Method: User Constructor - Initializes default UTC timestamps for user record.
+            RegisteredAt = DateTime.UtcNow;
             CreatedAt = DateTime.UtcNow;
             UpdatedAt = DateTime.UtcNow;
         }

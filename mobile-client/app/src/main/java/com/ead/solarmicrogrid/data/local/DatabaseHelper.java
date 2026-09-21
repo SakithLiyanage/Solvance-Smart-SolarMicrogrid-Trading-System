@@ -31,7 +31,7 @@ import java.util.List;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "SolarMicrogridLocal.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
 
     // Table: User Session
     private static final String TABLE_USER = "user_session";
@@ -39,8 +39,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String COL_NAME = "full_name";
     private static final String COL_EMAIL = "email";
     private static final String COL_PHONE = "phone";
+    private static final String COL_ADDRESS = "address";
     private static final String COL_ROLE = "role";
     private static final String COL_STATUS = "status";
+    private static final String COL_SOLAR_CAPACITY = "solar_capacity";
+    private static final String COL_INVERTER_SERIAL = "inverter_serial";
     private static final String COL_TOKEN = "jwt_token";
 
     // Table: Cached Stations
@@ -50,7 +53,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String COL_STATION_NAME = "name";
     private static final String COL_LATITUDE = "latitude";
     private static final String COL_LONGITUDE = "longitude";
-    private static final String COL_ADDRESS = "address";
+    private static final String COL_STATION_ADDRESS = "address";
     private static final String COL_CAPACITY = "capacity_kwh";
     private static final String COL_TOTAL_SLOTS = "total_slots";
     private static final String COL_AVAILABLE_SLOTS = "available_slots";
@@ -79,8 +82,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COL_NAME + " TEXT, " +
                 COL_EMAIL + " TEXT, " +
                 COL_PHONE + " TEXT, " +
+                COL_ADDRESS + " TEXT, " +
                 COL_ROLE + " TEXT, " +
                 COL_STATUS + " TEXT, " +
+                COL_SOLAR_CAPACITY + " REAL, " +
+                COL_INVERTER_SERIAL + " TEXT, " +
                 COL_TOKEN + " TEXT)");
 
         // Create cached stations table
@@ -90,7 +96,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COL_STATION_NAME + " TEXT, " +
                 COL_LATITUDE + " REAL, " +
                 COL_LONGITUDE + " REAL, " +
-                COL_ADDRESS + " TEXT, " +
+                COL_STATION_ADDRESS + " TEXT, " +
                 COL_CAPACITY + " REAL, " +
                 COL_TOTAL_SLOTS + " INTEGER, " +
                 COL_AVAILABLE_SLOTS + " INTEGER)");
@@ -127,8 +133,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COL_NAME, user.getFullName());
         values.put(COL_EMAIL, user.getEmail());
         values.put(COL_PHONE, user.getPhone());
+        values.put(COL_ADDRESS, user.getAddress());
         values.put(COL_ROLE, user.getRole());
         values.put(COL_STATUS, user.getStatus());
+        values.put(COL_SOLAR_CAPACITY, user.getSolarCapacityKw());
+        values.put(COL_INVERTER_SERIAL, user.getInverterSerial());
         values.put(COL_TOKEN, token);
 
         db.insert(TABLE_USER, null, values);
@@ -143,8 +152,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             user.setFullName(cursor.getString(cursor.getColumnIndexOrThrow(COL_NAME)));
             user.setEmail(cursor.getString(cursor.getColumnIndexOrThrow(COL_EMAIL)));
             user.setPhone(cursor.getString(cursor.getColumnIndexOrThrow(COL_PHONE)));
+            user.setAddress(cursor.getString(cursor.getColumnIndexOrThrow(COL_ADDRESS)));
             user.setRole(cursor.getString(cursor.getColumnIndexOrThrow(COL_ROLE)));
             user.setStatus(cursor.getString(cursor.getColumnIndexOrThrow(COL_STATUS)));
+            user.setSolarCapacityKw(cursor.getDouble(cursor.getColumnIndexOrThrow(COL_SOLAR_CAPACITY)));
+            user.setInverterSerial(cursor.getString(cursor.getColumnIndexOrThrow(COL_INVERTER_SERIAL)));
             cursor.close();
             return user;
         }

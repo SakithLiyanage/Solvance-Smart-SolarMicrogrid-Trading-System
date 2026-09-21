@@ -49,10 +49,11 @@ namespace SolarMicrogridApi.Services
 
         public async Task<AuthResponseDto?> AuthenticateAsync(LoginRequestDto request)
         {
-            // Method: AuthenticateAsync - Validates credentials against User's detail and generates JWT token.
+            // Method: AuthenticateAsync - Validates credentials against User's detail, enforces status guards, tracks lockout, and generates JWT.
             var filter = Builders<User>.Filter.Or(
-                Builders<User>.Filter.Eq(u => u.Nic, request.UsernameOrNic),
-                Builders<User>.Filter.Eq(u => u.Email, request.UsernameOrNic)
+                Builders<User>.Filter.Eq(u => u.Nic, request.UsernameOrNic.Trim()),
+                Builders<User>.Filter.Eq(u => u.Username, request.UsernameOrNic.Trim()),
+                Builders<User>.Filter.Eq(u => u.Email, request.UsernameOrNic.Trim().ToLower())
             );
 
             var user = await _context.Users.Find(filter).FirstOrDefaultAsync();
@@ -61,11 +62,60 @@ namespace SolarMicrogridApi.Services
                 return null;
             }
 
+            // Check if account is temporarily locked out
+            if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTime.UtcNow)
+            {
+                var remainingMinutes = Math.Ceiling((user.LockoutEnd.Value - DateTime.UtcNow).TotalMinutes);
+                throw new AccountLockedException($"Account is temporarily locked due to excessive failed attempts. Try again in {remainingMinutes} minutes.", user.LockoutEnd);
+            }
+
             // Verify password using BCrypt
             bool passwordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
             if (!passwordValid)
             {
+                // Increment failed attempts and trigger lockout if limit reached
+                int newAttempts = user.FailedLoginAttempts + 1;
+                DateTime? newLockout = null;
+
+                if (newAttempts >= _securitySettings.MaxFailedLoginAttempts)
+                {
+                    newLockout = DateTime.UtcNow.AddMinutes(_securitySettings.LockoutDurationMinutes);
+                }
+
+                var failedUpdate = Builders<User>.Update
+                    .Set(u => u.FailedLoginAttempts, newAttempts)
+                    .Set(u => u.LockoutEnd, newLockout)
+                    .Set(u => u.UpdatedAt, DateTime.UtcNow);
+
+                await _context.Users.UpdateOneAsync(u => u.Id == user.Id, failedUpdate);
+
+                if (newLockout.HasValue)
+                {
+                    throw new AccountLockedException($"Account locked for {_securitySettings.LockoutDurationMinutes} minutes due to {newAttempts} failed login attempts.", newLockout);
+                }
+
                 return null;
+            }
+
+            // Enforce account status lifecycle guards
+            if (user.Status == "Pending")
+            {
+                throw new AccountPendingException("Your account registration is currently pending Backoffice KYC approval.");
+            }
+
+            if (user.Status == "Deactivated")
+            {
+                throw new AccountDeactivatedException("Your account has been deactivated. Contact Backoffice support for reactivation.");
+            }
+
+            // Reset failed login attempts on successful authentication
+            if (user.FailedLoginAttempts > 0 || user.LockoutEnd != null)
+            {
+                var resetUpdate = Builders<User>.Update
+                    .Set(u => u.FailedLoginAttempts, 0)
+                    .Set(u => u.LockoutEnd, null)
+                    .Set(u => u.UpdatedAt, DateTime.UtcNow);
+                await _context.Users.UpdateOneAsync(u => u.Id == user.Id, resetUpdate);
             }
 
             // Generate JWT Token
@@ -102,14 +152,18 @@ namespace SolarMicrogridApi.Services
                 Nic = user.Nic,
                 FullName = user.FullName,
                 Email = user.Email,
+                Phone = user.Phone,
+                Address = user.Address,
                 Role = user.Role,
-                Status = user.Status
+                Status = user.Status,
+                SolarCapacityKw = user.SolarCapacityKw,
+                InverterSerial = user.InverterSerial
             };
         }
 
         public async Task<User> RegisterProsumerAsync(ProsumerRegisterDto dto)
         {
-            // Method: RegisterProsumerAsync - Creates new Prosumer account with initial "Pending" status requiring Backoffice approval.
+            // Method: RegisterProsumerAsync - Creates new Prosumer account with initial "Pending" status and hardware solar specs.
             var existingUser = await _context.Users.Find(u => u.Nic == dto.Nic || u.Email == dto.Email).FirstOrDefaultAsync();
             if (existingUser != null)
             {
@@ -119,12 +173,17 @@ namespace SolarMicrogridApi.Services
             var prosumer = new User
             {
                 Nic = dto.Nic.Trim().ToUpper(),
+                Username = dto.Nic.Trim().ToUpper(),
                 FullName = dto.FullName.Trim(),
                 Email = dto.Email.Trim().ToLower(),
                 Phone = dto.Phone.Trim(),
+                Address = dto.Address.Trim(),
+                SolarCapacityKw = dto.SolarCapacityKw,
+                InverterSerial = dto.InverterSerial.Trim(),
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
                 Role = "Prosumer",
-                Status = "Pending", // Requires backoffice activation
+                Status = _securitySettings.DefaultProsumerStatus ?? "Pending",
+                RegisteredAt = DateTime.UtcNow,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -145,12 +204,16 @@ namespace SolarMicrogridApi.Services
             var staffUser = new User
             {
                 Nic = dto.Nic.Trim().ToUpper(),
+                Username = dto.Nic.Trim().ToUpper(),
                 FullName = dto.FullName.Trim(),
                 Email = dto.Email.Trim().ToLower(),
                 Phone = dto.Phone.Trim(),
+                Address = dto.Address.Trim(),
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
                 Role = dto.Role == "Backoffice" ? "Backoffice" : "GridOperator",
                 Status = "Active",
+                RegisteredAt = DateTime.UtcNow,
+                ActivatedAt = DateTime.UtcNow,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -185,33 +248,58 @@ namespace SolarMicrogridApi.Services
 
         public async Task<User?> GetUserByNicAsync(string nic)
         {
-            // Method: GetUserByNicAsync - Looks up user profile by National Identity Card number.
-            return await _context.Users.Find(u => u.Nic == nic).FirstOrDefaultAsync();
+            // Method: GetUserByNicAsync - Looks up user profile by National Identity Card number or username.
+            return await _context.Users.Find(u => u.Nic == nic || u.Username == nic).FirstOrDefaultAsync();
         }
 
-        public async Task<bool> UpdateUserStatusAsync(string nic, string newStatus, string operatorRole)
+        public async Task<bool> UpdateUserStatusAsync(string nic, string newStatus, string operatorRole, string? operatorNic = null)
         {
-            // Method: UpdateUserStatusAsync - Updates account status (Activate/Deactivate/Reactivate) enforcing Backoffice rule.
+            // Method: UpdateUserStatusAsync - Updates account status (Activate/Deactivate/Reactivate) enforcing Backoffice rule and audit fields.
             if (operatorRole != "Backoffice")
             {
                 throw new UnauthorizedAccessException("Only Backoffice officers have permission to activate or reactivate accounts.");
             }
 
-            var update = Builders<User>.Update
+            // If deactivating a prosumer, verify no active/pending reservations exist
+            if (newStatus == "Deactivated")
+            {
+                var activeCount = await _context.Reservations.CountDocumentsAsync(r =>
+                    r.ProsumerNic == nic &&
+                    (r.Status == "Pending" || r.Status == "Approved") &&
+                    r.ScheduledDateTime >= DateTime.UtcNow
+                );
+
+                if (activeCount > 0)
+                {
+                    throw new InvalidOperationException($"Cannot deactivate prosumer '{nic}'. User has {activeCount} active or pending energy reservations.");
+                }
+            }
+
+            var updateBuilder = Builders<User>.Update
                 .Set(u => u.Status, newStatus)
                 .Set(u => u.UpdatedAt, DateTime.UtcNow);
 
-            var result = await _context.Users.UpdateOneAsync(u => u.Nic == nic, update);
+            if (newStatus == "Active")
+            {
+                updateBuilder = updateBuilder
+                    .Set(u => u.ActivatedAt, DateTime.UtcNow)
+                    .Set(u => u.ApprovedBy, operatorNic ?? "ADMIN001");
+            }
+
+            var result = await _context.Users.UpdateOneAsync(u => u.Nic == nic, updateBuilder);
             return result.ModifiedCount > 0;
         }
 
         public async Task<bool> UpdateProfileAsync(string nic, UpdateProfileDto dto)
         {
-            // Method: UpdateProfileAsync - Enables users to edit their own contact details.
+            // Method: UpdateProfileAsync - Enables users to edit their own contact and solar capacity details.
             var update = Builders<User>.Update
                 .Set(u => u.FullName, dto.FullName)
                 .Set(u => u.Email, dto.Email)
                 .Set(u => u.Phone, dto.Phone)
+                .Set(u => u.Address, dto.Address)
+                .Set(u => u.SolarCapacityKw, dto.SolarCapacityKw)
+                .Set(u => u.InverterSerial, dto.InverterSerial)
                 .Set(u => u.UpdatedAt, DateTime.UtcNow);
 
             var result = await _context.Users.UpdateOneAsync(u => u.Nic == nic, update);
@@ -220,7 +308,18 @@ namespace SolarMicrogridApi.Services
 
         public async Task<bool> RequestDeactivationAsync(string nic)
         {
-            // Method: RequestDeactivationAsync - Prosumer self-service action to deactivate account. Reactivation requires Backoffice.
+            // Method: RequestDeactivationAsync - Prosumer self-service action to deactivate account with active booking check.
+            var activeCount = await _context.Reservations.CountDocumentsAsync(r =>
+                r.ProsumerNic == nic &&
+                (r.Status == "Pending" || r.Status == "Approved") &&
+                r.ScheduledDateTime >= DateTime.UtcNow
+            );
+
+            if (activeCount > 0)
+            {
+                throw new InvalidOperationException($"Cannot deactivate account. You have {activeCount} active or pending energy reservations. Please cancel bookings first.");
+            }
+
             var update = Builders<User>.Update
                 .Set(u => u.Status, "Deactivated")
                 .Set(u => u.UpdatedAt, DateTime.UtcNow);

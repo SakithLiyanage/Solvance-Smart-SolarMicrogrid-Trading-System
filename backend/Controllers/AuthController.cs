@@ -29,25 +29,56 @@ namespace SolarMicrogridApi.Controllers
             _userService = userService;
         }
 
-        /// <summary>
-        /// Authenticates user and returns JWT token along with role details.
-        /// </summary>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
         {
-            // Method: Login - Validates user credentials and issues signed JWT bearer token.
+            // Method: Login - Validates user credentials, enforces status checks, and issues signed JWT bearer token.
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            var response = await _userService.AuthenticateAsync(request);
-            if (response == null)
+            try
             {
-                return Unauthorized(new { message = "Invalid National Identity Card / Email or password." });
-            }
+                var response = await _userService.AuthenticateAsync(request);
+                if (response == null)
+                {
+                    return Unauthorized(new AuthErrorResponseDto
+                    {
+                        Code = "INVALID_CREDENTIALS",
+                        Message = "Invalid National Identity Card / Email or password."
+                    });
+                }
 
-            return Ok(response);
+                return Ok(response);
+            }
+            catch (AccountPendingException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new AuthErrorResponseDto
+                {
+                    Code = "ACCOUNT_PENDING",
+                    Message = ex.Message,
+                    Status = "Pending"
+                });
+            }
+            catch (AccountDeactivatedException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new AuthErrorResponseDto
+                {
+                    Code = "ACCOUNT_DEACTIVATED",
+                    Message = ex.Message,
+                    Status = "Deactivated"
+                });
+            }
+            catch (AccountLockedException ex)
+            {
+                return StatusCode(StatusCodes.Status423Locked, new AuthErrorResponseDto
+                {
+                    Code = "ACCOUNT_LOCKED",
+                    Message = ex.Message,
+                    Status = "Locked"
+                });
+            }
         }
 
         /// <summary>
@@ -135,8 +166,13 @@ namespace SolarMicrogridApi.Controllers
                 fullName = user.FullName,
                 email = user.Email,
                 phone = user.Phone,
+                address = user.Address,
                 role = user.Role,
-                status = user.Status
+                status = user.Status,
+                solarCapacityKw = user.SolarCapacityKw,
+                inverterSerial = user.InverterSerial,
+                registeredAt = user.RegisteredAt,
+                activatedAt = user.ActivatedAt
             });
         }
     }

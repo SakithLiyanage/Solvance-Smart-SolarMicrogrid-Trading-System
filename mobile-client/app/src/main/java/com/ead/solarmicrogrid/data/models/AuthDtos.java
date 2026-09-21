@@ -24,8 +24,25 @@ public class AuthDtos {
         public String fullName;
         @SerializedName("email")
         public String email;
+        @SerializedName("phone")
+        public String phone;
+        @SerializedName("address")
+        public String address;
         @SerializedName("role")
         public String role;
+        @SerializedName("status")
+        public String status;
+        @SerializedName("solarCapacityKw")
+        public double solarCapacityKw;
+        @SerializedName("inverterSerial")
+        public String inverterSerial;
+    }
+
+    public static class AuthErrorResponse {
+        @SerializedName("code")
+        public String code;
+        @SerializedName("message")
+        public String message;
         @SerializedName("status")
         public String status;
     }
@@ -39,15 +56,28 @@ public class AuthDtos {
         public String email;
         @SerializedName("phone")
         public String phone;
+        @SerializedName("address")
+        public String address;
+        @SerializedName("solarCapacityKw")
+        public double solarCapacityKw;
+        @SerializedName("inverterSerial")
+        public String inverterSerial;
         @SerializedName("password")
         public String password;
 
-        public RegisterRequest(String nic, String fullName, String email, String phone, String password) {
+        public RegisterRequest(String nic, String fullName, String email, String phone, String address, double solarCapacityKw, String inverterSerial, String password) {
             this.nic = nic;
             this.fullName = fullName;
             this.email = email;
             this.phone = phone;
+            this.address = address;
+            this.solarCapacityKw = solarCapacityKw;
+            this.inverterSerial = inverterSerial;
             this.password = password;
+        }
+
+        public RegisterRequest(String nic, String fullName, String email, String phone, String password) {
+            this(nic, fullName, email, phone, "", 15.0, "INV-SL-2026-DEFAULT", password);
         }
     }
 
