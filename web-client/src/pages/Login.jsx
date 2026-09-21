@@ -119,19 +119,36 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
 
       <div className="w-full max-w-md z-10 space-y-6">
         {/* Brand Header with Context-Aware Logo */}
-        <div className="text-center">
-          <div className="relative inline-block group">
-            <div className="absolute -inset-2 bg-gradient-to-r from-amber-500/30 to-emerald-500/30 rounded-3xl blur-xl opacity-60 group-hover:opacity-100 transition duration-500" />
+        <div className="text-center flex flex-col items-center">
+          <div className="relative group cursor-pointer" onClick={onBackToHome}>
+            <div className="absolute -inset-2 bg-gradient-to-r from-amber-500/30 via-amber-400/20 to-emerald-500/30 rounded-3xl blur-xl opacity-75 group-hover:opacity-100 transition duration-500" />
             
-            {/* Display full horizontal logo suited for theme */}
-            <img
-              src={isDark ? "/solvance_logo_dark_trans.png?v=5" : "/solvance_logo_light_trans.png?v=5"}
-              alt="Solvance Smart Solar Trading"
-              className="relative h-24 sm:h-28 object-contain mx-auto drop-shadow-lg transition transform group-hover:scale-105 duration-300"
-            />
+            <div className="relative flex flex-col items-center gap-2">
+              <div className="h-16 w-16 rounded-2xl bg-white/90 dark:bg-slate-900/90 border border-slate-200/90 dark:border-slate-800/90 p-2 shadow-xl flex items-center justify-center backdrop-blur-xl group-hover:scale-105 transition-transform duration-300">
+                <img
+                  src={isDark ? "/solvance_mark_dark_trans.png" : "/solvance_mark_light_trans.png"}
+                  alt="Solvance Solar Emblem"
+                  className="h-full w-full object-contain drop-shadow-md"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
+
+              <div className="mt-1 text-center">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="font-display font-black text-2xl sm:text-3xl tracking-wider bg-gradient-to-r from-amber-500 via-amber-400 to-emerald-400 bg-clip-text text-transparent">
+                    SOLVANCE
+                  </span>
+                </div>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide mt-0.5">
+                  Smart Solar Microgrid Trading System
+                </p>
+              </div>
+            </div>
           </div>
           
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-slate-900/90 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60 shadow-sm mt-3 backdrop-blur-md">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-slate-900/90 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60 shadow-xs mt-3 backdrop-blur-md">
             <Sparkles className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
             <span>Enterprise Grid Operations Portal</span>
           </div>
