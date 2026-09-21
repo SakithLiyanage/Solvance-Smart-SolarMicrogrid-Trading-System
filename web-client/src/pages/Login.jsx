@@ -3,6 +3,7 @@ import {
   Shield, Zap, AlertCircle, ArrowRight, Sun, Moon, 
   Activity, Cpu, Sparkles 
 } from 'lucide-react';
+import BrandLogo from '../components/BrandLogo';
 import api from '../api/client';
 
 export default function Login({ onLoginSuccess, theme, onToggleTheme }) {
@@ -99,11 +100,10 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme }) {
           <div className="relative inline-block group">
             <div className="absolute -inset-2 bg-gradient-to-r from-amber-500/30 to-emerald-500/30 rounded-3xl blur-xl opacity-60 group-hover:opacity-100 transition duration-500" />
             
-            {/* Display full horizontal logo suited for theme */}
-            <img
-              src={isDark ? "/solvance_logo_dark_trans.png?v=5" : "/solvance_logo_light_trans.png?v=5"}
-              alt="Solvance Smart Solar Trading"
-              className="relative h-24 sm:h-28 object-contain mx-auto drop-shadow-lg transition transform group-hover:scale-105 duration-300"
+            <BrandLogo 
+              className="relative h-24 sm:h-28 mx-auto transition transform group-hover:scale-105 duration-300"
+              showTagline={false}
+              isDark={isDark}
             />
           </div>
           
