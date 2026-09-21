@@ -170,10 +170,25 @@ namespace SolarMicrogridApi.Services
 
         public async Task<bool> UpdateUserStatusAsync(string nic, string newStatus, string operatorRole)
         {
-            // Method: UpdateUserStatusAsync - Updates account status (Activate/Deactivate/Reactivate) enforcing Backoffice rule.
+            // Method: UpdateUserStatusAsync - Updates account status (Activate/Deactivate/Reactivate) enforcing Backoffice rule and reservation checks.
             if (operatorRole != "Backoffice")
             {
                 throw new UnauthorizedAccessException("Only Backoffice officers have permission to activate or reactivate accounts.");
+            }
+
+            if (newStatus == "Deactivated")
+            {
+                // FAT Service Rule: Check for active reservations before deactivation
+                var activeCount = await _context.Reservations.CountDocumentsAsync(r => 
+                    r.ProsumerNic == nic && 
+                    (r.Status == "Approved" || r.Status == "Pending") && 
+                    r.ScheduledDateTime >= DateTime.UtcNow
+                );
+
+                if (activeCount > 0)
+                {
+                    throw new InvalidOperationException($"Cannot deactivate account '{nic}'. There are {activeCount} active or confirmed future energy trading reservations.");
+                }
             }
 
             var update = Builders<User>.Update
@@ -199,7 +214,18 @@ namespace SolarMicrogridApi.Services
 
         public async Task<bool> RequestDeactivationAsync(string nic)
         {
-            // Method: RequestDeactivationAsync - Prosumer self-service action to deactivate account. Reactivation requires Backoffice.
+            // Method: RequestDeactivationAsync - Prosumer self-service action to deactivate account. Blocks if active bookings exist.
+            var activeCount = await _context.Reservations.CountDocumentsAsync(r => 
+                r.ProsumerNic == nic && 
+                (r.Status == "Approved" || r.Status == "Pending") && 
+                r.ScheduledDateTime >= DateTime.UtcNow
+            );
+
+            if (activeCount > 0)
+            {
+                throw new InvalidOperationException($"Cannot deactivate account. You have {activeCount} active or confirmed energy trading reservations. Please complete or cancel them with 12 hours notice first.");
+            }
+
             var update = Builders<User>.Update
                 .Set(u => u.Status, "Deactivated")
                 .Set(u => u.UpdatedAt, DateTime.UtcNow);
