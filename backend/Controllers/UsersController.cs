@@ -163,6 +163,23 @@ namespace SolarMicrogridApi.Controllers
         }
 
         /// <summary>
+        /// Updates a prosumer or user profile by NIC (Backoffice only).
+        /// </summary>
+        [HttpPut("{nic}")]
+        [Authorize(Roles = "Backoffice")]
+        public async Task<IActionResult> UpdateUserByNic(string nic, [FromBody] UpdateProfileDto dto)
+        {
+            // Method: UpdateUserByNic - Allows Backoffice officers to update user profile information and solar hardware specs.
+            var success = await _userService.UpdateProfileAsync(nic, dto);
+            if (!success)
+            {
+                return NotFound(new { message = $"User with NIC '{nic}' not found." });
+            }
+
+            return Ok(new { message = $"Profile for '{nic}' updated successfully." });
+        }
+
+        /// <summary>
         /// Updates the authenticated user's personal profile information.
         /// </summary>
         [HttpPut("profile")]
