@@ -154,22 +154,23 @@ export default function ProsumerManagement({ theme }) {
             <thead className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800/80 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[11px]">
               <tr>
                 <th className="py-4 px-6">Prosumer Identity (NIC PK)</th>
+                <th className="py-4 px-6">Solar System Specs</th>
                 <th className="py-4 px-6">Contact Channels</th>
-                <th className="py-4 px-6">Verification Status</th>
+                <th className="py-4 px-6">KYC Status</th>
                 <th className="py-4 px-6 text-right">Lifecycle Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-slate-700 dark:text-slate-200">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="py-12 text-center text-slate-400">
+                  <td colSpan={5} className="py-12 text-center text-slate-400">
                     <RefreshCw className="h-6 w-6 text-amber-500 dark:text-amber-400 animate-spin mx-auto mb-2" />
                     <span>Loading prosumer records...</span>
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-12 text-center text-slate-400">
+                  <td colSpan={5} className="py-12 text-center text-slate-400">
                     No prosumer accounts found matching your query.
                   </td>
                 </tr>
@@ -187,8 +188,27 @@ export default function ProsumerManagement({ theme }) {
                             <Hash className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                             <span>NIC: {u.nic}</span>
                           </p>
+                          {u.approvedBy && (
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                              Approved by: {u.approvedBy}
+                            </p>
+                          )}
                         </div>
                       </div>
+                    </td>
+
+                    <td className="py-4 px-6 space-y-1">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-xs">
+                        <span>⚡ {u.solarCapacityKw > 0 ? `${u.solarCapacityKw} kW` : '15.0 kW'} Array</span>
+                      </div>
+                      <p className="font-mono text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[180px]">
+                        INV: {u.inverterSerial || 'INV-SL-2026-DEFAULT'}
+                      </p>
+                      {u.address && (
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[180px]">
+                          📍 {u.address}
+                        </p>
+                      )}
                     </td>
 
                     <td className="py-4 px-6 space-y-1">
@@ -225,7 +245,7 @@ export default function ProsumerManagement({ theme }) {
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold transition shadow-sm active:scale-95 cursor-pointer"
                           >
                             <Check className="h-3.5 w-3.5" />
-                            <span>Approve</span>
+                            <span>Approve KYC</span>
                           </button>
                         )}
 

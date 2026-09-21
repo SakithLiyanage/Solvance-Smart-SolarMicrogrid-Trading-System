@@ -17,7 +17,7 @@ namespace SolarMicrogridApi.Services
         Task<List<User>> GetUsersAsync(string? role = null, string? status = null);
         Task<List<User>> GetPendingProsumersAsync();
         Task<User?> GetUserByNicAsync(string nic);
-        Task<bool> UpdateUserStatusAsync(string nic, string newStatus, string operatorRole);
+        Task<bool> UpdateUserStatusAsync(string nic, string newStatus, string operatorRole, string? operatorNic = null);
         Task<bool> UpdateProfileAsync(string nic, UpdateProfileDto dto);
         Task<bool> RequestDeactivationAsync(string nic);
     }

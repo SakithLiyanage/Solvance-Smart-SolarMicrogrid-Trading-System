@@ -26,7 +26,18 @@ namespace SolarMicrogridApi.Models
         public string Nic { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public double SolarCapacityKw { get; set; } = 0.0;
+        public string InverterSerial { get; set; } = string.Empty;
+    }
+
+    public class AuthErrorResponseDto
+    {
+        public string Code { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
     }
 
@@ -44,6 +55,13 @@ namespace SolarMicrogridApi.Models
 
         [Required]
         public string Phone { get; set; } = string.Empty;
+
+        public string Address { get; set; } = string.Empty;
+
+        [Range(0, 100000)]
+        public double SolarCapacityKw { get; set; } = 0.0;
+
+        public string InverterSerial { get; set; } = string.Empty;
 
         [Required]
         [MinLength(6)]
@@ -65,6 +83,8 @@ namespace SolarMicrogridApi.Models
         [Required]
         public string Phone { get; set; } = string.Empty;
 
+        public string Address { get; set; } = string.Empty;
+
         [Required]
         public string Password { get; set; } = string.Empty;
 
@@ -77,6 +97,9 @@ namespace SolarMicrogridApi.Models
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public double SolarCapacityKw { get; set; }
+        public string InverterSerial { get; set; } = string.Empty;
     }
 
     // --- SOLAR STATION DTOS ---

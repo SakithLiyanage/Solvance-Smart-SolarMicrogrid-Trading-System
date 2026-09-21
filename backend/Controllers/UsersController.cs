@@ -42,11 +42,18 @@ namespace SolarMicrogridApi.Controllers
             {
                 u.Id,
                 u.Nic,
+                u.Username,
                 u.FullName,
                 u.Email,
                 u.Phone,
+                u.Address,
                 u.Role,
                 u.Status,
+                u.SolarCapacityKw,
+                u.InverterSerial,
+                u.RegisteredAt,
+                u.ActivatedAt,
+                u.ApprovedBy,
                 u.CreatedAt,
                 u.UpdatedAt
             });
@@ -66,11 +73,16 @@ namespace SolarMicrogridApi.Controllers
             {
                 u.Id,
                 u.Nic,
+                u.Username,
                 u.FullName,
                 u.Email,
                 u.Phone,
+                u.Address,
                 u.Role,
                 u.Status,
+                u.SolarCapacityKw,
+                u.InverterSerial,
+                u.RegisteredAt,
                 u.CreatedAt
             });
             return Ok(result);
@@ -102,11 +114,18 @@ namespace SolarMicrogridApi.Controllers
             {
                 user.Id,
                 user.Nic,
+                user.Username,
                 user.FullName,
                 user.Email,
                 user.Phone,
+                user.Address,
                 user.Role,
                 user.Status,
+                user.SolarCapacityKw,
+                user.InverterSerial,
+                user.RegisteredAt,
+                user.ActivatedAt,
+                user.ApprovedBy,
                 user.CreatedAt,
                 user.UpdatedAt
             });
@@ -121,16 +140,21 @@ namespace SolarMicrogridApi.Controllers
         {
             // Method: UpdateStatus - Backoffice action to approve, deactivate, or reactivate user accounts.
             var currentRole = User.FindFirstValue(ClaimTypes.Role) ?? "Backoffice";
+            var operatorNic = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "ADMIN001";
 
             try
             {
-                var success = await _userService.UpdateUserStatusAsync(nic, dto.Status, currentRole);
+                var success = await _userService.UpdateUserStatusAsync(nic, dto.Status, currentRole, operatorNic);
                 if (!success)
                 {
                     return NotFound(new { message = $"User with NIC '{nic}' not found." });
                 }
 
                 return Ok(new { message = $"Account '{nic}' status successfully changed to '{dto.Status}'." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -168,20 +192,27 @@ namespace SolarMicrogridApi.Controllers
         [Authorize(Roles = "Prosumer")]
         public async Task<IActionResult> DeactivateSelf()
         {
-            // Method: DeactivateSelf - Marks prosumer account as deactivated. Reactivation requires Backoffice officer.
+            // Method: DeactivateSelf - Marks prosumer account as deactivated with active reservations check.
             var nic = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(nic))
             {
                 return Unauthorized();
             }
 
-            var success = await _userService.RequestDeactivationAsync(nic);
-            if (!success)
+            try
             {
-                return NotFound(new { message = "User not found." });
-            }
+                var success = await _userService.RequestDeactivationAsync(nic);
+                if (!success)
+                {
+                    return NotFound(new { message = "User not found." });
+                }
 
-            return Ok(new { message = "Your account has been deactivated. Contact Backoffice for reactivation." });
+                return Ok(new { message = "Your account has been deactivated. Contact Backoffice for reactivation." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
     }
 

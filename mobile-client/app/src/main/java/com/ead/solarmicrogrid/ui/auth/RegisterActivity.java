@@ -35,7 +35,7 @@ import retrofit2.Response;
 
 public class RegisterActivity extends AppCompatActivity {
 
-    private TextInputEditText etNic, etFullName, etEmail, etPhone, etPassword;
+    private TextInputEditText etNic, etFullName, etEmail, etPhone, etAddress, etSolarCapacity, etInverterSerial, etPassword;
     private Button btnRegister;
     private TextView tvBackToLogin;
     private ProgressBar progressBar;
@@ -54,6 +54,9 @@ public class RegisterActivity extends AppCompatActivity {
         etFullName = findViewById(R.id.etFullName);
         etEmail = findViewById(R.id.etEmail);
         etPhone = findViewById(R.id.etPhone);
+        etAddress = findViewById(R.id.etAddress);
+        etSolarCapacity = findViewById(R.id.etSolarCapacity);
+        etInverterSerial = findViewById(R.id.etInverterSerial);
         etPassword = findViewById(R.id.etPassword);
         btnRegister = findViewById(R.id.btnRegister);
         tvBackToLogin = findViewById(R.id.tvBackToLogin);
@@ -73,12 +76,20 @@ public class RegisterActivity extends AppCompatActivity {
         String fullName = etFullName.getText() != null ? etFullName.getText().toString().trim() : "";
         String email = etEmail.getText() != null ? etEmail.getText().toString().trim().toLowerCase() : "";
         String phone = etPhone.getText() != null ? etPhone.getText().toString().trim() : "";
+        String address = etAddress.getText() != null ? etAddress.getText().toString().trim() : "";
+        String solarStr = etSolarCapacity.getText() != null ? etSolarCapacity.getText().toString().trim() : "15.0";
+        String inverterSerial = etInverterSerial.getText() != null ? etInverterSerial.getText().toString().trim() : "";
         String password = etPassword.getText() != null ? etPassword.getText().toString().trim() : "";
 
-        if (nic.isEmpty() || fullName.isEmpty() || email.isEmpty() || phone.isEmpty() || password.isEmpty()) {
-            Toast.makeText(this, "All fields are required.", Toast.LENGTH_SHORT).show();
+        if (nic.isEmpty() || fullName.isEmpty() || email.isEmpty() || phone.isEmpty() || address.isEmpty() || password.isEmpty()) {
+            Toast.makeText(this, "All required fields must be completed.", Toast.LENGTH_SHORT).show();
             return;
         }
+
+        double solarKw = 15.0;
+        try {
+            solarKw = Double.parseDouble(solarStr);
+        } catch (NumberFormatException ignored) {}
 
         if (password.length() < 6) {
             Toast.makeText(this, "Password must be at least 6 characters.", Toast.LENGTH_SHORT).show();
@@ -88,7 +99,7 @@ public class RegisterActivity extends AppCompatActivity {
         progressBar.setVisibility(View.VISIBLE);
         btnRegister.setEnabled(false);
 
-        AuthDtos.RegisterRequest request = new AuthDtos.RegisterRequest(nic, fullName, email, phone, password);
+        AuthDtos.RegisterRequest request = new AuthDtos.RegisterRequest(nic, fullName, email, phone, address, solarKw, inverterSerial, password);
         ApiClient.getService(this).registerProsumer(request).enqueue(new Callback<ResponseBody>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
@@ -97,8 +108,8 @@ public class RegisterActivity extends AppCompatActivity {
 
                 if (response.isSuccessful()) {
                     new AlertDialog.Builder(RegisterActivity.this)
-                            .setTitle("Registration Submitted")
-                            .setMessage("Your account has been registered with NIC: " + nic + ".\n\nPer system specification, your account is in 'Pending' status and will become active once reviewed by a Backoffice officer.")
+                            .setTitle("KYC Registration Submitted")
+                            .setMessage("Your solar prosumer profile has been registered.\n\nNIC: " + nic + "\nSolar Array: " + solarKw + " kW\nInverter: " + inverterSerial + "\n\nPer system specification, your account is in 'Pending' status awaiting Backoffice review.")
                             .setPositiveButton("Go to Login", (dialog, which) -> finish())
                             .setCancelable(false)
                             .show();
