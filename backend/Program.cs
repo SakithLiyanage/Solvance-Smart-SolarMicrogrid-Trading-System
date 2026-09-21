@@ -19,6 +19,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using SolarMicrogridApi.Data;
+using SolarMicrogridApi.Models.Config;
 using SolarMicrogridApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,6 +27,11 @@ var builder = WebApplication.CreateBuilder(args);
 // Method: ConfigureServices - Registers controllers, MongoDB context, enterprise services, and JWT.
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+
+// Register strongly-typed configuration options (IOptions<T>)
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+builder.Services.Configure<SecuritySettings>(builder.Configuration.GetSection("SecuritySettings"));
+builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDbSettings"));
 
 // Register MongoDB Context
 builder.Services.AddSingleton<MongoDbContext>();
@@ -49,7 +55,10 @@ builder.Services.AddCors(options =>
 });
 
 // Configure JWT Authentication
-var jwtSecret = builder.Configuration["JwtSettings:SecretKey"] ?? "EnterpriseSolarMicrogridTradingSystemSecretKey2026!#Security";
+var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>() ?? new JwtSettings();
+var jwtSecret = !string.IsNullOrEmpty(jwtSettings.EffectiveSecret)
+    ? jwtSettings.EffectiveSecret
+    : (builder.Configuration["JwtSettings:SecretKey"] ?? "EnterpriseSolarMicrogridTradingSystemSecretKey2026!#Security");
 var key = Encoding.UTF8.GetBytes(jwtSecret);
 
 builder.Services.AddAuthentication(options =>
@@ -67,9 +76,9 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(key),
         ValidateIssuer = true,
-        ValidIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "SolarMicrogridApi",
+        ValidIssuer = !string.IsNullOrEmpty(jwtSettings.Issuer) ? jwtSettings.Issuer : (builder.Configuration["JwtSettings:Issuer"] ?? "SolarMicrogridApi"),
         ValidateAudience = true,
-        ValidAudience = builder.Configuration["JwtSettings:Audience"] ?? "SolarMicrogridClients",
+        ValidAudience = !string.IsNullOrEmpty(jwtSettings.Audience) ? jwtSettings.Audience : (builder.Configuration["JwtSettings:Audience"] ?? "SolarMicrogridClients"),
         ClockSkew = TimeSpan.Zero
     };
 });

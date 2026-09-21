@@ -11,9 +11,11 @@
 
 using System;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using SolarMicrogridApi.Models;
+using SolarMicrogridApi.Models.Config;
 
 namespace SolarMicrogridApi.Data
 {
@@ -23,19 +25,25 @@ namespace SolarMicrogridApi.Data
     public class MongoDbContext
     {
         private readonly IMongoDatabase _database;
-        private readonly IConfiguration _configuration;
+        private readonly MongoDbSettings _settings;
 
         /// <summary>
-        /// Initializes the MongoDB client and accesses the target database with resilient connection settings.
+        /// Initializes the MongoDB client with strongly-typed IOptions settings.
         /// </summary>
-        public MongoDbContext(IConfiguration configuration)
+        public MongoDbContext(IOptions<MongoDbSettings> options, IConfiguration configuration)
         {
             // Method: MongoDbContext Constructor - Connects to MongoDB server and sets database reference.
-            _configuration = configuration;
-            var connectionString = _configuration["MongoDbSettings:ConnectionString"] ?? "mongodb://localhost:27017";
-            var databaseName = _configuration["MongoDbSettings:DatabaseName"] ?? "SolarMicrogridDb";
+            _settings = options?.Value ?? new MongoDbSettings();
 
-            IMongoDatabase targetDb = null;
+            var connectionString = !string.IsNullOrEmpty(_settings.ConnectionString)
+                ? _settings.ConnectionString
+                : (configuration["MongoDbSettings:ConnectionString"] ?? "mongodb://localhost:27017");
+
+            var databaseName = !string.IsNullOrEmpty(_settings.DatabaseName)
+                ? _settings.DatabaseName
+                : (configuration["MongoDbSettings:DatabaseName"] ?? "SolarMicrogridDb");
+
+            IMongoDatabase? targetDb = null;
 
             try
             {
@@ -82,25 +90,25 @@ namespace SolarMicrogridApi.Data
         /// Collection 1: "User's detail" per specification.
         /// </summary>
         public IMongoCollection<User> Users =>
-            _database.GetCollection<User>(_configuration["MongoDbSettings:UsersCollectionName"] ?? "User's detail");
+            _database.GetCollection<User>(_settings.EffectiveUsersCollection);
 
         /// <summary>
         /// Collection 2: "SolarStationInfo" per specification.
         /// </summary>
         public IMongoCollection<SolarStation> Stations =>
-            _database.GetCollection<SolarStation>(_configuration["MongoDbSettings:StationsCollectionName"] ?? "SolarStationInfo");
+            _database.GetCollection<SolarStation>(_settings.EffectiveStationsCollection);
 
         /// <summary>
         /// Collection 3: "EnergyBookingSlots" per specification.
         /// </summary>
         public IMongoCollection<EnergySlot> Slots =>
-            _database.GetCollection<EnergySlot>(_configuration["MongoDbSettings:SlotsCollectionName"] ?? "EnergyBookingSlots");
+            _database.GetCollection<EnergySlot>(_settings.EffectiveSlotsCollection);
 
         /// <summary>
         /// Collection 4: "Energy Reservation" per specification.
         /// </summary>
         public IMongoCollection<EnergyReservation> Reservations =>
-            _database.GetCollection<EnergyReservation>(_configuration["MongoDbSettings:ReservationsCollectionName"] ?? "Energy Reservation");
+            _database.GetCollection<EnergyReservation>(_settings.EffectiveReservationsCollection);
 
         /// <summary>
         /// Ensures unique indexes on critical natural keys like NIC.

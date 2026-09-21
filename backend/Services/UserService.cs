@@ -15,10 +15,12 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 using SolarMicrogridApi.Data;
 using SolarMicrogridApi.Models;
+using SolarMicrogridApi.Models.Config;
 
 namespace SolarMicrogridApi.Services
 {
@@ -29,12 +31,20 @@ namespace SolarMicrogridApi.Services
     {
         private readonly MongoDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly JwtSettings _jwtSettings;
+        private readonly SecuritySettings _securitySettings;
 
-        public UserService(MongoDbContext context, IConfiguration configuration)
+        public UserService(
+            MongoDbContext context, 
+            IConfiguration configuration,
+            IOptions<JwtSettings> jwtOptions,
+            IOptions<SecuritySettings> securityOptions)
         {
-            // Method: UserService Constructor - Injects database context and configuration settings.
+            // Method: UserService Constructor - Injects database context and strongly-typed configuration settings.
             _context = context;
             _configuration = configuration;
+            _jwtSettings = jwtOptions?.Value ?? new JwtSettings();
+            _securitySettings = securityOptions?.Value ?? new SecuritySettings();
         }
 
         public async Task<AuthResponseDto?> AuthenticateAsync(LoginRequestDto request)
@@ -60,8 +70,13 @@ namespace SolarMicrogridApi.Services
 
             // Generate JWT Token
             var tokenHandler = new JwtSecurityTokenHandler();
-            var secretKey = _configuration["JwtSettings:SecretKey"] ?? "EnterpriseSolarMicrogridTradingSystemSecretKey2026!#Security";
+            var secretKey = !string.IsNullOrEmpty(_jwtSettings.EffectiveSecret)
+                ? _jwtSettings.EffectiveSecret
+                : (_configuration["JwtSettings:SecretKey"] ?? "EnterpriseSolarMicrogridTradingSystemSecretKey2026!#Security");
             var key = Encoding.UTF8.GetBytes(secretKey);
+
+            var issuer = !string.IsNullOrEmpty(_jwtSettings.Issuer) ? _jwtSettings.Issuer : (_configuration["JwtSettings:Issuer"] ?? "SolarMicrogridApi");
+            var audience = !string.IsNullOrEmpty(_jwtSettings.Audience) ? _jwtSettings.Audience : (_configuration["JwtSettings:Audience"] ?? "SolarMicrogridClients");
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
@@ -73,9 +88,9 @@ namespace SolarMicrogridApi.Services
                     new Claim(ClaimTypes.Role, user.Role),
                     new Claim("Status", user.Status)
                 }),
-                Expires = DateTime.UtcNow.AddDays(7),
-                Issuer = _configuration["JwtSettings:Issuer"] ?? "SolarMicrogridApi",
-                Audience = _configuration["JwtSettings:Audience"] ?? "SolarMicrogridClients",
+                Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpiryMinutes > 0 ? _jwtSettings.AccessTokenExpiryMinutes : 10080),
+                Issuer = issuer,
+                Audience = audience,
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
 
