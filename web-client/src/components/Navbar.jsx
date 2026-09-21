@@ -28,7 +28,7 @@ export default function Navbar({ user, activeTab, setActiveTab, onLogout, onOpen
             <div className="relative flex items-center justify-center">
               <div className="absolute -inset-1.5 bg-gradient-to-r from-amber-500/20 to-emerald-500/20 rounded-full blur-md opacity-0 group-hover:opacity-100 transition duration-300" />
               <img 
-                src={isDark ? "/solvance_mark_dark_trans.png?v=7" : "/solvance_mark_light_trans.png?v=7"} 
+                src={isDark ? "/solvance_mark_dark_trans.png" : "/solvance_mark_light_trans.png"} 
                 alt="Solvance" 
                 className="relative h-11 w-auto object-contain transition-transform duration-300 group-hover:scale-105 drop-shadow-sm" 
               />

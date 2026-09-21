@@ -85,7 +85,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
           <div className="flex items-center gap-3 select-none">
             <div className="relative flex items-center justify-center">
               <img 
-                src={isDark ? "/solvance_mark_dark_trans.png?v=7" : "/solvance_mark_light_trans.png?v=7"} 
+                src={isDark ? "/solvance_mark_dark_trans.png" : "/solvance_mark_light_trans.png"} 
                 alt="Solvance Logo" 
                 className="h-10 w-auto object-contain drop-shadow-sm" 
               />
@@ -537,7 +537,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <img 
-              src={isDark ? "/solvance_mark_dark_trans.png?v=7" : "/solvance_mark_light_trans.png?v=7"} 
+              src={isDark ? "/solvance_mark_dark_trans.png" : "/solvance_mark_light_trans.png"} 
               alt="Solvance" 
               className="h-8 w-auto object-contain" 
             />
