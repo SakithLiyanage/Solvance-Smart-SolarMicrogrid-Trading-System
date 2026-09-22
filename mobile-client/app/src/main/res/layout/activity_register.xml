@@ -385,21 +385,21 @@
                             android:lineSpacingExtra="2dp"
                             android:layout_marginBottom="14dp" />
 
-                        <!-- Document Slot 1: National Identity Card (Proof of Identity) -->
+                        <!-- Document Slot 1: National Identity Card (Front Side) -->
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="1. National Identity Card (NIC Photo) *"
+                            android:text="1. NIC Front Side (Photo &amp; Name) *"
                             android:textColor="@color/text_primary"
                             android:textSize="12sp"
                             android:textStyle="bold"
                             android:layout_marginBottom="6dp" />
 
-                        <!-- NIC Preview Frame -->
+                        <!-- NIC Front Preview Frame -->
                         <FrameLayout
                             android:id="@+id/layoutNicPreview"
                             android:layout_width="match_parent"
-                            android:layout_height="160dp"
+                            android:layout_height="150dp"
                             android:background="@drawable/bg_action_card"
                             android:visibility="gone"
                             android:layout_marginBottom="8dp">
@@ -421,20 +421,20 @@
                                 android:backgroundTint="#80000000"
                                 app:tint="#EF4444"
                                 android:padding="6dp"
-                                android:contentDescription="Remove NIC" />
+                                android:contentDescription="Remove NIC Front" />
                         </FrameLayout>
 
-                        <!-- NIC Document Status Text -->
+                        <!-- NIC Front Document Status Text -->
                         <TextView
                             android:id="@+id/tvDocStatus"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="No ID document attached"
+                            android:text="No front ID attached"
                             android:textColor="@color/text_muted"
                             android:textSize="11sp"
                             android:layout_marginBottom="10dp" />
 
-                        <!-- NIC Action Buttons -->
+                        <!-- NIC Front Action Buttons -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -492,11 +492,118 @@
                                 android:layout_marginStart="5dp" />
                         </LinearLayout>
 
-                        <!-- Document Slot 2: Electricity Bill / CEB Solar Interconnection (Proof of Grid Node) -->
+                        <!-- Document Slot 2: National Identity Card (Back Side) -->
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="2. CEB / LECO Electricity Bill (Proof of Grid Node)"
+                            android:text="2. NIC Back Side (Address &amp; Barcode) *"
+                            android:textColor="@color/text_primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="6dp" />
+
+                        <!-- NIC Back Preview Frame -->
+                        <FrameLayout
+                            android:id="@+id/layoutNicBackPreview"
+                            android:layout_width="match_parent"
+                            android:layout_height="150dp"
+                            android:background="@drawable/bg_action_card"
+                            android:visibility="gone"
+                            android:layout_marginBottom="8dp">
+
+                            <ImageView
+                                android:id="@+id/ivNicBackPreview"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop" />
+
+                            <ImageButton
+                                android:id="@+id/btnRemoveNicBackDoc"
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:layout_gravity="top|end"
+                                android:layout_margin="8dp"
+                                android:src="@drawable/ic_x"
+                                android:background="@drawable/bg_circle_icon_button"
+                                android:backgroundTint="#80000000"
+                                app:tint="#EF4444"
+                                android:padding="6dp"
+                                android:contentDescription="Remove NIC Back" />
+                        </FrameLayout>
+
+                        <!-- NIC Back Document Status Text -->
+                        <TextView
+                            android:id="@+id/tvDocBackStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="No back ID attached"
+                            android:textColor="@color/text_muted"
+                            android:textSize="11sp"
+                            android:layout_marginBottom="10dp" />
+
+                        <!-- NIC Back Action Buttons -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="16dp">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnCameraNicBack"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:minHeight="48dp"
+                                android:layout_weight="1"
+                                android:text="Camera"
+                                app:icon="@drawable/ic_camera"
+                                app:iconGravity="textStart"
+                                app:iconSize="18dp"
+                                app:iconTint="@color/primary"
+                                android:textAllCaps="false"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:paddingVertical="8dp"
+                                android:paddingHorizontal="10dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                app:strokeColor="@color/primary"
+                                app:strokeWidth="1.5dp"
+                                android:textColor="@color/primary"
+                                app:cornerRadius="10dp"
+                                android:layout_marginEnd="5dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnUploadNicBackDoc"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:minHeight="48dp"
+                                android:layout_weight="1"
+                                android:text="Browse Files"
+                                app:icon="@drawable/ic_image"
+                                app:iconGravity="textStart"
+                                app:iconSize="18dp"
+                                app:iconTint="@color/text_primary"
+                                android:textAllCaps="false"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:paddingVertical="8dp"
+                                android:paddingHorizontal="10dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                app:strokeColor="@color/card_border"
+                                app:strokeWidth="1dp"
+                                android:textColor="@color/text_primary"
+                                app:cornerRadius="10dp"
+                                android:layout_marginStart="5dp" />
+                        </LinearLayout>
+
+                        <!-- Document Slot 3: Electricity Bill / CEB Solar Interconnection (Proof of Grid Node) -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="3. CEB / LECO Electricity Bill (Proof of Grid Node)"
                             android:textColor="@color/text_primary"
                             android:textSize="12sp"
                             android:textStyle="bold"
@@ -599,6 +706,18 @@
             android:drawableEnd="@drawable/ic_arrow_right"
             android:drawableTint="@color/primary"
             android:drawablePadding="6dp" />
+
+        <TextView
+            android:id="@+id/tvRegisterServerBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Server: http://127.0.0.1:5000/api/ (Tap to switch)"
+            android:textColor="@color/text_secondary"
+            android:textSize="10sp"
+            android:fontFamily="monospace"
+            android:layout_gravity="center"
+            android:padding="6dp"
+            android:background="?attr/selectableItemBackground" />
 
         <ProgressBar
             android:id="@+id/progressBar"

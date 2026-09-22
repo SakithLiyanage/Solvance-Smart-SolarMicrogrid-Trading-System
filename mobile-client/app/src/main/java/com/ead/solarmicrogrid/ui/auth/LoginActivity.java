@@ -64,8 +64,12 @@ public class LoginActivity extends AppCompatActivity {
         // Check if user already logged in locally in SQLite
         User existingUser = dbHelper.getLoggedInUser();
         if (autoUser == null && existingUser != null && !dbHelper.getAuthToken().isEmpty()) {
-            navigateForRole(existingUser.getRole());
-            return;
+            if ("Backoffice".equalsIgnoreCase(existingUser.getRole())) {
+                dbHelper.clearSession();
+            } else {
+                navigateForRole(existingUser.getRole());
+                return;
+            }
         }
 
         initViews();
@@ -206,6 +210,16 @@ public class LoginActivity extends AppCompatActivity {
 
                 if (response.isSuccessful() && response.body() != null) {
                     AuthDtos.AuthResponse authData = response.body();
+
+                    if ("Backoffice".equalsIgnoreCase(authData.role)) {
+                        dbHelper.clearSession();
+                        new AlertDialog.Builder(LoginActivity.this)
+                                .setTitle("Solvance Web Portal Required")
+                                .setMessage("Welcome, " + authData.fullName + " (Backoffice Officer).\n\nBackoffice operations (e-KYC Verification, Staff Provisioning, and Grid Auditing) must be accessed via the Solvance Web Portal at:\nhttp://localhost:5173\n\nThe Android Mobile Client is reserved for Prosumers and Field Grid Operators.")
+                                .setPositiveButton("Understood", null)
+                                .show();
+                        return;
+                    }
 
                     // Save session to local SQLite database with solar hardware specs
                     User user = new User(
