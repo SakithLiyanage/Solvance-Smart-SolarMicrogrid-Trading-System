@@ -7,6 +7,8 @@
 
 using MongoDB.Driver;
 using SolarMicrogridApi.Models;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace SolarMicrogridApi.Data
 {
@@ -18,7 +20,7 @@ namespace SolarMicrogridApi.Data
         /// <summary>
         /// Seeds system users, stations, and sample reservations if collections are empty.
         /// </summary>
-        public static async Task SeedAsync(MongoDbContext context)
+        public static async Task SeedAsync(MongoDbContext context, IConfiguration configuration)
         {
             // Method: SeedAsync - Populates default admin, operator, sample prosumers, and solar hubs.
             var usersCount = await context.Users.CountDocumentsAsync(Builders<User>.Filter.Empty);
@@ -143,10 +145,11 @@ namespace SolarMicrogridApi.Data
 
                 // Create initial slots and reservation
                 var colomboStation = sampleStations[0];
+                var sampleScheduledDateTime = DateTime.UtcNow.AddDays(2).Date.AddHours(10);
                 var sampleSlot = new EnergySlot
                 {
                     StationId = colomboStation.Id!,
-                    Date = DateTime.UtcNow.AddDays(2).ToString("yyyy-MM-dd"),
+                    Date = sampleScheduledDateTime.ToString("yyyy-MM-dd"),
                     StartTime = "10:00",
                     EndTime = "12:00",
                     SlotCapacityKwh = 50.0,
@@ -164,16 +167,31 @@ namespace SolarMicrogridApi.Data
                     StationId = colomboStation.Id!,
                     StationName = colomboStation.Name,
                     SlotId = sampleSlot.Id!,
-                    ScheduledDateTime = DateTime.UtcNow.AddDays(2).Date.AddHours(10),
+                    ScheduledDateTime = sampleScheduledDateTime,
                     EnergyAmountKwh = 15.0,
                     TradeType = "DropOff",
                     Status = "Approved",
-                    QrCodeToken = "RES-INIT-101|200012345678|" + colomboStation.Id + "|APPROVED",
+                    QrCodeToken = GenerateQrToken(
+                        "RES-INIT-101",
+                        "200012345678",
+                        colomboStation.Id!,
+                        sampleScheduledDateTime,
+                        15.0,
+                        configuration["QrSettings:SigningSecret"] ?? string.Empty),
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
                 await context.Reservations.InsertOneAsync(sampleReservation);
             }
+        }
+
+        private static string GenerateQrToken(string reservationNumber, string prosumerNic, string stationId,
+            DateTime scheduledDateTime, double energyAmountKwh, string signingSecret)
+        {
+            var raw = $"{reservationNumber}|{prosumerNic}|{stationId}|{scheduledDateTime:yyyyMMddHHmm}|{energyAmountKwh}";
+            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(signingSecret));
+            var signature = Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(raw)))[..12];
+            return $"SOLAR-TX:{reservationNumber}:{signature}";
         }
     }
 }
