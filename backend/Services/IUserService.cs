@@ -1,7 +1,8 @@
 // ============================================================================
 // File: IUserService.cs
-// Project: Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: M.L. Booso (IT23452916)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Contract for user authentication, account control, and lifecycle operations.
 // ============================================================================
 

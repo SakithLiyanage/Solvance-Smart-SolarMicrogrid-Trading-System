@@ -181,8 +181,9 @@ namespace SolarMicrogridApi.Services
                 SolarCapacityKw = dto.SolarCapacityKw,
                 InverterSerial = dto.InverterSerial.Trim(),
                 NicDocumentBase64 = dto.NicDocumentBase64,
+                NicBackDocumentBase64 = dto.NicBackDocumentBase64,
                 UtilityBillBase64 = dto.UtilityBillBase64,
-                KycTrustScore = !string.IsNullOrEmpty(dto.NicDocumentBase64) ? 98 : 90,
+                KycTrustScore = (!string.IsNullOrEmpty(dto.NicDocumentBase64) && !string.IsNullOrEmpty(dto.NicBackDocumentBase64)) ? 99 : (!string.IsNullOrEmpty(dto.NicDocumentBase64) ? 95 : 85),
                 KycRiskLevel = "Low",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
                 Role = "Prosumer",
@@ -309,6 +310,10 @@ namespace SolarMicrogridApi.Services
             if (!string.IsNullOrEmpty(dto.NicDocumentBase64))
             {
                 update = update.Set(u => u.NicDocumentBase64, dto.NicDocumentBase64);
+            }
+            if (!string.IsNullOrEmpty(dto.NicBackDocumentBase64))
+            {
+                update = update.Set(u => u.NicBackDocumentBase64, dto.NicBackDocumentBase64);
             }
             if (!string.IsNullOrEmpty(dto.UtilityBillBase64))
             {

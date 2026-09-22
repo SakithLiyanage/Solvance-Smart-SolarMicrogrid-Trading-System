@@ -1,7 +1,7 @@
 // ============================================================================
 // File: StaffManagement.jsx
 // Project: Solvance — Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Author: M.L. Booso (IT23452916)
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Backoffice administration portal for managing Grid Operator and Backoffice staff accounts.
 // References & Citations:
@@ -18,7 +18,7 @@ import {
   ShieldCheck, Radio, Search, Filter, RefreshCw, UserPlus, 
   Edit3, CheckCircle2, XCircle, Shield, Mail, Phone, MapPin, 
   Hash, Lock, UserX, UserCheck, AlertCircle, Sparkles, Key, 
-  Clock, ShieldAlert, Cpu
+  Clock, ShieldAlert, Cpu, Eye, EyeOff
 } from 'lucide-react';
 import api from '../api/client';
 import Modal from '../components/Modal';
@@ -34,6 +34,7 @@ export default function StaffManagement({ theme, currentUser }) {
   // Modal States
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showCreatePassword, setShowCreatePassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [modalError, setModalError] = useState('');
 
@@ -60,8 +61,12 @@ export default function StaffManagement({ theme, currentUser }) {
   const fetchStaff = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/users');
-      // Filter only Backoffice and GridOperator personnel
+      const params = {};
+      if (roleFilter !== 'All') params.role = roleFilter;
+      if (statusFilter !== 'All') params.status = statusFilter;
+
+      const res = await api.get('/users', { params });
+      // Filter only Backoffice and GridOperator personnel if 'All' was queried
       const staffList = (res.data || []).filter(
         (u) => u.role === 'Backoffice' || u.role === 'GridOperator'
       );
@@ -76,7 +81,7 @@ export default function StaffManagement({ theme, currentUser }) {
 
   useEffect(() => {
     fetchStaff();
-  }, []);
+  }, [roleFilter, statusFilter]);
 
   const notify = (text, type = 'success') => {
     setMessage({ text, type });
@@ -362,9 +367,12 @@ export default function StaffManagement({ theme, currentUser }) {
               {filteredUsers.length} records
             </span>
           </div>
-          <span className="text-[11px] font-mono text-slate-400">
-            REST /api/users?role=[Backoffice|GridOperator]
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Scope: {roleFilter === 'All' ? 'All Roles' : roleFilter === 'GridOperator' ? 'Grid Operators' : 'Backoffice Admins'}</span>
+            </span>
+          </div>
         </div>
 
         {loading ? (
@@ -629,14 +637,29 @@ export default function StaffManagement({ theme, currentUser }) {
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Temporary Secure Password *
             </label>
-            <input
-              type="password"
-              required
-              placeholder="••••••••"
-              value={createForm.password}
-              onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 font-mono"
-            />
+            <div className="relative">
+              <input
+                type={showCreatePassword ? 'text' : 'password'}
+                required
+                placeholder="••••••••"
+                value={createForm.password}
+                onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                className="w-full pl-3 pr-10 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 font-mono"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCreatePassword(!showCreatePassword)}
+                title={showCreatePassword ? "Hide password" : "Show password"}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+              >
+                {showCreatePassword ? (
+                  <EyeOff className="h-3.5 w-3.5 text-amber-500" />
+                ) : (
+                  <Eye className="h-3.5 w-3.5" />
+                )}
+              </button>
+            </div>
+            <span className="text-[10px] text-slate-400 mt-1 block">Minimum 6 characters recommended</span>
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
