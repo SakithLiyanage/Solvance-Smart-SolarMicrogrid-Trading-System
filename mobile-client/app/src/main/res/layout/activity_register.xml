@@ -101,7 +101,7 @@
                     app:boxBackgroundColor="@color/surface_dark"
                     app:hintTextColor="@color/primary"
                     android:textColorHint="@color/text_muted"
-                    android:layout_marginBottom="14dp">
+                    android:layout_marginBottom="6dp">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etNic"
@@ -112,6 +112,20 @@
                         android:padding="16dp"
                         android:inputType="textCapCharacters" />
                 </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Live Sri Lankan NIC Demographic Intelligence Feedback -->
+                <TextView
+                    android:id="@+id/tvNicDemographic"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/accent"
+                    android:background="@drawable/bg_pill_chip"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="6dp"
+                    android:layout_marginBottom="14dp" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
@@ -309,11 +323,11 @@
                         android:inputType="textPassword" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- e-KYC NIC Document Attachment Card -->
+                <!-- e-KYC Identity & Grid Verification Section -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:cardCornerRadius="16dp"
+                    app:cardCornerRadius="18dp"
                     app:cardElevation="0dp"
                     app:cardBackgroundColor="@color/background_dark"
                     app:strokeColor="@color/card_border"
@@ -331,11 +345,11 @@
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
                             android:gravity="center_vertical"
-                            android:layout_marginBottom="8dp">
+                            android:layout_marginBottom="6dp">
 
                             <ImageView
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
+                                android:layout_width="22dp"
+                                android:layout_height="22dp"
                                 android:src="@drawable/ic_shield_check"
                                 app:tint="@color/primary"
                                 android:layout_marginEnd="8dp" />
@@ -344,9 +358,9 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="National ID Document (e-KYC)"
+                                android:text="e-KYC Document Verification"
                                 android:textColor="@color/text_primary"
-                                android:textSize="13sp"
+                                android:textSize="14sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -365,20 +379,30 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Upload or generate a digital scan of your Sri Lankan NIC to fast-track verification by backoffice administrators."
+                            android:text="Capture or upload official documents to authenticate your identity and solar microgrid connection node."
                             android:textColor="@color/text_secondary"
                             android:textSize="11sp"
                             android:lineSpacingExtra="2dp"
-                            android:layout_marginBottom="12dp" />
+                            android:layout_marginBottom="14dp" />
 
-                        <!-- Preview Frame -->
+                        <!-- Document Slot 1: National Identity Card (Proof of Identity) -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="1. National Identity Card (NIC Photo) *"
+                            android:textColor="@color/text_primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="6dp" />
+
+                        <!-- NIC Preview Frame -->
                         <FrameLayout
                             android:id="@+id/layoutNicPreview"
                             android:layout_width="match_parent"
-                            android:layout_height="140dp"
+                            android:layout_height="160dp"
                             android:background="@drawable/bg_action_card"
                             android:visibility="gone"
-                            android:layout_marginBottom="12dp">
+                            android:layout_marginBottom="8dp">
 
                             <ImageView
                                 android:id="@+id/ivNicPreview"
@@ -397,64 +421,149 @@
                                 android:backgroundTint="#80000000"
                                 app:tint="#EF4444"
                                 android:padding="6dp"
-                                android:contentDescription="Remove Document" />
+                                android:contentDescription="Remove NIC" />
                         </FrameLayout>
 
-                        <!-- Document Status Indicator -->
+                        <!-- NIC Document Status Text -->
                         <TextView
                             android:id="@+id/tvDocStatus"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="No document selected yet"
+                            android:text="No ID document attached"
                             android:textColor="@color/text_muted"
                             android:textSize="11sp"
-                            android:layout_marginBottom="12dp" />
+                            android:layout_marginBottom="10dp" />
 
+                        <!-- NIC Action Buttons -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal">
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="16dp">
 
                             <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnUploadNicDoc"
+                                android:id="@+id/btnCameraNic"
                                 android:layout_width="0dp"
-                                android:layout_height="44dp"
+                                android:layout_height="wrap_content"
+                                android:minHeight="48dp"
                                 android:layout_weight="1"
-                                android:text="Select Photo"
-                                app:icon="@drawable/ic_edit"
+                                android:text="Camera"
+                                app:icon="@drawable/ic_camera"
                                 app:iconGravity="textStart"
-                                app:iconSize="16dp"
+                                app:iconSize="18dp"
                                 app:iconTint="@color/primary"
                                 android:textAllCaps="false"
                                 android:textSize="12sp"
                                 android:textStyle="bold"
+                                android:paddingVertical="8dp"
+                                android:paddingHorizontal="10dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
                                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                                 app:strokeColor="@color/primary"
                                 app:strokeWidth="1.5dp"
                                 android:textColor="@color/primary"
                                 app:cornerRadius="10dp"
-                                android:layout_marginEnd="6dp" />
+                                android:layout_marginEnd="5dp" />
 
                             <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnGenerateDigitalDoc"
+                                android:id="@+id/btnUploadNicDoc"
                                 android:layout_width="0dp"
-                                android:layout_height="44dp"
+                                android:layout_height="wrap_content"
+                                android:minHeight="48dp"
                                 android:layout_weight="1"
-                                android:text="Digital ID Scan"
-                                app:icon="@drawable/ic_zap"
+                                android:text="Browse Files"
+                                app:icon="@drawable/ic_image"
                                 app:iconGravity="textStart"
-                                app:iconSize="16dp"
+                                app:iconSize="18dp"
                                 app:iconTint="@color/text_primary"
                                 android:textAllCaps="false"
                                 android:textSize="12sp"
                                 android:textStyle="bold"
+                                android:paddingVertical="8dp"
+                                android:paddingHorizontal="10dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
                                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                                 app:strokeColor="@color/card_border"
                                 app:strokeWidth="1dp"
                                 android:textColor="@color/text_primary"
                                 app:cornerRadius="10dp"
-                                android:layout_marginStart="6dp" />
+                                android:layout_marginStart="5dp" />
                         </LinearLayout>
+
+                        <!-- Document Slot 2: Electricity Bill / CEB Solar Interconnection (Proof of Grid Node) -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="2. CEB / LECO Electricity Bill (Proof of Grid Node)"
+                            android:textColor="@color/text_primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="6dp" />
+
+                        <!-- Utility Bill Preview Frame -->
+                        <FrameLayout
+                            android:id="@+id/layoutUtilityPreview"
+                            android:layout_width="match_parent"
+                            android:layout_height="140dp"
+                            android:background="@drawable/bg_action_card"
+                            android:visibility="gone"
+                            android:layout_marginBottom="8dp">
+
+                            <ImageView
+                                android:id="@+id/ivUtilityPreview"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop" />
+
+                            <ImageButton
+                                android:id="@+id/btnRemoveUtilityBill"
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:layout_gravity="top|end"
+                                android:layout_margin="8dp"
+                                android:src="@drawable/ic_x"
+                                android:background="@drawable/bg_circle_icon_button"
+                                android:backgroundTint="#80000000"
+                                app:tint="#EF4444"
+                                android:padding="6dp"
+                                android:contentDescription="Remove Utility Bill" />
+                        </FrameLayout>
+
+                        <!-- Utility Bill Status Text -->
+                        <TextView
+                            android:id="@+id/tvUtilityStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Optional (Fast-tracks grid authorization)"
+                            android:textColor="@color/text_muted"
+                            android:textSize="11sp"
+                            android:layout_marginBottom="10dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnUploadUtilityBill"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="44dp"
+                            android:text="Attach CEB / LECO Bill"
+                            app:icon="@drawable/ic_zap"
+                            app:iconGravity="textStart"
+                            app:iconSize="16dp"
+                            app:iconTint="@color/text_primary"
+                            android:textAllCaps="false"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:paddingVertical="8dp"
+                            android:paddingHorizontal="12dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            app:strokeColor="@color/card_border"
+                            app:strokeWidth="1dp"
+                            android:textColor="@color/text_primary"
+                            app:cornerRadius="10dp" />
+
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
