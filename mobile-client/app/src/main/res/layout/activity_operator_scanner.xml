@@ -553,7 +553,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Enter QR Payload Token or Res #:"
+                               android:text="Enter QR token:"
                             android:textColor="@color/text_primary"
                             android:textSize="13sp"
                             android:textStyle="bold"
@@ -569,7 +569,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="46dp"
                                 android:layout_weight="1"
-                                android:hint="SOLAR-TX:... or RES-..."
+                                android:hint="SOLAR-TX:RES-...:signature"
                                 android:textColorHint="@color/text_muted"
                                 android:textColor="@color/text_primary"
                                 android:background="@drawable/bg_search_input"
