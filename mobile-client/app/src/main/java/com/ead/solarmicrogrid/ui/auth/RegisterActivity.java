@@ -24,6 +24,7 @@ import android.text.TextWatcher;
 import android.util.Base64;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -56,29 +57,42 @@ public class RegisterActivity extends AppCompatActivity {
 
     private TextInputEditText etNic, etFullName, etEmail, etPhone, etAddress, etSolarCapacity, etInverterSerial, etPassword;
     private Button btnRegister;
-    private TextView tvBackToLogin, tvNicDemographic, tvDocStatus, tvUtilityStatus;
+    private TextView tvBackToLogin, tvNicDemographic, tvDocStatus, tvDocBackStatus, tvUtilityStatus;
     private ProgressBar progressBar;
 
-    // e-KYC Slot 1 (NIC / Government ID)
+    // e-KYC Slot 1 (NIC Front Side)
     private FrameLayout layoutNicPreview;
     private ImageView ivNicPreview;
     private ImageButton btnRemoveDoc;
     private MaterialButton btnCameraNic, btnUploadNicDoc;
 
-    // e-KYC Slot 2 (CEB / LECO Grid Utility Bill)
+    // e-KYC Slot 2 (NIC Back Side)
+    private FrameLayout layoutNicBackPreview;
+    private ImageView ivNicBackPreview;
+    private ImageButton btnRemoveNicBackDoc;
+    private MaterialButton btnCameraNicBack, btnUploadNicBackDoc;
+
+    // e-KYC Slot 3 (CEB / LECO Grid Utility Bill)
     private FrameLayout layoutUtilityPreview;
     private ImageView ivUtilityPreview;
     private ImageButton btnRemoveUtilityBill;
     private MaterialButton btnUploadUtilityBill;
 
-    // Launchers
+    // Launchers & State
     private ActivityResultLauncher<String> requestCameraPermissionLauncher;
     private ActivityResultLauncher<Void> cameraLauncher;
-    private ActivityResultLauncher<String> galleryNicLauncher;
+    private ActivityResultLauncher<String> galleryNicFrontLauncher;
+    private ActivityResultLauncher<String> galleryNicBackLauncher;
     private ActivityResultLauncher<String> galleryUtilityLauncher;
 
-    private String attachedNicBase64 = null;
+    private boolean isTargetingFrontCamera = true;
+    private String attachedNicFrontBase64 = null;
+    private String attachedNicBackBase64 = null;
     private String attachedUtilityBillBase64 = null;
+
+    private Bitmap bitmapNicFront = null;
+    private Bitmap bitmapNicBack = null;
+    private Bitmap bitmapUtility = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,22 +117,36 @@ public class RegisterActivity extends AppCompatActivity {
                 }
         );
 
-        // Camera capture for physical NIC
+        // Camera capture for physical NIC (Front or Back)
         cameraLauncher = registerForActivityResult(
                 new ActivityResultContracts.TakePicturePreview(),
                 bitmap -> {
                     if (bitmap != null) {
-                        processBitmap(bitmap, true);
+                        if (isTargetingFrontCamera) {
+                            processBitmap(bitmap, 1);
+                        } else {
+                            processBitmap(bitmap, 2);
+                        }
                     }
                 }
         );
 
-        // Gallery picker for NIC image
-        galleryNicLauncher = registerForActivityResult(
+        // Gallery picker for NIC Front
+        galleryNicFrontLauncher = registerForActivityResult(
                 new ActivityResultContracts.GetContent(),
                 uri -> {
                     if (uri != null) {
-                        processUriImage(uri, true);
+                        processUriImage(uri, 1);
+                    }
+                }
+        );
+
+        // Gallery picker for NIC Back
+        galleryNicBackLauncher = registerForActivityResult(
+                new ActivityResultContracts.GetContent(),
+                uri -> {
+                    if (uri != null) {
+                        processUriImage(uri, 2);
                     }
                 }
         );
@@ -128,7 +156,7 @@ public class RegisterActivity extends AppCompatActivity {
                 new ActivityResultContracts.GetContent(),
                 uri -> {
                     if (uri != null) {
-                        processUriImage(uri, false);
+                        processUriImage(uri, 3);
                     }
                 }
         );
@@ -156,7 +184,7 @@ public class RegisterActivity extends AppCompatActivity {
         tvBackToLogin = findViewById(R.id.tvBackToLogin);
         progressBar = findViewById(R.id.progressBar);
 
-        // NIC Slot
+        // NIC Front Slot
         layoutNicPreview = findViewById(R.id.layoutNicPreview);
         ivNicPreview = findViewById(R.id.ivNicPreview);
         btnRemoveDoc = findViewById(R.id.btnRemoveDoc);
@@ -164,15 +192,29 @@ public class RegisterActivity extends AppCompatActivity {
         btnCameraNic = findViewById(R.id.btnCameraNic);
         btnUploadNicDoc = findViewById(R.id.btnUploadNicDoc);
 
+        // NIC Back Slot
+        layoutNicBackPreview = findViewById(R.id.layoutNicBackPreview);
+        ivNicBackPreview = findViewById(R.id.ivNicBackPreview);
+        btnRemoveNicBackDoc = findViewById(R.id.btnRemoveNicBackDoc);
+        tvDocBackStatus = findViewById(R.id.tvDocBackStatus);
+        btnCameraNicBack = findViewById(R.id.btnCameraNicBack);
+        btnUploadNicBackDoc = findViewById(R.id.btnUploadNicBackDoc);
+
         // Utility Slot
         layoutUtilityPreview = findViewById(R.id.layoutUtilityPreview);
         ivUtilityPreview = findViewById(R.id.ivUtilityPreview);
         btnRemoveUtilityBill = findViewById(R.id.btnRemoveUtilityBill);
         tvUtilityStatus = findViewById(R.id.tvUtilityStatus);
         btnUploadUtilityBill = findViewById(R.id.btnUploadUtilityBill);
+
+        tvRegisterServerBadge = findViewById(R.id.tvRegisterServerBadge);
+        updateServerBadge();
     }
 
     private void setupListeners() {
+        if (tvRegisterServerBadge != null) {
+            tvRegisterServerBadge.setOnClickListener(v -> showServerConfigDialog());
+        }
         // Real-time Sri Lankan NIC demographic validation feedback
         etNic.addTextChangedListener(new TextWatcher() {
             @Override
@@ -204,27 +246,52 @@ public class RegisterActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {}
         });
 
-        // NIC document triggers
+        // NIC Front triggers
         btnCameraNic.setOnClickListener(v -> {
+            isTargetingFrontCamera = true;
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
                 openCameraSafely();
             } else {
                 requestCameraPermissionLauncher.launch(Manifest.permission.CAMERA);
             }
         });
-        btnUploadNicDoc.setOnClickListener(v -> galleryNicLauncher.launch("image/*"));
+        btnUploadNicDoc.setOnClickListener(v -> galleryNicFrontLauncher.launch("image/*"));
+        ivNicPreview.setOnClickListener(v -> showImagePreviewDialog("NIC Front Document", bitmapNicFront));
         btnRemoveDoc.setOnClickListener(v -> {
-            attachedNicBase64 = null;
+            attachedNicFrontBase64 = null;
+            bitmapNicFront = null;
             layoutNicPreview.setVisibility(View.GONE);
             ivNicPreview.setImageDrawable(null);
-            tvDocStatus.setText("No ID document attached");
+            tvDocStatus.setText("No front ID attached");
             tvDocStatus.setTextColor(ContextCompat.getColor(this, R.color.text_muted));
         });
 
-        // Utility Bill document triggers
+        // NIC Back triggers
+        btnCameraNicBack.setOnClickListener(v -> {
+            isTargetingFrontCamera = false;
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                openCameraSafely();
+            } else {
+                requestCameraPermissionLauncher.launch(Manifest.permission.CAMERA);
+            }
+        });
+        btnUploadNicBackDoc.setOnClickListener(v -> galleryNicBackLauncher.launch("image/*"));
+        ivNicBackPreview.setOnClickListener(v -> showImagePreviewDialog("NIC Back Document", bitmapNicBack));
+        btnRemoveNicBackDoc.setOnClickListener(v -> {
+            attachedNicBackBase64 = null;
+            bitmapNicBack = null;
+            layoutNicBackPreview.setVisibility(View.GONE);
+            ivNicBackPreview.setImageDrawable(null);
+            tvDocBackStatus.setText("No back ID attached");
+            tvDocBackStatus.setTextColor(ContextCompat.getColor(this, R.color.text_muted));
+        });
+
+        // Utility Bill triggers
         btnUploadUtilityBill.setOnClickListener(v -> galleryUtilityLauncher.launch("image/*"));
+        ivUtilityPreview.setOnClickListener(v -> showImagePreviewDialog("Electricity / Grid Utility Bill", bitmapUtility));
         btnRemoveUtilityBill.setOnClickListener(v -> {
             attachedUtilityBillBase64 = null;
+            bitmapUtility = null;
             layoutUtilityPreview.setVisibility(View.GONE);
             ivUtilityPreview.setImageDrawable(null);
             tvUtilityStatus.setText("Optional (Fast-tracks grid authorization)");
@@ -239,7 +306,21 @@ public class RegisterActivity extends AppCompatActivity {
         });
     }
 
-    private void processBitmap(Bitmap original, boolean isNicDoc) {
+    private void showImagePreviewDialog(String title, Bitmap bitmap) {
+        if (bitmap == null) return;
+        ImageView iv = new ImageView(this);
+        iv.setImageBitmap(bitmap);
+        iv.setAdjustViewBounds(true);
+        iv.setPadding(24, 24, 24, 24);
+
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setView(iv)
+                .setPositiveButton("Close", null)
+                .show();
+    }
+
+    private void processBitmap(Bitmap original, int docType) {
         if (original == null) return;
         try {
             int maxDim = 1024;
@@ -257,17 +338,26 @@ public class RegisterActivity extends AppCompatActivity {
             byte[] bytes = outputStream.toByteArray();
             String base64Data = "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP);
 
-            if (isNicDoc) {
-                attachedNicBase64 = base64Data;
+            if (docType == 1) { // NIC Front
+                attachedNicFrontBase64 = base64Data;
+                bitmapNicFront = original;
                 ivNicPreview.setImageBitmap(original);
                 layoutNicPreview.setVisibility(View.VISIBLE);
-                tvDocStatus.setText("✓ NIC Photo Captured (" + (bytes.length / 1024) + " KB)");
+                tvDocStatus.setText("✓ NIC Front Attached (" + (bytes.length / 1024) + " KB) • Tap to view");
                 tvDocStatus.setTextColor(ContextCompat.getColor(this, R.color.accent));
-            } else {
+            } else if (docType == 2) { // NIC Back
+                attachedNicBackBase64 = base64Data;
+                bitmapNicBack = original;
+                ivNicBackPreview.setImageBitmap(original);
+                layoutNicBackPreview.setVisibility(View.VISIBLE);
+                tvDocBackStatus.setText("✓ NIC Back Attached (" + (bytes.length / 1024) + " KB) • Tap to view");
+                tvDocBackStatus.setTextColor(ContextCompat.getColor(this, R.color.accent));
+            } else { // Utility Bill
                 attachedUtilityBillBase64 = base64Data;
+                bitmapUtility = original;
                 ivUtilityPreview.setImageBitmap(original);
                 layoutUtilityPreview.setVisibility(View.VISIBLE);
-                tvUtilityStatus.setText("✓ CEB/LECO Bill Attached (" + (bytes.length / 1024) + " KB)");
+                tvUtilityStatus.setText("✓ CEB/LECO Bill Attached (" + (bytes.length / 1024) + " KB) • Tap to view");
                 tvUtilityStatus.setTextColor(ContextCompat.getColor(this, R.color.accent));
             }
         } catch (Exception e) {
@@ -275,17 +365,84 @@ public class RegisterActivity extends AppCompatActivity {
         }
     }
 
-    private void processUriImage(Uri uri, boolean isNicDoc) {
+    private void processUriImage(Uri uri, int docType) {
         try (InputStream inputStream = getContentResolver().openInputStream(uri)) {
             Bitmap original = BitmapFactory.decodeStream(inputStream);
             if (original == null) {
                 Toast.makeText(this, "Unable to decode selected image file.", Toast.LENGTH_SHORT).show();
                 return;
             }
-            processBitmap(original, isNicDoc);
+            processBitmap(original, docType);
         } catch (Exception e) {
             Toast.makeText(this, "Error reading image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private TextView tvRegisterServerBadge;
+
+    private void updateServerBadge() {
+        if (tvRegisterServerBadge != null) {
+            String url = ApiClient.getBaseUrl(this);
+            tvRegisterServerBadge.setText("Server: " + url + " (Tap to switch)");
+        }
+    }
+
+    private void showServerConfigDialog() {
+        String[] options = {
+                "USB Cable Reverse (127.0.0.1:5000) [Default USB]",
+                "Wi-Fi LAN (192.168.1.105:5000) [Current Host PC]",
+                "Android Emulator (10.0.2.2:5000)",
+                "Custom URL..."
+        };
+
+        new AlertDialog.Builder(this)
+                .setTitle("Select Server API Endpoint")
+                .setItems(options, (dialog, which) -> {
+                    switch (which) {
+                        case 0:
+                            ApiClient.setBaseUrl(this, "http://127.0.0.1:5000/api/");
+                            updateServerBadge();
+                            Toast.makeText(this, "Switched to USB Reverse (127.0.0.1:5000)", Toast.LENGTH_SHORT).show();
+                            break;
+                        case 1:
+                            ApiClient.setBaseUrl(this, "http://192.168.1.105:5000/api/");
+                            updateServerBadge();
+                            Toast.makeText(this, "Switched to Wi-Fi LAN (192.168.1.105:5000)", Toast.LENGTH_SHORT).show();
+                            break;
+                        case 2:
+                            ApiClient.setBaseUrl(this, "http://10.0.2.2:5000/api/");
+                            updateServerBadge();
+                            Toast.makeText(this, "Switched to Emulator (10.0.2.2:5000)", Toast.LENGTH_SHORT).show();
+                            break;
+                        case 3:
+                            showCustomUrlDialog();
+                            break;
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showCustomUrlDialog() {
+        final EditText input = new EditText(this);
+        input.setText(ApiClient.getBaseUrl(this));
+        input.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+        input.setHintTextColor(ContextCompat.getColor(this, R.color.text_muted));
+        input.setPadding(32, 24, 32, 24);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Enter Custom Web API URL")
+                .setView(input)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String url = input.getText().toString().trim();
+                    if (!url.isEmpty()) {
+                        ApiClient.setBaseUrl(this, url);
+                        updateServerBadge();
+                        Toast.makeText(this, "Server updated to: " + url, Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void performRegistration() {
@@ -298,11 +455,14 @@ public class RegisterActivity extends AppCompatActivity {
         String inverterSerial = etInverterSerial.getText() != null ? etInverterSerial.getText().toString().trim() : "";
         String password = etPassword.getText() != null ? etPassword.getText().toString().trim() : "";
 
-        if (nic.isEmpty() || fullName.isEmpty() || email.isEmpty() || phone.isEmpty() || address.isEmpty() || password.isEmpty()) {
-            Toast.makeText(this, "All required fields must be completed.", Toast.LENGTH_SHORT).show();
+        // 1. Mandatory Field Validation
+        if (nic.isEmpty()) {
+            Toast.makeText(this, "National Identity Card (NIC) number is required.", Toast.LENGTH_SHORT).show();
+            etNic.requestFocus();
             return;
         }
 
+        // 2. Sri Lankan NIC Algorithm Check
         NicValidator.NicValidationResult nicResult = NicValidator.validate(nic);
         if (!nicResult.isValid) {
             Toast.makeText(this, nicResult.error, Toast.LENGTH_LONG).show();
@@ -310,20 +470,74 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
 
-        double parsedSolarKw = 15.0;
-        try {
-            parsedSolarKw = Double.parseDouble(solarStr);
-        } catch (NumberFormatException ignored) {}
-        final double solarKw = parsedSolarKw;
-
-        if (password.length() < 6) {
-            Toast.makeText(this, "Password must be at least 6 characters.", Toast.LENGTH_SHORT).show();
+        // 3. Name Validation
+        if (fullName.isEmpty()) {
+            Toast.makeText(this, "Full Name is required.", Toast.LENGTH_SHORT).show();
+            etFullName.requestFocus();
             return;
         }
 
-        // e-KYC Proof of Identity requirement check
-        if (attachedNicBase64 == null) {
-            Toast.makeText(this, "Please capture or attach your National Identity Card (NIC) photo to complete e-KYC.", Toast.LENGTH_LONG).show();
+        // 4. Email Validation
+        if (email.isEmpty()) {
+            Toast.makeText(this, "Email address is required.", Toast.LENGTH_SHORT).show();
+            etEmail.requestFocus();
+            return;
+        }
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            Toast.makeText(this, "Please enter a valid email address.", Toast.LENGTH_SHORT).show();
+            etEmail.requestFocus();
+            return;
+        }
+
+        // 5. Phone Validation (Sri Lankan standard format)
+        if (phone.isEmpty()) {
+            Toast.makeText(this, "Phone number is required.", Toast.LENGTH_SHORT).show();
+            etPhone.requestFocus();
+            return;
+        }
+        if (!phone.matches("^(?:\\+94|0)[0-9]{9}$")) {
+            Toast.makeText(this, "Please enter a valid Sri Lankan phone number (e.g. 0771234567 or +94771234567).", Toast.LENGTH_LONG).show();
+            etPhone.requestFocus();
+            return;
+        }
+
+        // 6. Address Validation
+        if (address.isEmpty()) {
+            Toast.makeText(this, "Physical / Property address is required.", Toast.LENGTH_SHORT).show();
+            etAddress.requestFocus();
+            return;
+        }
+
+        // 7. Solar Array Capacity Validation
+        double parsedSolarKw = 15.0;
+        try {
+            parsedSolarKw = Double.parseDouble(solarStr);
+            if (parsedSolarKw <= 0 || parsedSolarKw > 500.0) {
+                Toast.makeText(this, "Solar array capacity must be between 0.1 kW and 500.0 kW.", Toast.LENGTH_SHORT).show();
+                etSolarCapacity.requestFocus();
+                return;
+            }
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Invalid solar array capacity value.", Toast.LENGTH_SHORT).show();
+            etSolarCapacity.requestFocus();
+            return;
+        }
+        final double solarKw = parsedSolarKw;
+
+        // 8. Password Strength Validation
+        if (password.length() < 6) {
+            Toast.makeText(this, "Password must be at least 6 characters.", Toast.LENGTH_SHORT).show();
+            etPassword.requestFocus();
+            return;
+        }
+
+        // 9. Dual-Slot e-KYC Proof of Identity Mandatory Check
+        if (attachedNicFrontBase64 == null) {
+            Toast.makeText(this, "e-KYC Mandatory: Please capture or attach Front side of Sri Lankan NIC.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (attachedNicBackBase64 == null) {
+            Toast.makeText(this, "e-KYC Mandatory: Please capture or attach Back side of Sri Lankan NIC.", Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -339,7 +553,8 @@ public class RegisterActivity extends AppCompatActivity {
                 solarKw,
                 inverterSerial,
                 password,
-                attachedNicBase64,
+                attachedNicFrontBase64,
+                attachedNicBackBase64,
                 attachedUtilityBillBase64
         );
 
@@ -352,7 +567,7 @@ public class RegisterActivity extends AppCompatActivity {
                 if (response.isSuccessful()) {
                     new AlertDialog.Builder(RegisterActivity.this)
                             .setTitle("e-KYC Prosumer Registered")
-                            .setMessage("Your solar prosumer node registration has been submitted.\n\nNIC: " + nic + "\nDemographics: " + nicResult.gender + ", Age " + nicResult.age + "\nSolar Array: " + solarKw + " kW\nInverter: " + inverterSerial + "\n\nPer enterprise compliance, account status is 'Pending' awaiting Backoffice review.")
+                            .setMessage("Your solar prosumer node registration has been submitted with Front/Back ID verification.\n\nNIC: " + nic + "\nDemographics: " + nicResult.gender + ", Age " + nicResult.age + "\nSolar Array: " + solarKw + " kW\nInverter: " + inverterSerial + "\n\nPer enterprise compliance, account status is 'Pending' awaiting Backoffice review.")
                             .setPositiveButton("Go to Login", (dialog, which) -> finish())
                             .setCancelable(false)
                             .show();
@@ -365,10 +580,17 @@ public class RegisterActivity extends AppCompatActivity {
             public void onFailure(Call<ResponseBody> call, Throwable t) {
                 progressBar.setVisibility(View.GONE);
                 btnRegister.setEnabled(true);
-                Toast.makeText(RegisterActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_LONG).show();
+                String currentUrl = ApiClient.getBaseUrl(RegisterActivity.this);
+                new AlertDialog.Builder(RegisterActivity.this)
+                        .setTitle("Connection Error")
+                        .setMessage("Failed to reach server at:\n" + currentUrl + "\n\nError: " + t.getMessage() + "\n\n• For USB testing: Ensure 'adb reverse tcp:5000 tcp:5000' is active on PC.\n• For Wi-Fi: Switch endpoint to Wi-Fi LAN (192.168.1.105:5000).")
+                        .setPositiveButton("Switch Server", (dialog, which) -> showServerConfigDialog())
+                        .setNegativeButton("Close", null)
+                        .show();
             }
         });
     }
 }
+
 
 

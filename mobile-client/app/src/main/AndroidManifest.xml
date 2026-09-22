@@ -29,7 +29,8 @@
         <!-- Launcher Activity: Login -->
         <activity
             android:name=".ui.auth.LoginActivity"
-            android:exported="true">
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -40,18 +41,22 @@
         <activity
             android:name=".ui.auth.RegisterActivity"
             android:exported="true"
+            android:windowSoftInputMode="adjustResize"
             android:parentActivityName=".ui.auth.LoginActivity" />
 
         <!-- Prosumer Activities -->
         <activity
             android:name=".ui.prosumer.ProsumerDashboardActivity"
-            android:exported="true" />
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".ui.prosumer.CreateReservationActivity"
-            android:exported="true" />
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".ui.prosumer.ReservationDetailActivity"
-            android:exported="true" />
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".ui.prosumer.StationsMapActivity"
             android:exported="true" />
