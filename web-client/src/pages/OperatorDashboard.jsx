@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Battery, QrCode, CheckCircle2, AlertCircle, Search, RefreshCw, 
+import {
+  Battery, QrCode, CheckCircle2, AlertCircle, Search, RefreshCw,
   Zap, Clock, ShieldCheck, Filter, Scan, Check, BatteryCharging,
   ArrowRight, Radio, Eye
 } from 'lucide-react';
@@ -22,6 +22,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
   const [availableSlots, setAvailableSlots] = useState(0);
   const [totalSlots, setTotalSlots] = useState(0);
   const [slotUpdateMsg, setSlotUpdateMsg] = useState('');
+  const [telemetry, setTelemetry] = useState(null);
 
   // Reservations Monitor
   const [reservations, setReservations] = useState([]);
@@ -57,11 +58,22 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
     } finally {
       setLoadingReservations(false);
     }
+
+    if (selectedStationId) {
+      try {
+        const telemetryRes = await api.get(`/stations/${selectedStationId}/telemetry`);
+        setTelemetry(telemetryRes.data);
+      } catch (err) {
+        console.error('Failed to load station telemetry', err);
+      }
+    }
   };
 
   useEffect(() => {
     loadOperationalData();
-  }, []);
+    const timer = setInterval(loadOperationalData, 30000);
+    return () => clearInterval(timer);
+  }, [selectedStationId]);
 
   const handleStationChange = (id) => {
     setSelectedStationId(id);
@@ -94,13 +106,19 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
     const token = tokenToVerify || qrToken;
     if (!token.trim()) return;
 
+    if (!/^SOLAR-TX:RES-[^:]+:[0-9A-Fa-f]{12}$/.test(token.trim())) {
+      setQrError('Enter a valid QR payload beginning with SOLAR-TX:. Reservation numbers cannot be verified.');
+      return;
+    }
+
     setVerifying(true);
     setQrError('');
     setQrResult(null);
 
     try {
       const res = await api.post('/reservations/verify-qr', {
-        qrCodeToken: token.trim()
+        qrCodeToken: token.trim(),
+        stationId: selectedStationId || undefined
       });
       setQrResult(res.data.summary || res.data.reservation);
       setQrToken('');
@@ -185,6 +203,35 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
               </select>
             </div>
 
+            {telemetry && (
+              <div className="grid grid-cols-2 gap-3 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Occupied</p>
+                  <p className="text-lg font-mono font-bold text-slate-900 dark:text-white">
+                    {telemetry.occupiedBatterySlots} / {telemetry.totalBatterySlots}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Occupancy</p>
+                  <p className="text-lg font-mono font-bold text-cyan-600 dark:text-cyan-400">
+                    {telemetry.batteryOccupancyPercent.toFixed(1)}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Pending / Approved</p>
+                  <p className="text-sm font-mono font-bold text-slate-900 dark:text-white">
+                    {telemetry.pendingReservations} / {telemetry.approvedReservations}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Completed</p>
+                  <p className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    {telemetry.completedReservations}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Slider & Meter */}
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 space-y-3">
               <div className="flex justify-between text-xs font-bold">
@@ -245,13 +292,12 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
         </div>
 
         {/* Optical QR Scanner Viewport */}
-        <div 
+        <div
           ref={qrSectionRef}
-          className={`lg:col-span-6 rounded-3xl border ${
-            activeTab === 'bookings' 
-              ? 'border-cyan-500/80 ring-2 ring-cyan-500/30 shadow-lg shadow-cyan-500/10' 
-              : 'border-slate-200 dark:border-slate-800/80'
-          } bg-white dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-7 shadow-sm dark:shadow-xl space-y-5 transition-all duration-300`}
+          className={`lg:col-span-6 rounded-3xl border ${activeTab === 'bookings'
+            ? 'border-cyan-500/80 ring-2 ring-cyan-500/30 shadow-lg shadow-cyan-500/10'
+            : 'border-slate-200 dark:border-slate-800/80'
+            } bg-white dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-7 shadow-sm dark:shadow-xl space-y-5 transition-all duration-300`}
         >
           <div className="flex items-center gap-3 text-slate-900 dark:text-white font-display font-bold text-lg">
             <div className="h-10 w-10 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
@@ -291,6 +337,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                   ref={qrInputRef}
                   type="text"
                   required
+                  pattern="SOLAR-TX:RES-[^:]+:[0-9A-Fa-f]{12}"
                   placeholder="e.g. SOLAR-TX:RES-18498637:07AF828EED4D"
                   value={qrToken}
                   onChange={(e) => setQrToken(e.target.value)}
@@ -355,11 +402,10 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  statusFilter === status
-                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                    : 'bg-slate-100 dark:bg-slate-950/60 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'
-                }`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${statusFilter === status
+                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                  : 'bg-slate-100 dark:bg-slate-950/60 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'
+                  }`}
               >
                 {status}
               </button>
@@ -405,15 +451,14 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                          r.status === 'Approved'
-                            ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
-                            : r.status === 'Completed'
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${r.status === 'Approved'
+                          ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
+                          : r.status === 'Completed'
                             ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
                             : r.status === 'Cancelled'
-                            ? 'bg-slate-200 dark:bg-slate-800 text-slate-500'
-                            : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
-                        }`}
+                              ? 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+                              : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                          }`}
                       >
                         <span>{r.status}</span>
                       </span>
