@@ -297,7 +297,7 @@
                     app:passwordToggleEnabled="true"
                     app:passwordToggleTint="@color/primary"
                     android:textColorHint="@color/text_muted"
-                    android:layout_marginBottom="22dp">
+                    android:layout_marginBottom="18dp">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etPassword"
@@ -308,6 +308,155 @@
                         android:padding="16dp"
                         android:inputType="textPassword" />
                 </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- e-KYC NIC Document Attachment Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="@color/background_dark"
+                    app:strokeColor="@color/card_border"
+                    app:strokeWidth="1dp"
+                    android:layout_marginBottom="22dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="8dp">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:src="@drawable/ic_shield_check"
+                                app:tint="@color/primary"
+                                android:layout_marginEnd="8dp" />
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="National ID Document (e-KYC)"
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvDocBadge"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Required"
+                                android:textColor="@color/primary"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:background="@drawable/bg_pill_chip"
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="3dp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Upload or generate a digital scan of your Sri Lankan NIC to fast-track verification by backoffice administrators."
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp"
+                            android:lineSpacingExtra="2dp"
+                            android:layout_marginBottom="12dp" />
+
+                        <!-- Preview Frame -->
+                        <FrameLayout
+                            android:id="@+id/layoutNicPreview"
+                            android:layout_width="match_parent"
+                            android:layout_height="140dp"
+                            android:background="@drawable/bg_action_card"
+                            android:visibility="gone"
+                            android:layout_marginBottom="12dp">
+
+                            <ImageView
+                                android:id="@+id/ivNicPreview"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop" />
+
+                            <ImageButton
+                                android:id="@+id/btnRemoveDoc"
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:layout_gravity="top|end"
+                                android:layout_margin="8dp"
+                                android:src="@drawable/ic_x"
+                                android:background="@drawable/bg_circle_icon_button"
+                                android:backgroundTint="#80000000"
+                                app:tint="#EF4444"
+                                android:padding="6dp"
+                                android:contentDescription="Remove Document" />
+                        </FrameLayout>
+
+                        <!-- Document Status Indicator -->
+                        <TextView
+                            android:id="@+id/tvDocStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="No document selected yet"
+                            android:textColor="@color/text_muted"
+                            android:textSize="11sp"
+                            android:layout_marginBottom="12dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnUploadNicDoc"
+                                android:layout_width="0dp"
+                                android:layout_height="44dp"
+                                android:layout_weight="1"
+                                android:text="Select Photo"
+                                app:icon="@drawable/ic_edit"
+                                app:iconGravity="textStart"
+                                app:iconSize="16dp"
+                                app:iconTint="@color/primary"
+                                android:textAllCaps="false"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                app:strokeColor="@color/primary"
+                                app:strokeWidth="1.5dp"
+                                android:textColor="@color/primary"
+                                app:cornerRadius="10dp"
+                                android:layout_marginEnd="6dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnGenerateDigitalDoc"
+                                android:layout_width="0dp"
+                                android:layout_height="44dp"
+                                android:layout_weight="1"
+                                android:text="Digital ID Scan"
+                                app:icon="@drawable/ic_zap"
+                                app:iconGravity="textStart"
+                                app:iconSize="16dp"
+                                app:iconTint="@color/text_primary"
+                                android:textAllCaps="false"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                app:strokeColor="@color/card_border"
+                                app:strokeWidth="1dp"
+                                android:textColor="@color/text_primary"
+                                app:cornerRadius="10dp"
+                                android:layout_marginStart="6dp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnRegister"
