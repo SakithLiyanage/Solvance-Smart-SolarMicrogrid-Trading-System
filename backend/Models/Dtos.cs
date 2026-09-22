@@ -44,6 +44,7 @@ namespace SolarMicrogridApi.Models
     public class ProsumerRegisterDto
     {
         [Required]
+        [RegularExpression(@"^([0-9]{9}[vVxX]|[0-9]{12})$", ErrorMessage = "Invalid National Identity Card (NIC) format. Must be 9 digits with V/X or 12 numeric digits.")]
         public string Nic { get; set; } = string.Empty;
 
         [Required]
@@ -63,6 +64,10 @@ namespace SolarMicrogridApi.Models
 
         public string InverterSerial { get; set; } = string.Empty;
 
+        public string? NicDocumentBase64 { get; set; }
+
+        public string? UtilityBillBase64 { get; set; }
+
         [Required]
         [MinLength(6)]
         public string Password { get; set; } = string.Empty;
@@ -71,6 +76,7 @@ namespace SolarMicrogridApi.Models
     public class CreateStaffUserDto
     {
         [Required]
+        [RegularExpression(@"^([0-9]{9}[vVxX]|[0-9]{12}|(ADMIN|OPERATOR)[0-9]{3,})$", ErrorMessage = "Invalid Staff Identifier or NIC format.")]
         public string Nic { get; set; } = string.Empty;
 
         [Required]
@@ -100,6 +106,8 @@ namespace SolarMicrogridApi.Models
         public string Address { get; set; } = string.Empty;
         public double SolarCapacityKw { get; set; }
         public string InverterSerial { get; set; } = string.Empty;
+        public string? NicDocumentBase64 { get; set; }
+        public string? UtilityBillBase64 { get; set; }
     }
 
     // --- SOLAR STATION DTOS ---

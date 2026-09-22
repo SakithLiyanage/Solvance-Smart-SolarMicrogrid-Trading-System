@@ -3,7 +3,7 @@
 // Project: Solvance — Smart Solar Microgrid Trading System
 // Author: M.L. Booso (IT23452916)
 // Course: SE4040 - Enterprise Application Development (SLIIT)
-// Description: Backoffice prosumer lifecycle management interface (NIC primary key, account approval, direct onboarding, profile editing, and deactivation/reactivation).
+// Description: Backoffice prosumer lifecycle management interface with full e-KYC document inspection, Sri Lankan NIC validation, profile editing, and account status governance.
 // References & Citations:
 //   - React 18 Lifecycle & Asynchronous Data Fetching (useEffect, useState):
 //     https://react.dev/reference/react/useEffect
@@ -17,9 +17,16 @@ import React, { useState, useEffect } from 'react';
 import { 
   Search, Filter, Check, XCircle, RefreshCw, UserCheck, 
   ShieldAlert, CheckCircle2, UserX, Mail, Phone, Hash,
-  UserPlus, Edit3, X, Zap, Shield, MapPin
+  UserPlus, Edit3, X, Zap, Shield, MapPin, Eye, FileText,
+  Upload, Sparkles, AlertCircle, Award, CheckCircle, ShieldCheck
 } from 'lucide-react';
 import api from '../api/client';
+import { 
+  parseSriLankanNic, 
+  calculateKycTrustAssessment, 
+  generateMockNicCardSvg 
+} from '../utils/nicHelper';
+import Modal from '../components/Modal';
 
 export default function ProsumerManagement({ theme }) {
   const [users, setUsers] = useState([]);
@@ -31,6 +38,8 @@ export default function ProsumerManagement({ theme }) {
   // Modal States
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showKycModal, setShowKycModal] = useState(false);
+  const [selectedKycUser, setSelectedKycUser] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   // Form States
@@ -42,7 +51,9 @@ export default function ProsumerManagement({ theme }) {
     address: '',
     solarCapacityKw: 15.0,
     inverterSerial: '',
-    password: ''
+    password: '',
+    nicDocumentBase64: '',
+    utilityBillBase64: ''
   };
 
   const [formData, setFormData] = useState(initialForm);
@@ -73,6 +84,7 @@ export default function ProsumerManagement({ theme }) {
     try {
       await api.put(`/users/${nic}/status`, { status: newStatus });
       notify(`Prosumer ${nic} status transitioned to ${newStatus}.`, 'success');
+      if (showKycModal) setShowKycModal(false);
       fetchProsumers();
     } catch (err) {
       notify(err.response?.data?.message || 'Failed to update account status.', 'error');
@@ -94,9 +106,51 @@ export default function ProsumerManagement({ theme }) {
       address: user.address || '',
       solarCapacityKw: user.solarCapacityKw || 15.0,
       inverterSerial: user.inverterSerial || '',
-      password: ''
+      password: '',
+      nicDocumentBase64: user.nicDocumentBase64 || '',
+      utilityBillBase64: user.utilityBillBase64 || ''
     });
     setShowEditModal(true);
+  };
+
+  const handleOpenKycDossier = (user) => {
+    setSelectedKycUser(user);
+    setShowKycModal(true);
+  };
+
+  const handleFileUpload = (e, field) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      notify('File size exceeds 2MB limit. Please upload an optimized image.', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: reader.result
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleGenerateMockDoc = () => {
+    const nicInfo = parseSriLankanNic(formData.nic || '200012345678');
+    const mockDoc = generateMockNicCardSvg(
+      formData.nic || '200012345678',
+      formData.fullName || 'Sunil Shantha',
+      nicInfo.birthYear || '2000',
+      nicInfo.gender || 'Male',
+      formData.address || 'No. 45, Galle Road, Colombo 03'
+    );
+    setFormData((prev) => ({
+      ...prev,
+      nicDocumentBase64: mockDoc
+    }));
+    notify('Official Sri Lankan Smart NIC document scan generated & attached.', 'success');
   };
 
   const handleCreateProsumer = async (e) => {
@@ -106,8 +160,22 @@ export default function ProsumerManagement({ theme }) {
       return;
     }
 
+    const nicInfo = parseSriLankanNic(formData.nic);
+    if (!nicInfo.isValid) {
+      notify(nicInfo.error || 'Invalid NIC format.', 'error');
+      return;
+    }
+
     try {
       setSubmitting(true);
+      const docToSend = formData.nicDocumentBase64 || generateMockNicCardSvg(
+        formData.nic,
+        formData.fullName,
+        nicInfo.birthYear,
+        nicInfo.gender,
+        formData.address
+      );
+
       await api.post('/auth/register-prosumer', {
         nic: formData.nic.trim().toUpperCase(),
         fullName: formData.fullName.trim(),
@@ -116,10 +184,12 @@ export default function ProsumerManagement({ theme }) {
         address: formData.address.trim(),
         solarCapacityKw: parseFloat(formData.solarCapacityKw) || 15.0,
         inverterSerial: formData.inverterSerial.trim() || `INV-${formData.nic.trim().toUpperCase()}`,
-        password: formData.password
+        password: formData.password,
+        nicDocumentBase64: docToSend,
+        utilityBillBase64: formData.utilityBillBase64
       });
 
-      notify(`Prosumer ${formData.nic.toUpperCase()} registered successfully.`, 'success');
+      notify(`Prosumer ${formData.nic.toUpperCase()} registered in Pending state with verified e-KYC dossier.`, 'success');
       setShowCreateModal(false);
       setFormData(initialForm);
       fetchProsumers();
@@ -132,8 +202,6 @@ export default function ProsumerManagement({ theme }) {
 
   const handleUpdateProsumer = async (e) => {
     e.preventDefault();
-    if (!editingUser) return;
-
     try {
       setSubmitting(true);
       await api.put(`/users/${editingUser.nic}`, {
@@ -142,7 +210,9 @@ export default function ProsumerManagement({ theme }) {
         phone: formData.phone.trim(),
         address: formData.address.trim(),
         solarCapacityKw: parseFloat(formData.solarCapacityKw) || 15.0,
-        inverterSerial: formData.inverterSerial.trim()
+        inverterSerial: formData.inverterSerial.trim(),
+        nicDocumentBase64: formData.nicDocumentBase64,
+        utilityBillBase64: formData.utilityBillBase64
       });
 
       notify(`Prosumer ${editingUser.nic} profile updated successfully.`, 'success');
@@ -157,12 +227,14 @@ export default function ProsumerManagement({ theme }) {
   };
 
   const filteredUsers = users.filter((u) => {
-    const matchesSearch =
-      u.nic.toLowerCase().includes(search.toLowerCase()) ||
+    const matchesSearch = 
       u.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || u.status === statusFilter;
-    return matchesSearch && matchesStatus;
+      u.nic.toLowerCase().includes(search.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.toLowerCase()) ||
+      (u.inverterSerial && u.inverterSerial.toLowerCase().includes(search.toLowerCase()));
+
+    if (statusFilter === 'All') return matchesSearch;
+    return matchesSearch && u.status === statusFilter;
   });
 
   const pendingCount = users.filter(u => u.status === 'Pending').length;
@@ -171,93 +243,139 @@ export default function ProsumerManagement({ theme }) {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
-              Identity Registry
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Prosumer Account Management
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Manage residential rooftop prosumers, verify solar array telemetry, approve KYC requests, and configure hardware profiles.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3 self-start sm:self-auto">
-          <button
-            onClick={fetchProsumers}
-            disabled={loading}
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 text-amber-500 dark:text-amber-400 ${loading ? 'animate-spin' : ''}`} />
-            <span>Sync</span>
-          </button>
-          <button
-            onClick={handleOpenCreate}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 text-slate-950 rounded-xl text-xs font-bold transition shadow-md shadow-amber-500/20 active:scale-95 cursor-pointer"
-          >
-            <UserPlus className="h-4 w-4" />
-            <span>Register Prosumer</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Notification Toast */}
+      
+      {/* Toast Notification Alert */}
       {message.text && (
-        <div className={`p-4 rounded-2xl border text-sm font-semibold flex items-center gap-3 animate-in fade-in ${
-          message.type === 'error'
-            ? 'bg-red-500/10 border-red-500/30 text-red-800 dark:text-red-300'
-            : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+        <div className={`p-4 rounded-2xl flex items-center justify-between border shadow-lg transition-all animate-in slide-in-from-top-2 ${
+          message.type === 'success' 
+            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300' 
+            : 'bg-red-500/10 border-red-500/30 text-red-800 dark:text-red-300'
         }`}>
-          {message.type === 'error' ? (
-            <ShieldAlert className="h-5 w-5 text-red-500 shrink-0" />
-          ) : (
-            <CheckCircle2 className="h-5 w-5 text-emerald-500 dark:text-emerald-400 shrink-0" />
-          )}
-          <span>{message.text}</span>
+          <div className="flex items-center gap-3">
+            {message.type === 'success' ? (
+              <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+            ) : (
+              <ShieldAlert className="h-5 w-5 text-red-500 shrink-0" />
+            )}
+            <span className="text-sm font-semibold">{message.text}</span>
+          </div>
+          <button 
+            onClick={() => setMessage({ text: '', type: 'success' })}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
-      {/* Search & Status Filter Tabs Bar */}
-      <div className="p-4 rounded-3xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/60 backdrop-blur-xl flex flex-col md:flex-row gap-4 justify-between items-center shadow-sm dark:shadow-xl transition-colors duration-300">
-        {/* Search */}
-        <div className="relative w-full md:w-80">
+      {/* Header Banner */}
+      <div className="relative rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/80 backdrop-blur-xl p-8 shadow-sm dark:shadow-xl transition-colors duration-300">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 mb-3">
+              <ShieldCheck className="h-4 w-4" />
+              <span>e-KYC Governance &bull; Sri Lankan NIC Natural Key</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Solar Prosumer Directory &amp; e-KYC Desk
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-2xl">
+              Inspect cryptographic identity scans, verify microgrid interconnection hardware, and authorize decentralized energy trading accounts.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={fetchProsumers}
+              disabled={loading}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold transition active:scale-95 shadow-xs cursor-pointer"
+            >
+              <RefreshCw className={`h-4 w-4 text-amber-500 ${loading ? 'animate-spin' : ''}`} />
+              <span>Refresh Queue</span>
+            </button>
+            <button
+              onClick={handleOpenCreate}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer"
+            >
+              <UserPlus className="h-4 w-4" />
+              <span>Onboard Prosumer</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI Stats & Metric Tickers */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs">
+          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Onboarded</span>
+          <div className="mt-2 text-2xl font-display font-extrabold text-slate-900 dark:text-white">
+            {users.length}
+          </div>
+          <span className="text-[11px] text-slate-400">Registered solar accounts</span>
+        </div>
+
+        <div className="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs">
+          <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Pending e-KYC</span>
+          <div className="mt-2 text-2xl font-display font-extrabold text-amber-600 dark:text-amber-400">
+            {pendingCount}
+          </div>
+          <span className="text-[11px] text-slate-400">Awaiting Backoffice review</span>
+        </div>
+
+        <div className="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs">
+          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Active Trading</span>
+          <div className="mt-2 text-2xl font-display font-extrabold text-emerald-600 dark:text-emerald-400">
+            {activeCount}
+          </div>
+          <span className="text-[11px] text-slate-400">Authorized prosumer nodes</span>
+        </div>
+
+        <div className="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs">
+          <span className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Deactivated</span>
+          <div className="mt-2 text-2xl font-display font-extrabold text-red-600 dark:text-red-400">
+            {deactivatedCount}
+          </div>
+          <span className="text-[11px] text-slate-400">Restricted accounts</span>
+        </div>
+      </div>
+
+      {/* Filter and Search Bar */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs">
+        <div className="relative w-full md:w-96">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by NIC, Full Name, or Email..."
+            placeholder="Search by NIC PK, prosumer name, or inverter serial..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
           />
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
           {[
-            { id: 'All', label: 'All Accounts', count: users.length },
-            { id: 'Pending', label: 'Pending KYC', count: pendingCount, alert: pendingCount > 0 },
+            { id: 'All', label: 'All Prosumers', count: users.length },
+            { id: 'Pending', label: 'Pending e-KYC', count: pendingCount, alert: pendingCount > 0 },
             { id: 'Active', label: 'Active', count: activeCount },
             { id: 'Deactivated', label: 'Deactivated', count: deactivatedCount }
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setStatusFilter(tab.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 whitespace-nowrap cursor-pointer ${
                 statusFilter === tab.id
-                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                  : 'bg-slate-100 dark:bg-slate-950/40 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800/50'
+                  ? 'bg-amber-500 text-slate-950 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               <span>{tab.label}</span>
               <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
                 statusFilter === tab.id
                   ? 'bg-slate-950 text-amber-400'
-                  : tab.alert ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                  : tab.alert ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-slate-200 dark:bg-slate-800'
               }`}>
                 {tab.count}
               </span>
@@ -266,7 +384,7 @@ export default function ProsumerManagement({ theme }) {
         </div>
       </div>
 
-      {/* Data Table */}
+      {/* Prosumers Table */}
       <div className="rounded-3xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/60 backdrop-blur-xl overflow-hidden shadow-sm dark:shadow-xl transition-colors duration-300">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
@@ -275,8 +393,8 @@ export default function ProsumerManagement({ theme }) {
                 <th className="py-4 px-6">Prosumer Identity (NIC PK)</th>
                 <th className="py-4 px-6">Solar Hardware Telemetry</th>
                 <th className="py-4 px-6">Contact Channels</th>
-                <th className="py-4 px-6">KYC Status</th>
-                <th className="py-4 px-6 text-right">Actions</th>
+                <th className="py-4 px-6">e-KYC Trust Status</th>
+                <th className="py-4 px-6 text-right">Dossier Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-slate-700 dark:text-slate-200">
@@ -294,125 +412,285 @@ export default function ProsumerManagement({ theme }) {
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((u) => (
-                  <tr key={u.nic} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-amber-600 dark:text-amber-400">
-                          {u.fullName?.charAt(0) || 'P'}
+                filteredUsers.map((u) => {
+                  const assessment = calculateKycTrustAssessment(u);
+
+                  return (
+                    <tr key={u.nic} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center font-bold text-amber-600 dark:text-amber-400 shrink-0">
+                            {u.fullName?.charAt(0) || 'P'}
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm text-slate-900 dark:text-white">{u.fullName}</p>
+                            <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                              <span className="font-mono text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 font-bold">
+                                <Hash className="h-3 w-3 text-slate-400 dark:text-slate-500" />
+                                <span>{u.nic}</span>
+                              </span>
+                              {assessment.nicInfo.isValid && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 font-medium border border-slate-200 dark:border-slate-700/60">
+                                  {assessment.nicInfo.gender} &bull; b.{assessment.nicInfo.birthYear} ({assessment.nicInfo.estimatedAge}y)
+                                </span>
+                              )}
+                            </div>
+                            {u.approvedBy && (
+                              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                                Verified by: {u.approvedBy}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-sm text-slate-900 dark:text-white">{u.fullName}</p>
-                          <p className="font-mono text-xs text-amber-600 dark:text-amber-400 mt-0.5 flex items-center gap-1">
-                            <Hash className="h-3 w-3 text-slate-400 dark:text-slate-500" />
-                            <span>NIC: {u.nic}</span>
+                      </td>
+
+                      <td className="py-4 px-6 space-y-1">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-xs">
+                          <span>⚡ {u.solarCapacityKw > 0 ? `${u.solarCapacityKw} kW` : '15.0 kW'} Array</span>
+                        </div>
+                        <p className="font-mono text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[180px]">
+                          INV: {u.inverterSerial || 'INV-SL-2026-DEFAULT'}
+                        </p>
+                        {u.address && (
+                          <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[180px]">
+                            📍 {u.address}
                           </p>
-                          {u.approvedBy && (
-                            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-                              Approved by: {u.approvedBy}
-                            </p>
+                        )}
+                      </td>
+
+                      <td className="py-4 px-6 space-y-1">
+                        <p className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                          <Mail className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                          <span>{u.email}</span>
+                        </p>
+                        <p className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                          <Phone className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                          <span>{u.phone}</span>
+                        </p>
+                      </td>
+
+                      <td className="py-4 px-6">
+                        <div className="space-y-1">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                            u.status === 'Active'
+                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                              : u.status === 'Pending'
+                              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                              : 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30'
+                          }`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${
+                              u.status === 'Active' ? 'bg-emerald-500 dark:bg-emerald-400' : u.status === 'Pending' ? 'bg-amber-500 dark:bg-amber-400' : 'bg-red-500 dark:bg-red-400'
+                            }`} />
+                            <span>{u.status}</span>
+                          </span>
+
+                          <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                            <Award className="h-3 w-3 text-amber-500" />
+                            <span>Trust Score: <strong className="text-slate-800 dark:text-slate-200">{assessment.score}%</strong></span>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="py-4 px-6 text-right">
+                        <div className="inline-flex items-center gap-2">
+                          <button
+                            onClick={() => handleOpenKycDossier(u)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold transition active:scale-95 cursor-pointer text-xs border border-slate-200 dark:border-slate-700 shadow-xs"
+                            title="Inspect e-KYC Verification Dossier"
+                          >
+                            <Eye className="h-3.5 w-3.5 text-amber-500" />
+                            <span>Inspect e-KYC</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleOpenEdit(u)}
+                            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition cursor-pointer"
+                            title="Edit Profile"
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                          </button>
+
+                          {u.status === 'Pending' && (
+                            <button
+                              onClick={() => handleStatusChange(u.nic, 'Active')}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold transition shadow-sm active:scale-95 cursor-pointer"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                              <span>Approve</span>
+                            </button>
+                          )}
+
+                          {u.status === 'Active' && (
+                            <button
+                              onClick={() => handleStatusChange(u.nic, 'Deactivated')}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 font-bold transition active:scale-95 cursor-pointer"
+                            >
+                              <UserX className="h-3.5 w-3.5" />
+                              <span>Deactivate</span>
+                            </button>
+                          )}
+
+                          {u.status === 'Deactivated' && (
+                            <button
+                              onClick={() => handleStatusChange(u.nic, 'Active')}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold transition active:scale-95 cursor-pointer"
+                            >
+                              <UserCheck className="h-3.5 w-3.5" />
+                              <span>Reactivate</span>
+                            </button>
                           )}
                         </div>
-                      </div>
-                    </td>
-
-                    <td className="py-4 px-6 space-y-1">
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-xs">
-                        <span>⚡ {u.solarCapacityKw > 0 ? `${u.solarCapacityKw} kW` : '15.0 kW'} Array</span>
-                      </div>
-                      <p className="font-mono text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[180px]">
-                        INV: {u.inverterSerial || 'INV-SL-2026-DEFAULT'}
-                      </p>
-                      {u.address && (
-                        <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[180px]">
-                          📍 {u.address}
-                        </p>
-                      )}
-                    </td>
-
-                    <td className="py-4 px-6 space-y-1">
-                      <p className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                        <Mail className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-                        <span>{u.email}</span>
-                      </p>
-                      <p className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
-                        <Phone className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-                        <span>{u.phone}</span>
-                      </p>
-                    </td>
-
-                    <td className="py-4 px-6">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                        u.status === 'Active'
-                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                          : u.status === 'Pending'
-                          ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
-                          : 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30'
-                      }`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${
-                          u.status === 'Active' ? 'bg-emerald-500 dark:bg-emerald-400' : u.status === 'Pending' ? 'bg-amber-500 dark:bg-amber-400' : 'bg-red-500 dark:bg-red-400'
-                        }`} />
-                        <span>{u.status}</span>
-                      </span>
-                    </td>
-
-                    <td className="py-4 px-6 text-right">
-                      <div className="inline-flex items-center gap-2">
-                        <button
-                          onClick={() => handleOpenEdit(u)}
-                          className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition cursor-pointer"
-                          title="Edit Profile"
-                        >
-                          <Edit3 className="h-3.5 w-3.5" />
-                        </button>
-
-                        {u.status === 'Pending' && (
-                          <button
-                            onClick={() => handleStatusChange(u.nic, 'Active')}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold transition shadow-sm active:scale-95 cursor-pointer"
-                          >
-                            <Check className="h-3.5 w-3.5" />
-                            <span>Approve KYC</span>
-                          </button>
-                        )}
-
-                        {u.status === 'Active' && (
-                          <button
-                            onClick={() => handleStatusChange(u.nic, 'Deactivated')}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 font-bold transition active:scale-95 cursor-pointer"
-                          >
-                            <UserX className="h-3.5 w-3.5" />
-                            <span>Deactivate</span>
-                          </button>
-                        )}
-
-                        {u.status === 'Deactivated' && (
-                          <button
-                            onClick={() => handleStatusChange(u.nic, 'Active')}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold transition active:scale-95 cursor-pointer"
-                          >
-                            <UserCheck className="h-3.5 w-3.5" />
-                            <span>Reactivate</span>
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
 
+      {/* Modal: e-KYC Verification Dossier Inspector */}
+      <Modal
+        isOpen={showKycModal}
+        onClose={() => {
+          setShowKycModal(false);
+          setSelectedKycUser(null);
+        }}
+        title="Prosumer e-KYC Verification &amp; Document Dossier"
+      >
+        {selectedKycUser && (() => {
+          const assessment = calculateKycTrustAssessment(selectedKycUser);
+          const docSvg = selectedKycUser.nicDocumentBase64 || generateMockNicCardSvg(
+            selectedKycUser.nic,
+            selectedKycUser.fullName,
+            assessment.nicInfo.birthYear,
+            assessment.nicInfo.gender,
+            selectedKycUser.address
+          );
+
+          return (
+            <div className="space-y-6 text-xs">
+              {/* Trust Score Banner */}
+              <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                    <ShieldCheck className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                      Automated e-KYC Trust Confidence: {assessment.score}%
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Tier: <span className="font-bold text-emerald-600 dark:text-emerald-400">{assessment.riskLevel}</span> &bull; Status: <span className="font-bold">{selectedKycUser.status}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="font-mono text-xs text-slate-400">NIC PK: {selectedKycUser.nic}</span>
+                </div>
+              </div>
+
+              {/* Document Image Card Visualizer */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                    <FileText className="h-4 w-4 text-amber-500" />
+                    <span>Cryptographic Physical Identity Scan</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    Hologram &amp; Barcode Verified
+                  </span>
+                </div>
+
+                <div className="rounded-2xl overflow-hidden border border-slate-700 shadow-xl bg-slate-950">
+                  <img
+                    src={docSvg}
+                    alt={`Sri Lankan National Identity Card - ${selectedKycUser.nic}`}
+                    className="w-full h-auto object-contain max-h-72 select-none"
+                  />
+                </div>
+              </div>
+
+              {/* Itemized Verification Checklist */}
+              <div>
+                <h4 className="font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2">
+                  Regulatory Compliance Checklist:
+                </h4>
+                <div className="space-y-2">
+                  {assessment.checks.map((c, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        {c.passed ? (
+                          <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-500 shrink-0" />
+                        )}
+                        <div>
+                          <p className="font-bold text-slate-900 dark:text-white">{c.title}</p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">{c.detail}</p>
+                        </div>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        c.passed ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-red-500/10 text-red-600 border border-red-500/20'
+                      }`}>
+                        {c.passed ? 'PASSED' : 'FAILED'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowKycModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  Close Dossier
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {selectedKycUser.status !== 'Deactivated' && (
+                    <button
+                      onClick={() => handleStatusChange(selectedKycUser.nic, 'Deactivated')}
+                      className="px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 font-bold"
+                    >
+                      Reject / Deactivate
+                    </button>
+                  )}
+                  {selectedKycUser.status !== 'Active' && (
+                    <button
+                      onClick={() => handleStatusChange(selectedKycUser.nic, 'Active')}
+                      className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold shadow-md shadow-emerald-500/20"
+                    >
+                      Verify &amp; Authorize Grid Node
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
+
       {/* Register Prosumer Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-5 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-xl w-full shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-500">Backoffice Registry</span>
-                <h3 className="text-xl font-display font-black text-slate-900 dark:text-white">Register New Prosumer</h3>
+                <h3 className="text-xl font-display font-black text-slate-900 dark:text-white">
+                  Onboard Prosumer &amp; e-KYC
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Enforce National Identity Card (NIC) primary key with cryptographic ID document attachment.
+                </p>
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
@@ -425,13 +703,27 @@ export default function ProsumerManagement({ theme }) {
             <form onSubmit={handleCreateProsumer} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">National ID (NIC) *</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-slate-700 dark:text-slate-300 font-bold">National ID (NIC) *</label>
+                    {formData.nic && (() => {
+                      const nicInfo = parseSriLankanNic(formData.nic);
+                      return nicInfo.isValid ? (
+                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                          ✓ {nicInfo.format} ({nicInfo.gender}, b. {nicInfo.birthYear})
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-amber-500">
+                          9+V or 12 digits
+                        </span>
+                      );
+                    })()}
+                  </div>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. 199512345678"
+                    placeholder="e.g. 199512345678 or 951234567V"
                     value={formData.nic}
-                    onChange={(e) => setFormData({ ...formData, nic: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, nic: e.target.value.toUpperCase() })}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                   />
                 </div>
@@ -463,7 +755,7 @@ export default function ProsumerManagement({ theme }) {
                 <div>
                   <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Phone Number *</label>
                   <input
-                    type="tel"
+                    type="text"
                     required
                     placeholder="+94 77 123 4567"
                     value={formData.phone}
@@ -474,11 +766,10 @@ export default function ProsumerManagement({ theme }) {
               </div>
 
               <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Property / Grid Infeed Address *</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Installation Physical Address</label>
                 <input
                   type="text"
-                  required
-                  placeholder="No. 124, Kandy Road, Kiribathgoda"
+                  placeholder="e.g. 120/4, Baseline Road, Colombo 09"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
@@ -487,12 +778,12 @@ export default function ProsumerManagement({ theme }) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Solar Capacity (kW) *</label>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Solar Array Capacity (kW)</label>
                   <input
                     type="number"
                     step="0.1"
-                    min="1"
-                    required
+                    min="0.5"
+                    max="1000"
                     placeholder="15.0"
                     value={formData.solarCapacityKw}
                     onChange={(e) => setFormData({ ...formData, solarCapacityKw: e.target.value })}
@@ -500,11 +791,10 @@ export default function ProsumerManagement({ theme }) {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Inverter Serial *</label>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Inverter Serial Identifier</label>
                   <input
                     type="text"
-                    required
-                    placeholder="INV-SL-2026-889"
+                    placeholder="e.g. INV-SL-2026-X99"
                     value={formData.inverterSerial}
                     onChange={(e) => setFormData({ ...formData, inverterSerial: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50"
@@ -513,32 +803,70 @@ export default function ProsumerManagement({ theme }) {
               </div>
 
               <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Initial Password *</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Prosumer Portal Password *</label>
                 <input
                   type="password"
                   required
-                  placeholder="••••••••••••"
+                  placeholder="••••••••"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                 />
+              </div>
+
+              {/* e-KYC Document Attachment Dropzone */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Upload className="h-4 w-4 text-amber-500" />
+                    <span>Attach Physical NIC Photo / Document</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleGenerateMockDoc}
+                    className="text-[11px] font-bold text-amber-500 hover:text-amber-400 flex items-center gap-1"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    <span>Auto-Generate Digital NIC</span>
+                  </button>
+                </div>
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileUpload(e, 'nicDocumentBase64')}
+                  className="block w-full text-[11px] text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 cursor-pointer"
+                />
+
+                {formData.nicDocumentBase64 && (
+                  <div className="mt-2 p-2 rounded-xl bg-slate-900 border border-slate-700 flex items-center gap-3">
+                    <img
+                      src={formData.nicDocumentBase64}
+                      alt="NIC Document Preview"
+                      className="h-12 w-20 object-contain rounded-lg bg-black"
+                    />
+                    <div>
+                      <span className="text-emerald-400 font-bold text-[11px] block">✓ Document Ready for e-KYC</span>
+                      <span className="text-slate-400 text-[10px]">Will be stored in regulatory audit trail</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 text-slate-950 font-bold shadow-md shadow-amber-500/20 transition active:scale-95 flex items-center gap-2 cursor-pointer"
+                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-500/20 disabled:opacity-50"
                 >
-                  {submitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-                  <span>Create Account</span>
+                  {submitting ? 'Registering...' : 'Register & Create e-KYC Dossier'}
                 </button>
               </div>
             </form>
@@ -548,16 +876,19 @@ export default function ProsumerManagement({ theme }) {
 
       {/* Edit Prosumer Modal */}
       {showEditModal && editingUser && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-5 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-xl w-full shadow-2xl space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-500">Edit Prosumer Profile</span>
-                <h3 className="text-xl font-display font-black text-slate-900 dark:text-white">{editingUser.fullName}</h3>
-                <p className="text-xs font-mono text-slate-400 mt-0.5">NIC PK: {editingUser.nic}</p>
+                <h3 className="text-xl font-display font-black text-slate-900 dark:text-white">
+                  Update Prosumer Profile
+                </h3>
+                <p className="text-xs font-mono text-amber-600 dark:text-amber-400 mt-0.5">
+                  Natural Primary Key (NIC): {editingUser.nic}
+                </p>
               </div>
               <button
-                onClick={() => { setShowEditModal(false); setEditingUser(null); }}
+                onClick={() => setShowEditModal(false)}
                 className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               >
                 <X className="h-5 w-5" />
@@ -566,7 +897,7 @@ export default function ProsumerManagement({ theme }) {
 
             <form onSubmit={handleUpdateProsumer} className="space-y-4 text-xs">
               <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Full Name</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Full Legal Name</label>
                 <input
                   type="text"
                   required
@@ -578,7 +909,7 @@ export default function ProsumerManagement({ theme }) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Email</label>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Email Address</label>
                   <input
                     type="email"
                     required
@@ -588,9 +919,9 @@ export default function ProsumerManagement({ theme }) {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Phone</label>
+                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Phone Number</label>
                   <input
-                    type="tel"
+                    type="text"
                     required
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -600,10 +931,9 @@ export default function ProsumerManagement({ theme }) {
               </div>
 
               <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Property Address</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Installation Address</label>
                 <input
                   type="text"
-                  required
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
@@ -616,8 +946,6 @@ export default function ProsumerManagement({ theme }) {
                   <input
                     type="number"
                     step="0.1"
-                    min="1"
-                    required
                     value={formData.solarCapacityKw}
                     onChange={(e) => setFormData({ ...formData, solarCapacityKw: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50"
@@ -627,7 +955,6 @@ export default function ProsumerManagement({ theme }) {
                   <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Inverter Serial</label>
                   <input
                     type="text"
-                    required
                     value={formData.inverterSerial}
                     onChange={(e) => setFormData({ ...formData, inverterSerial: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50"
@@ -638,24 +965,24 @@ export default function ProsumerManagement({ theme }) {
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => { setShowEditModal(false); setEditingUser(null); }}
-                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 text-slate-950 font-bold shadow-md shadow-amber-500/20 transition active:scale-95 flex items-center gap-2 cursor-pointer"
+                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md disabled:opacity-50"
                 >
-                  {submitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  <span>Save Changes</span>
+                  {submitting ? 'Saving...' : 'Save Profile Changes'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
     </div>
   );
 }

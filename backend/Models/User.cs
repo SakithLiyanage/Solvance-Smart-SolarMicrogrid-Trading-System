@@ -69,6 +69,21 @@ namespace SolarMicrogridApi.Models
         [BsonElement("inverterSerial")]
         public string InverterSerial { get; set; } = string.Empty;
 
+        [BsonElement("nicDocumentBase64")]
+        public string? NicDocumentBase64 { get; set; }
+
+        [BsonElement("utilityBillBase64")]
+        public string? UtilityBillBase64 { get; set; }
+
+        [BsonElement("kycTrustScore")]
+        public int KycTrustScore { get; set; } = 95;
+
+        [BsonElement("kycRiskLevel")]
+        public string KycRiskLevel { get; set; } = "Low"; // "Low", "Medium", "High"
+
+        [BsonElement("kycNotes")]
+        public string? KycNotes { get; set; }
+
         [BsonElement("registeredAt")]
         public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
 

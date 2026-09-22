@@ -86,10 +86,16 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
 
-        double solarKw = 15.0;
+        if (!nic.matches("^([0-9]{9}[VvXx]|[0-9]{12})$")) {
+            Toast.makeText(this, "Invalid NIC format. Must be 9 digits with V/X or 12 digits.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        double parsedSolarKw = 15.0;
         try {
-            solarKw = Double.parseDouble(solarStr);
+            parsedSolarKw = Double.parseDouble(solarStr);
         } catch (NumberFormatException ignored) {}
+        final double solarKw = parsedSolarKw;
 
         if (password.length() < 6) {
             Toast.makeText(this, "Password must be at least 6 characters.", Toast.LENGTH_SHORT).show();

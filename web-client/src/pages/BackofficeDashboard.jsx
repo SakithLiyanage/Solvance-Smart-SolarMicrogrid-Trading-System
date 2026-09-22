@@ -115,6 +115,13 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
               <span>Refresh Metrics</span>
             </button>
             <button
+              onClick={() => setActiveTab('staff')}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700 text-xs font-bold transition shadow-sm active:scale-95"
+            >
+              <span>Staff &amp; Operators</span>
+              <ArrowRight className="h-4 w-4 text-amber-400" />
+            </button>
+            <button
               onClick={() => setActiveTab('prosumers')}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 transition active:scale-95"
             >
@@ -337,8 +344,14 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
 
                 <div className="flex items-center gap-2">
                   <button
+                    onClick={() => setActiveTab('prosumers')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition border border-slate-200 dark:border-slate-700 cursor-pointer shadow-xs"
+                  >
+                    <span>Inspect e-KYC</span>
+                  </button>
+                  <button
                     onClick={() => handleQuickApprove(prosumer.nic)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition shadow-sm"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition shadow-sm cursor-pointer active:scale-95"
                   >
                     <Check className="h-3.5 w-3.5" />
                     <span>Approve</span>
