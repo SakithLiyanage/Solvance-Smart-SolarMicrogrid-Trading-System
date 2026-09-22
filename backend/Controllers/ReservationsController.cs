@@ -189,7 +189,11 @@ namespace SolarMicrogridApi.Controllers
                 return BadRequest(ModelState);
             }
 
-            var operatorNic = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "OPERATOR";
+            var operatorNic = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(operatorNic))
+            {
+                return Unauthorized(new { message = "Authenticated operator identity is required." });
+            }
 
             try
             {
@@ -217,6 +221,10 @@ namespace SolarMicrogridApi.Controllers
             catch (InvalidOperationException ex)
             {
                 return BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
             }
         }
 
