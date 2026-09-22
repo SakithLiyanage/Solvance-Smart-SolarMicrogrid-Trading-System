@@ -25,58 +25,90 @@ namespace SolarMicrogridApi.Data
         public static async Task SeedAsync(MongoDbContext context)
         {
             // Method: SeedAsync - Populates default admin, operator, sample prosumers, and solar hubs.
-            var usersCount = await context.Users.CountDocumentsAsync(Builders<User>.Filter.Empty);
-            if (usersCount == 0)
+            // Always ensure essential seed accounts exist and are in Active status with valid passwords
+            var adminExists = await context.Users.Find(u => u.Nic == "ADMIN001").FirstOrDefaultAsync();
+            if (adminExists == null)
             {
-                var sampleUsers = new List<User>
+                var adminUser = new User
+                {
+                    Nic = "ADMIN001",
+                    Username = "ADMIN001",
+                    FullName = "System Administrator",
+                    Email = "admin@solarmicrogrid.lk",
+                    Phone = "+94771234567",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
+                    Role = "Backoffice",
+                    Status = "Active",
+                    FailedLoginAttempts = 0,
+                    LockoutEnd = null,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                await context.Users.InsertOneAsync(adminUser);
+            }
+
+            var operatorExists = await context.Users.Find(u => u.Nic == "OPERATOR001").FirstOrDefaultAsync();
+            if (operatorExists == null)
+            {
+                var operatorUser = new User
+                {
+                    Nic = "OPERATOR001",
+                    Username = "OPERATOR001",
+                    FullName = "Nuwan Perera",
+                    Email = "operator@solarmicrogrid.lk",
+                    Phone = "+94777654321",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Operator@123"),
+                    Role = "GridOperator",
+                    Status = "Active",
+                    FailedLoginAttempts = 0,
+                    LockoutEnd = null,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                await context.Users.InsertOneAsync(operatorUser);
+            }
+
+            // Seed prosumer sample accounts if needed
+            var prosumerExists = await context.Users.Find(u => u.Nic == "200012345678").FirstOrDefaultAsync();
+            if (prosumerExists == null)
+            {
+                var sampleProsumers = new List<User>
                 {
                     new User
                     {
-                        Nic = "ADMIN001",
-                        FullName = "System Administrator",
-                        Email = "admin@solarmicrogrid.lk",
-                        Phone = "+94771234567",
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
-                        Role = "Backoffice",
-                        Status = "Active",
-                        CreatedAt = DateTime.UtcNow
-                    },
-                    new User
-                    {
-                        Nic = "OPERATOR001",
-                        FullName = "Nuwan Perera",
-                        Email = "operator@solarmicrogrid.lk",
-                        Phone = "+94777654321",
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("Operator@123"),
-                        Role = "GridOperator",
-                        Status = "Active",
-                        CreatedAt = DateTime.UtcNow
-                    },
-                    new User
-                    {
                         Nic = "200012345678",
+                        Username = "200012345678",
                         FullName = "Sunil Shantha",
                         Email = "sunil@gmail.com",
                         Phone = "+94712345678",
+                        Address = "No. 45, Galle Road, Colombo 03",
+                        SolarCapacityKw = 25.0,
+                        InverterSerial = "INV-SL-20001",
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword("Prosumer@123"),
                         Role = "Prosumer",
                         Status = "Active",
-                        CreatedAt = DateTime.UtcNow
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
                     },
                     new User
                     {
                         Nic = "199987654321",
+                        Username = "199987654321",
                         FullName = "Kamal Gunaratne",
                         Email = "kamal@gmail.com",
                         Phone = "+94723456789",
+                        Address = "Peradeniya Road, Kandy",
+                        SolarCapacityKw = 15.0,
+                        InverterSerial = "INV-SL-19998",
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword("Prosumer@123"),
                         Role = "Prosumer",
                         Status = "Pending", // For testing backoffice approval workflow
-                        CreatedAt = DateTime.UtcNow
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
                     }
                 };
 
-                await context.Users.InsertManyAsync(sampleUsers);
+                await context.Users.InsertManyAsync(sampleProsumers);
             }
 
             var stationsCount = await context.Stations.CountDocumentsAsync(Builders<SolarStation>.Filter.Empty);
