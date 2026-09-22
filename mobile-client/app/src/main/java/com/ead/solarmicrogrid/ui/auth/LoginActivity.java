@@ -130,7 +130,7 @@ public class LoginActivity extends AppCompatActivity {
     private void showServerConfigDialog() {
         String[] options = {
                 "USB Cable Reverse (127.0.0.1:5000) [Default USB]",
-                "Wi-Fi LAN (192.168.8.102:5000) [Wireless]",
+                "Wi-Fi LAN (192.168.1.105:5000) [Current Host PC]",
                 "Android Emulator (10.0.2.2:5000)",
                 "Custom URL..."
         };
@@ -145,9 +145,9 @@ public class LoginActivity extends AppCompatActivity {
                             Toast.makeText(this, "Switched to USB Reverse (127.0.0.1:5000)", Toast.LENGTH_SHORT).show();
                             break;
                         case 1:
-                            ApiClient.setBaseUrl(this, "http://192.168.8.102:5000/api/");
+                            ApiClient.setBaseUrl(this, "http://192.168.1.105:5000/api/");
                             updateServerBadge();
-                            Toast.makeText(this, "Switched to Wi-Fi LAN (192.168.8.102:5000)", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "Switched to Wi-Fi LAN (192.168.1.105:5000)", Toast.LENGTH_SHORT).show();
                             break;
                         case 2:
                             ApiClient.setBaseUrl(this, "http://10.0.2.2:5000/api/");

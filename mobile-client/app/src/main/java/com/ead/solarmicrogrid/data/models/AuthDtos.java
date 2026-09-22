@@ -62,10 +62,14 @@ public class AuthDtos {
         public double solarCapacityKw;
         @SerializedName("inverterSerial")
         public String inverterSerial;
+        @SerializedName("nicDocumentBase64")
+        public String nicDocumentBase64;
+        @SerializedName("utilityBillBase64")
+        public String utilityBillBase64;
         @SerializedName("password")
         public String password;
 
-        public RegisterRequest(String nic, String fullName, String email, String phone, String address, double solarCapacityKw, String inverterSerial, String password) {
+        public RegisterRequest(String nic, String fullName, String email, String phone, String address, double solarCapacityKw, String inverterSerial, String password, String nicDocumentBase64) {
             this.nic = nic;
             this.fullName = fullName;
             this.email = email;
@@ -74,10 +78,15 @@ public class AuthDtos {
             this.solarCapacityKw = solarCapacityKw;
             this.inverterSerial = inverterSerial;
             this.password = password;
+            this.nicDocumentBase64 = nicDocumentBase64;
+        }
+
+        public RegisterRequest(String nic, String fullName, String email, String phone, String address, double solarCapacityKw, String inverterSerial, String password) {
+            this(nic, fullName, email, phone, address, solarCapacityKw, inverterSerial, password, null);
         }
 
         public RegisterRequest(String nic, String fullName, String email, String phone, String password) {
-            this(nic, fullName, email, phone, "", 15.0, "INV-SL-2026-DEFAULT", password);
+            this(nic, fullName, email, phone, "", 15.0, "INV-SL-2026-DEFAULT", password, null);
         }
     }
 
