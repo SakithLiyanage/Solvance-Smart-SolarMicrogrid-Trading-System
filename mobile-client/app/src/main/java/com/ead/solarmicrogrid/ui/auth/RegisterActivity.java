@@ -13,6 +13,8 @@
 
 package com.ead.solarmicrogrid.ui.auth;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -70,6 +72,7 @@ public class RegisterActivity extends AppCompatActivity {
     private MaterialButton btnUploadUtilityBill;
 
     // Launchers
+    private ActivityResultLauncher<String> requestCameraPermissionLauncher;
     private ActivityResultLauncher<Void> cameraLauncher;
     private ActivityResultLauncher<String> galleryNicLauncher;
     private ActivityResultLauncher<String> galleryUtilityLauncher;
@@ -88,6 +91,18 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void setupLaunchers() {
+        // Runtime Camera Permission Launcher
+        requestCameraPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                isGranted -> {
+                    if (isGranted) {
+                        openCameraSafely();
+                    } else {
+                        Toast.makeText(this, "Camera permission is required to capture NIC document photo.", Toast.LENGTH_LONG).show();
+                    }
+                }
+        );
+
         // Camera capture for physical NIC
         cameraLauncher = registerForActivityResult(
                 new ActivityResultContracts.TakePicturePreview(),
@@ -117,6 +132,14 @@ public class RegisterActivity extends AppCompatActivity {
                     }
                 }
         );
+    }
+
+    private void openCameraSafely() {
+        try {
+            cameraLauncher.launch(null);
+        } catch (Exception e) {
+            Toast.makeText(this, "Unable to launch camera: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 
     private void initViews() {
@@ -182,7 +205,13 @@ public class RegisterActivity extends AppCompatActivity {
         });
 
         // NIC document triggers
-        btnCameraNic.setOnClickListener(v -> cameraLauncher.launch(null));
+        btnCameraNic.setOnClickListener(v -> {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                openCameraSafely();
+            } else {
+                requestCameraPermissionLauncher.launch(Manifest.permission.CAMERA);
+            }
+        });
         btnUploadNicDoc.setOnClickListener(v -> galleryNicLauncher.launch("image/*"));
         btnRemoveDoc.setOnClickListener(v -> {
             attachedNicBase64 = null;
