@@ -21,11 +21,10 @@ import {
 import api from '../api/client';
 
 export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHome }) {
-  const [usernameOrNic, setUsernameOrNic] = useState('ADMIN001');
-  const [password, setPassword] = useState('Admin@123');
+  const [usernameOrNic, setUsernameOrNic] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [selectedRole, setSelectedRole] = useState('admin');
 
   const isDark = theme === 'dark';
 
@@ -56,18 +55,6 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
       setError(err.response?.data?.message || 'Login failed. Please verify your credentials.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const setQuickCredentials = (userType) => {
-    setError('');
-    setSelectedRole(userType);
-    if (userType === 'admin') {
-      setUsernameOrNic('ADMIN001');
-      setPassword('Admin@123');
-    } else {
-      setUsernameOrNic('OPERATOR001');
-      setPassword('Operator@123');
     }
   };
 
@@ -198,62 +185,6 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
                 {!loading && <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />}
               </button>
             </form>
-
-            {/* Quick Demo Credentials Switcher */}
-            <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800/80">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5 text-center">
-                Select Pre-Configured Demo Persona:
-              </p>
-              <div className="grid grid-cols-2 gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setQuickCredentials('admin')}
-                  className={`flex flex-col items-center justify-center py-2.5 px-3 rounded-xl text-xs font-semibold transition border cursor-pointer ${
-                    selectedRole === 'admin'
-                      ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300 shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 font-bold">
-                    <Shield className="h-4 w-4 text-amber-500 dark:text-amber-400" />
-                    <span>Backoffice Admin</span>
-                  </div>
-                  <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">ADMIN001 &bull; Admin@123</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setQuickCredentials('operator')}
-                  className={`flex flex-col items-center justify-center py-2.5 px-3 rounded-xl text-xs font-semibold transition border cursor-pointer ${
-                    selectedRole === 'operator'
-                      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300 shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 font-bold">
-                    <Zap className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
-                    <span>Grid Operator</span>
-                  </div>
-                  <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">OPERATOR001 &bull; Operator@123</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Live Grid Metrics Ticker */}
-        <div className="grid grid-cols-3 gap-2 px-2 text-center text-xs">
-          <div className="p-2.5 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/60 backdrop-blur-md shadow-sm">
-            <div className="font-display font-bold text-amber-500 dark:text-amber-400 text-sm">24.5 MWh</div>
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Solar Traded</div>
-          </div>
-          <div className="p-2.5 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/60 backdrop-blur-md shadow-sm">
-            <div className="font-display font-bold text-emerald-500 dark:text-emerald-400 text-sm">100% FAT</div>
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Service Rule Engine</div>
-          </div>
-          <div className="p-2.5 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/60 backdrop-blur-md shadow-sm">
-            <div className="font-display font-bold text-cyan-500 dark:text-cyan-400 text-sm">8 Nodes</div>
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Microgrid Online</div>
           </div>
         </div>
       </div>
