@@ -440,10 +440,27 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
                     ApiClient.getService(ProsumerDashboardActivity.this).deactivateSelf().enqueue(new Callback<ResponseBody>() {
                         @Override
                         public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                            Toast.makeText(ProsumerDashboardActivity.this, "Your account has been deactivated.", Toast.LENGTH_LONG).show();
-                            dbHelper.clearSession();
-                            startActivity(new Intent(ProsumerDashboardActivity.this, LoginActivity.class));
-                            finish();
+                            if (response.isSuccessful()) {
+                                Toast.makeText(ProsumerDashboardActivity.this, "Your account has been deactivated.", Toast.LENGTH_LONG).show();
+                                dbHelper.clearSession();
+                                startActivity(new Intent(ProsumerDashboardActivity.this, LoginActivity.class));
+                                finish();
+                            } else {
+                                String errorMsg = "Unable to deactivate account.";
+                                try {
+                                    if (response.errorBody() != null) {
+                                        String raw = response.errorBody().string();
+                                        org.json.JSONObject obj = new org.json.JSONObject(raw);
+                                        if (obj.has("message")) errorMsg = obj.getString("message");
+                                    }
+                                } catch (Exception ignored) {}
+
+                                new AlertDialog.Builder(ProsumerDashboardActivity.this)
+                                        .setTitle("Deactivation Locked")
+                                        .setMessage(errorMsg)
+                                        .setPositiveButton("Understood", null)
+                                        .show();
+                            }
                         }
                         @Override
                         public void onFailure(Call<ResponseBody> call, Throwable t) {
@@ -495,6 +512,18 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
         etPhone.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
         layout.addView(etPhone);
 
+        TextView tvAddressLabel = new TextView(this);
+        tvAddressLabel.setText("\nProperty / Solar Node Address:");
+        tvAddressLabel.setTextSize(13);
+        tvAddressLabel.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+        layout.addView(tvAddressLabel);
+
+        final EditText etAddress = new EditText(this);
+        etAddress.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_POSTAL_ADDRESS);
+        etAddress.setText(currentUser.getAddress());
+        etAddress.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+        layout.addView(etAddress);
+
         new AlertDialog.Builder(this)
                 .setTitle("Edit Contact Profile")
                 .setMessage("Update your prosumer contact details stored in the central microgrid database.")
@@ -503,19 +532,20 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
                     String name = etName.getText().toString().trim();
                     String email = etEmail.getText().toString().trim();
                     String phone = etPhone.getText().toString().trim();
+                    String address = etAddress.getText().toString().trim();
 
                     if (name.isEmpty() || email.isEmpty()) {
                         Toast.makeText(this, "Full name and email are required.", Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    executeEditProfile(name, email, phone);
+                    executeEditProfile(name, email, phone, address);
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    private void executeEditProfile(String name, String email, String phone) {
-        AuthDtos.UpdateProfileRequest request = new AuthDtos.UpdateProfileRequest(name, email, phone);
+    private void executeEditProfile(String name, String email, String phone, String address) {
+        AuthDtos.UpdateProfileRequest request = new AuthDtos.UpdateProfileRequest(name, email, phone, address);
         ApiClient.getService(this).updateProfile(request).enqueue(new Callback<ResponseBody>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
@@ -523,7 +553,8 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
                     currentUser.setFullName(name);
                     currentUser.setEmail(email);
                     currentUser.setPhone(phone);
-                    dbHelper.updateUserProfile(currentUser.getNic(), name, email, phone);
+                    currentUser.setAddress(address);
+                    dbHelper.updateUserProfile(currentUser.getNic(), name, email, phone, address);
 
                     tvWelcomeName.setText(name);
                     TextView tvInitials = findViewById(R.id.tvProsumerInitials);
