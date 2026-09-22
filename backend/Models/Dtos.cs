@@ -1,7 +1,8 @@
 // ============================================================================
 // File: Dtos.cs
-// Project: Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: M.L. Booso (IT23452916) - Auth & Prosumer DTOs
+// Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Data Transfer Objects (DTOs) for API request validation and response mapping.
 // ============================================================================
 
@@ -66,6 +67,8 @@ namespace SolarMicrogridApi.Models
 
         public string? NicDocumentBase64 { get; set; }
 
+        public string? NicBackDocumentBase64 { get; set; }
+
         public string? UtilityBillBase64 { get; set; }
 
         [Required]
@@ -107,6 +110,7 @@ namespace SolarMicrogridApi.Models
         public double SolarCapacityKw { get; set; }
         public string InverterSerial { get; set; } = string.Empty;
         public string? NicDocumentBase64 { get; set; }
+        public string? NicBackDocumentBase64 { get; set; }
         public string? UtilityBillBase64 { get; set; }
     }
 

@@ -1,7 +1,8 @@
 // ============================================================================
 // File: User.cs
-// Project: Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: M.L. Booso (IT23452916)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Model representing a system user stored in "User's detail" collection.
 // ============================================================================
 
@@ -71,6 +72,9 @@ namespace SolarMicrogridApi.Models
 
         [BsonElement("nicDocumentBase64")]
         public string? NicDocumentBase64 { get; set; }
+
+        [BsonElement("nicBackDocumentBase64")]
+        public string? NicBackDocumentBase64 { get; set; }
 
         [BsonElement("utilityBillBase64")]
         public string? UtilityBillBase64 { get; set; }
