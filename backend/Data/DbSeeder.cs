@@ -84,9 +84,14 @@ namespace SolarMicrogridApi.Data
                         Address = "No. 45, Galle Road, Colombo 03",
                         SolarCapacityKw = 25.0,
                         InverterSerial = "INV-SL-20001",
+                        KycTrustScore = 98,
+                        KycRiskLevel = "Low",
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword("Prosumer@123"),
                         Role = "Prosumer",
                         Status = "Active",
+                        RegisteredAt = DateTime.UtcNow.AddDays(-10),
+                        ActivatedAt = DateTime.UtcNow.AddDays(-9),
+                        ApprovedBy = "ADMIN001",
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
                     },
@@ -100,9 +105,12 @@ namespace SolarMicrogridApi.Data
                         Address = "Peradeniya Road, Kandy",
                         SolarCapacityKw = 15.0,
                         InverterSerial = "INV-SL-19998",
+                        KycTrustScore = 96,
+                        KycRiskLevel = "Low",
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword("Prosumer@123"),
                         Role = "Prosumer",
                         Status = "Pending", // For testing backoffice approval workflow
+                        RegisteredAt = DateTime.UtcNow.AddHours(-3),
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
                     }
