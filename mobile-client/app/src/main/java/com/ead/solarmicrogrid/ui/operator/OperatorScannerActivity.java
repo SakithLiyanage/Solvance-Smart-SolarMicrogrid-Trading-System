@@ -285,10 +285,11 @@ public class OperatorScannerActivity extends AppCompatActivity {
             @Override
             public void onVerify(EnergyReservation reservation) {
                 String token = reservation.getQrCodeToken();
-                if (token == null || token.isEmpty()) {
-                    token = reservation.getReservationNumber();
+                if (token != null && !token.isEmpty()) {
+                    verifyQrCodeOnServer(token);
+                } else {
+                    Toast.makeText(OperatorScannerActivity.this, "This reservation has no QR token.", Toast.LENGTH_SHORT).show();
                 }
-                verifyQrCodeOnServer(token);
             }
 
             @Override
@@ -409,7 +410,11 @@ public class OperatorScannerActivity extends AppCompatActivity {
         btnVerifyManual.setOnClickListener(v -> {
             String token = etManualQr.getText() != null ? etManualQr.getText().toString().trim() : "";
             if (token.isEmpty()) {
-                Toast.makeText(OperatorScannerActivity.this, "Enter QR token or Res # to verify.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(OperatorScannerActivity.this, "Enter QR token to verify.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (!token.matches("SOLAR-TX:RES-[^:]+:[0-9A-Fa-f]{12}")) {
+                Toast.makeText(OperatorScannerActivity.this, "Enter a valid QR token, not a reservation number.", Toast.LENGTH_SHORT).show();
                 return;
             }
             verifyQrCodeOnServer(token);
@@ -598,7 +603,8 @@ public class OperatorScannerActivity extends AppCompatActivity {
         progressBarOperator.setVisibility(View.VISIBLE);
         cardVerifiedResult.setVisibility(View.GONE);
 
-        AuthDtos.VerifyQrRequest request = new AuthDtos.VerifyQrRequest(qrToken);
+        String stationId = selectedStation != null ? selectedStation.getId() : null;
+        AuthDtos.VerifyQrRequest request = new AuthDtos.VerifyQrRequest(qrToken, stationId);
 
         ApiClient.getService(this).verifyQr(request).enqueue(new Callback<ResponseBody>() {
             @Override
