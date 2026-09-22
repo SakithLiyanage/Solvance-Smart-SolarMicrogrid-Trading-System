@@ -21,8 +21,8 @@ import {
 import api from '../api/client';
 
 export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHome }) {
-  const [usernameOrNic, setUsernameOrNic] = useState('');
-  const [password, setPassword] = useState('');
+  const [usernameOrNic, setUsernameOrNic] = useState('ADMIN001');
+  const [password, setPassword] = useState('Admin@123');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedRole, setSelectedRole] = useState('admin');
@@ -30,7 +30,7 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
   const isDark = theme === 'dark';
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setError('');
     setLoading(true);
 
@@ -60,6 +60,7 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
   };
 
   const setQuickCredentials = (userType) => {
+    setError('');
     setSelectedRole(userType);
     if (userType === 'admin') {
       setUsernameOrNic('ADMIN001');
@@ -207,27 +208,33 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
                 <button
                   type="button"
                   onClick={() => setQuickCredentials('admin')}
-                  className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold transition border ${
+                  className={`flex flex-col items-center justify-center py-2.5 px-3 rounded-xl text-xs font-semibold transition border cursor-pointer ${
                     selectedRole === 'admin'
                       ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300 shadow-sm'
                       : 'bg-slate-100 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800/60'
                   }`}
                 >
-                  <Shield className="h-4 w-4 text-amber-500 dark:text-amber-400" />
-                  <span>Backoffice Admin</span>
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <Shield className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+                    <span>Backoffice Admin</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">ADMIN001 &bull; Admin@123</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setQuickCredentials('operator')}
-                  className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold transition border ${
+                  className={`flex flex-col items-center justify-center py-2.5 px-3 rounded-xl text-xs font-semibold transition border cursor-pointer ${
                     selectedRole === 'operator'
                       ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300 shadow-sm'
                       : 'bg-slate-100 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800/60'
                   }`}
                 >
-                  <Zap className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
-                  <span>Grid Operator</span>
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <Zap className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
+                    <span>Grid Operator</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">OPERATOR001 &bull; Operator@123</span>
                 </button>
               </div>
             </div>
