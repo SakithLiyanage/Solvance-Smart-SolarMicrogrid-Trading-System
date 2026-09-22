@@ -1,10 +1,23 @@
+// ============================================================================
+// File: Navbar.jsx
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: Enterprise Application Development Team
+// Course: SE4040 - Enterprise Application Development (SLIIT)
+// Description: Modern navigation header with role-based routing, theme switching, and responsive layout.
+// References & Citations:
+//   - Tailwind CSS Responsive Navbar:
+//     https://tailwindcss.com/
+//   - Lucide React Iconography:
+//     https://lucide.dev/
+// ============================================================================
+
 import React from 'react';
 import { 
   Sun, Moon, LogOut, Cpu, LayoutDashboard, Users, 
-  CalendarClock, Radio, UserPlus, Zap
+  CalendarClock, Radio, Zap
 } from 'lucide-react';
 
-export default function Navbar({ user, activeTab, setActiveTab, onLogout, onOpenCreateStaff, theme, onToggleTheme }) {
+export default function Navbar({ user, activeTab, setActiveTab, onLogout, theme, onToggleTheme }) {
   const isBackoffice = user?.role === 'Backoffice';
   const isDark = theme === 'dark';
 
@@ -17,12 +30,12 @@ export default function Navbar({ user, activeTab, setActiveTab, onLogout, onOpen
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800/80 transition-colors duration-300 shadow-xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-4">
+      <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
           
           {/* 1. Left: Brand & Standalone Logo Mark */}
           <div 
-            className="flex items-center gap-3 cursor-pointer select-none shrink-0 group" 
+            className="flex items-center gap-2.5 sm:gap-3 cursor-pointer select-none shrink-0 group" 
             onClick={() => setActiveTab('overview')}
           >
             <div className="relative flex items-center justify-center">
@@ -30,25 +43,25 @@ export default function Navbar({ user, activeTab, setActiveTab, onLogout, onOpen
               <img 
                 src={isDark ? "/solvance_mark_dark_trans.png" : "/solvance_mark_light_trans.png"} 
                 alt="Solvance" 
-                className="relative h-11 w-auto object-contain transition-transform duration-300 group-hover:scale-105 drop-shadow-sm" 
+                className="relative h-10 sm:h-11 w-auto object-contain transition-transform duration-300 group-hover:scale-105 drop-shadow-sm" 
               />
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="font-display font-extrabold text-xl tracking-wider text-slate-900 dark:text-white">
+              <span className="font-display font-extrabold text-lg sm:text-xl tracking-wider text-slate-900 dark:text-white">
                 SOLVANCE
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 hidden sm:inline-block">
                 {user?.role === 'Backoffice' ? 'Backoffice' : 'Grid Operator'}
               </span>
             </div>
           </div>
 
-          {/* 2. Center: Navigation Tabs (No text wrapping, sleek pill indicator) */}
+          {/* 2. Center: Navigation Tabs */}
           <nav className="hidden md:flex items-center gap-1 bg-slate-100/90 dark:bg-slate-900/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shrink-0">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
                 activeTab === 'overview'
                   ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
@@ -62,7 +75,7 @@ export default function Navbar({ user, activeTab, setActiveTab, onLogout, onOpen
               <>
                 <button
                   onClick={() => setActiveTab('prosumers')}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
                     activeTab === 'prosumers'
                       ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
@@ -74,7 +87,7 @@ export default function Navbar({ user, activeTab, setActiveTab, onLogout, onOpen
 
                 <button
                   onClick={() => setActiveTab('nodes')}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
                     activeTab === 'nodes'
                       ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
@@ -83,12 +96,24 @@ export default function Navbar({ user, activeTab, setActiveTab, onLogout, onOpen
                   <Cpu className="h-3.5 w-3.5" />
                   <span>Solar Nodes</span>
                 </button>
+
+                <button
+                  onClick={() => setActiveTab('staff')}
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                    activeTab === 'staff'
+                      ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
+                  }`}
+                >
+                  <Radio className="h-3.5 w-3.5" />
+                  <span>Staff &amp; Operators</span>
+                </button>
               </>
             )}
 
             <button
               onClick={() => setActiveTab('bookings')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
                 activeTab === 'bookings'
                   ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
@@ -108,10 +133,10 @@ export default function Navbar({ user, activeTab, setActiveTab, onLogout, onOpen
             </button>
           </nav>
 
-          {/* 3. Right: Status, Staff Action, Theme Toggle, User Profile */}
-          <div className="flex items-center gap-3 shrink-0">
+          {/* 3. Right: Status, Theme Toggle, User Profile & Always-Visible Sign Out */}
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             {/* Live Grid Status */}
-            <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+            <div className="hidden 2xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -119,22 +144,11 @@ export default function Navbar({ user, activeTab, setActiveTab, onLogout, onOpen
               <span className="tracking-wide uppercase font-mono text-[10px]">Online</span>
             </div>
 
-            {/* Provision Staff Button (Backoffice only) */}
-            {isBackoffice && onOpenCreateStaff && (
-              <button
-                onClick={onOpenCreateStaff}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 transition shadow-xs active:scale-95 whitespace-nowrap"
-              >
-                <UserPlus className="h-3.5 w-3.5 text-amber-500" />
-                <span>Provision Staff</span>
-              </button>
-            )}
-
             {/* Theme Toggle (Light / Dark Mode) */}
             <button
               onClick={onToggleTheme}
               title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-amber-400 border border-slate-200 dark:border-slate-800 transition active:scale-95 shadow-xs"
+              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-amber-400 border border-slate-200 dark:border-slate-800 transition active:scale-95 shadow-xs cursor-pointer shrink-0"
             >
               {isDark ? (
                 <Sun className="h-4 w-4 transition-transform hover:rotate-45" />
@@ -144,32 +158,36 @@ export default function Navbar({ user, activeTab, setActiveTab, onLogout, onOpen
             </button>
 
             {/* Divider */}
-            <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block" />
+            <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block shrink-0" />
 
-            {/* User Profile Info & Sign Out */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-amber-500 to-emerald-500 flex items-center justify-center text-slate-950 font-bold text-xs shadow-xs">
-                  {getInitials(user?.fullName)}
-                </div>
-                <div className="hidden lg:block text-left leading-tight">
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">
-                    {user?.fullName || 'User'}
-                  </p>
-                  <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                    {user?.nic}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                onClick={onLogout}
-                title="Disconnect & Sign Out"
-                className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-500/10 transition active:scale-95"
+            {/* User Profile Avatar & Name */}
+            <div className="flex items-center gap-2 shrink-0">
+              <div 
+                className="h-8 w-8 rounded-xl bg-gradient-to-tr from-amber-500 to-emerald-500 flex items-center justify-center text-slate-950 font-bold text-xs shadow-xs shrink-0 select-none"
+                title={`${user?.fullName} (${user?.nic})`}
               >
-                <LogOut className="h-4 w-4" />
-              </button>
+                {getInitials(user?.fullName)}
+              </div>
+              
+              <div className="hidden xl:block text-left leading-tight max-w-[120px] 2xl:max-w-[160px]">
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                  {user?.fullName || 'User'}
+                </p>
+                <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">
+                  {user?.nic}
+                </p>
+              </div>
             </div>
+
+            {/* Always Visible Logout Button */}
+            <button
+              onClick={onLogout}
+              title="Disconnect & Sign Out"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/25 transition active:scale-95 shrink-0 cursor-pointer text-xs font-bold"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
           </div>
 
         </div>

@@ -180,6 +180,10 @@ namespace SolarMicrogridApi.Services
                 Address = dto.Address.Trim(),
                 SolarCapacityKw = dto.SolarCapacityKw,
                 InverterSerial = dto.InverterSerial.Trim(),
+                NicDocumentBase64 = dto.NicDocumentBase64,
+                UtilityBillBase64 = dto.UtilityBillBase64,
+                KycTrustScore = !string.IsNullOrEmpty(dto.NicDocumentBase64) ? 98 : 90,
+                KycRiskLevel = "Low",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
                 Role = "Prosumer",
                 Status = _securitySettings.DefaultProsumerStatus ?? "Pending",
@@ -301,6 +305,15 @@ namespace SolarMicrogridApi.Services
                 .Set(u => u.SolarCapacityKw, dto.SolarCapacityKw)
                 .Set(u => u.InverterSerial, dto.InverterSerial)
                 .Set(u => u.UpdatedAt, DateTime.UtcNow);
+
+            if (!string.IsNullOrEmpty(dto.NicDocumentBase64))
+            {
+                update = update.Set(u => u.NicDocumentBase64, dto.NicDocumentBase64);
+            }
+            if (!string.IsNullOrEmpty(dto.UtilityBillBase64))
+            {
+                update = update.Set(u => u.UtilityBillBase64, dto.UtilityBillBase64);
+            }
 
             var result = await _context.Users.UpdateOneAsync(u => u.Nic == nic, update);
             return result.ModifiedCount > 0;

@@ -23,6 +23,7 @@ import BackofficeDashboard from './pages/BackofficeDashboard';
 import ProsumerManagement from './pages/ProsumerManagement';
 import NodeManagement from './pages/NodeManagement';
 import OperatorDashboard from './pages/OperatorDashboard';
+import StaffManagement from './pages/StaffManagement';
 import api from './api/client';
 import { UserPlus, Shield, Zap, CheckCircle2, ShieldCheck, Activity } from 'lucide-react';
 
@@ -159,6 +160,10 @@ export default function App() {
 
         {activeTab === 'nodes' && user.role === 'Backoffice' && (
           <NodeManagement theme={theme} />
+        )}
+
+        {activeTab === 'staff' && user.role === 'Backoffice' && (
+          <StaffManagement theme={theme} currentUser={user} />
         )}
 
         {activeTab === 'bookings' && (
