@@ -181,13 +181,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.delete(TABLE_USER, null, null);
     }
 
-    public void updateUserProfile(String nic, String fullName, String email, String phone) {
+    public void updateUserProfile(String nic, String fullName, String email, String phone, String address) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COL_NAME, fullName);
         values.put(COL_EMAIL, email);
         values.put(COL_PHONE, phone);
+        if (address != null) {
+            values.put(COL_ADDRESS, address);
+        }
         db.update(TABLE_USER, values, COL_NIC + " = ?", new String[]{nic});
+    }
+
+    public void updateUserProfile(String nic, String fullName, String email, String phone) {
+        updateUserProfile(nic, fullName, email, phone, null);
     }
 
     // --- CACHED STATIONS OPERATIONS ---

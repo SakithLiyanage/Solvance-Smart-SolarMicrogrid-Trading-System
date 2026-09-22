@@ -73,7 +73,8 @@ public class NicValidator {
 
             int age = currentYear - birthYear;
             String suffixDesc = "V".equalsIgnoreCase(suffix) ? "Voter" : "Non-Voter";
-            String summary = String.format("✓ Valid Old NIC (%s) • %s • Age %d (Born %d)", suffixDesc, gender, age, birthYear);
+            String dobFormatted = calculateDob(birthYear, dayOfYear);
+            String summary = String.format("✓ Valid Old NIC (%s) • %s • Born: %s (Age %d)", suffixDesc, gender, dobFormatted, age);
 
             return new NicValidationResult(true, clean, "Old 9-Digit Format", birthYear, gender, dayOfYear, age, summary, null);
         }
@@ -99,11 +100,25 @@ public class NicValidator {
             }
 
             int age = currentYear - birthYear;
-            String summary = String.format("✓ Valid 12-Digit Digital NIC • %s • Age %d (Born %d)", gender, age, birthYear);
+            String dobFormatted = calculateDob(birthYear, dayOfYear);
+            String summary = String.format("✓ Valid 12-Digit Digital NIC • %s • Born: %s (Age %d)", gender, dobFormatted, age);
 
             return new NicValidationResult(true, clean, "New 12-Digit Format", birthYear, gender, dayOfYear, age, summary, null);
         }
 
         return NicValidationResult.invalid("Invalid NIC format. Must be 9 digits with V/X or 12 digits.");
+    }
+
+    private static String calculateDob(int year, int dayOfYear) {
+        int[] daysInMonths = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+        int month = 0;
+        int remainingDays = dayOfYear;
+        while (month < daysInMonths.length && remainingDays > daysInMonths[month]) {
+            remainingDays -= daysInMonths[month];
+            month++;
+        }
+        int monthNum = Math.min(month + 1, 12);
+        int dayNum = Math.max(remainingDays, 1);
+        return String.format(java.util.Locale.US, "%04d-%02d-%02d", year, monthNum, dayNum);
     }
 }
