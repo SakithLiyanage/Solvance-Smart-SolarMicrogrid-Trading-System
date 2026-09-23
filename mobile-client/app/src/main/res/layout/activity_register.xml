@@ -1,0 +1,720 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="@color/background_dark">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Top Brand Header -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="14dp">
+
+            <ImageView
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:src="@drawable/ic_solvance_mark"
+                android:scaleType="fitCenter"
+                android:layout_marginEnd="12dp" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SOLVANCE"
+                    android:textColor="@color/primary"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.08" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Clean Energy Microgrid"
+                    android:textColor="@color/text_muted"
+                    android:textSize="10sp"
+                    android:letterSpacing="0.04" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Prosumer Onboarding"
+            android:textColor="@color/text_primary"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Register with your National Identity Card (NIC). Account starts in Pending state until verified by backoffice."
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
+            android:lineSpacingExtra="2dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="20dp" />
+
+        <!-- Glassmorphic Form Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="22dp"
+            app:cardElevation="6dp"
+            app:cardBackgroundColor="@color/surface_card"
+            app:strokeColor="@color/card_border"
+            app:strokeWidth="1dp"
+            android:layout_marginBottom="18dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="22dp">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="National Identity Card (NIC) *"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    app:boxCornerRadiusTopStart="14dp"
+                    app:boxCornerRadiusTopEnd="14dp"
+                    app:boxCornerRadiusBottomStart="14dp"
+                    app:boxCornerRadiusBottomEnd="14dp"
+                    app:boxStrokeColor="@color/primary"
+                    app:boxStrokeWidth="1.5dp"
+                    app:boxBackgroundColor="@color/surface_dark"
+                    app:hintTextColor="@color/primary"
+                    android:textColorHint="@color/text_muted"
+                    android:layout_marginBottom="6dp">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etNic"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:padding="16dp"
+                        android:inputType="textCapCharacters" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Live Sri Lankan NIC Demographic Intelligence Feedback -->
+                <TextView
+                    android:id="@+id/tvNicDemographic"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/accent"
+                    android:background="@drawable/bg_pill_chip"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="6dp"
+                    android:layout_marginBottom="14dp" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Full Legal Name *"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    app:boxCornerRadiusTopStart="14dp"
+                    app:boxCornerRadiusTopEnd="14dp"
+                    app:boxCornerRadiusBottomStart="14dp"
+                    app:boxCornerRadiusBottomEnd="14dp"
+                    app:boxStrokeColor="@color/primary"
+                    app:boxStrokeWidth="1.5dp"
+                    app:boxBackgroundColor="@color/surface_dark"
+                    app:hintTextColor="@color/primary"
+                    android:textColorHint="@color/text_muted"
+                    android:layout_marginBottom="14dp">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etFullName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:padding="16dp"
+                        android:inputType="textPersonName" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Email Address *"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    app:boxCornerRadiusTopStart="14dp"
+                    app:boxCornerRadiusTopEnd="14dp"
+                    app:boxCornerRadiusBottomStart="14dp"
+                    app:boxCornerRadiusBottomEnd="14dp"
+                    app:boxStrokeColor="@color/primary"
+                    app:boxStrokeWidth="1.5dp"
+                    app:boxBackgroundColor="@color/surface_dark"
+                    app:hintTextColor="@color/primary"
+                    android:textColorHint="@color/text_muted"
+                    android:layout_marginBottom="14dp">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etEmail"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:padding="16dp"
+                        android:inputType="textEmailAddress" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Mobile Phone Number *"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    app:boxCornerRadiusTopStart="14dp"
+                    app:boxCornerRadiusTopEnd="14dp"
+                    app:boxCornerRadiusBottomStart="14dp"
+                    app:boxCornerRadiusBottomEnd="14dp"
+                    app:boxStrokeColor="@color/primary"
+                    app:boxStrokeWidth="1.5dp"
+                    app:boxBackgroundColor="@color/surface_dark"
+                    app:hintTextColor="@color/primary"
+                    android:textColorHint="@color/text_muted"
+                    android:layout_marginBottom="14dp">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etPhone"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:padding="16dp"
+                        android:inputType="phone" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Physical / Property Address *"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    app:boxCornerRadiusTopStart="14dp"
+                    app:boxCornerRadiusTopEnd="14dp"
+                    app:boxCornerRadiusBottomStart="14dp"
+                    app:boxCornerRadiusBottomEnd="14dp"
+                    app:boxStrokeColor="@color/primary"
+                    app:boxStrokeWidth="1.5dp"
+                    app:boxBackgroundColor="@color/surface_dark"
+                    app:hintTextColor="@color/primary"
+                    android:textColorHint="@color/text_muted"
+                    android:layout_marginBottom="14dp">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etAddress"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:padding="16dp"
+                        android:inputType="textPostalAddress" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Solar Array Hardware Specifications -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="14dp">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="Solar Array (kW) *"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        app:boxCornerRadiusTopStart="14dp"
+                        app:boxCornerRadiusTopEnd="14dp"
+                        app:boxCornerRadiusBottomStart="14dp"
+                        app:boxCornerRadiusBottomEnd="14dp"
+                        app:boxStrokeColor="@color/primary"
+                        app:boxStrokeWidth="1.5dp"
+                        app:boxBackgroundColor="@color/surface_dark"
+                        app:hintTextColor="@color/primary"
+                        android:textColorHint="@color/text_muted"
+                        android:layout_marginEnd="6dp">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etSolarCapacity"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:padding="16dp"
+                            android:text="15.0"
+                            android:inputType="numberDecimal" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="Inverter Serial *"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        app:boxCornerRadiusTopStart="14dp"
+                        app:boxCornerRadiusTopEnd="14dp"
+                        app:boxCornerRadiusBottomStart="14dp"
+                        app:boxCornerRadiusBottomEnd="14dp"
+                        app:boxStrokeColor="@color/primary"
+                        app:boxStrokeWidth="1.5dp"
+                        app:boxBackgroundColor="@color/surface_dark"
+                        app:hintTextColor="@color/primary"
+                        android:textColorHint="@color/text_muted"
+                        android:layout_marginStart="6dp">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etInverterSerial"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:padding="16dp"
+                            android:text="INV-SL-2026-9981"
+                            android:inputType="textCapCharacters" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Password (Min 6 chars) *"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    app:boxCornerRadiusTopStart="14dp"
+                    app:boxCornerRadiusTopEnd="14dp"
+                    app:boxCornerRadiusBottomStart="14dp"
+                    app:boxCornerRadiusBottomEnd="14dp"
+                    app:boxStrokeColor="@color/primary"
+                    app:boxStrokeWidth="1.5dp"
+                    app:boxBackgroundColor="@color/surface_dark"
+                    app:hintTextColor="@color/primary"
+                    app:passwordToggleEnabled="true"
+                    app:passwordToggleTint="@color/primary"
+                    android:textColorHint="@color/text_muted"
+                    android:layout_marginBottom="18dp">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etPassword"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:padding="16dp"
+                        android:inputType="textPassword" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- e-KYC Identity & Grid Verification Section -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="@color/background_dark"
+                    app:strokeColor="@color/card_border"
+                    app:strokeWidth="1dp"
+                    android:layout_marginBottom="22dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="6dp">
+
+                            <ImageView
+                                android:layout_width="22dp"
+                                android:layout_height="22dp"
+                                android:src="@drawable/ic_shield_check"
+                                app:tint="@color/primary"
+                                android:layout_marginEnd="8dp" />
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="e-KYC Document Verification"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvDocBadge"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Required"
+                                android:textColor="@color/primary"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:background="@drawable/bg_pill_chip"
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="3dp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Capture or upload official documents to authenticate your identity and solar microgrid connection node."
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp"
+                            android:lineSpacingExtra="2dp"
+                            android:layout_marginBottom="14dp" />
+
+                        <!-- Document Slot 1: National Identity Card (Front Side) -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="1. NIC Front Side (Photo &amp; Name) *"
+                            android:textColor="@color/text_primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="6dp" />
+
+                        <!-- NIC Front Preview Frame -->
+                        <FrameLayout
+                            android:id="@+id/layoutNicPreview"
+                            android:layout_width="match_parent"
+                            android:layout_height="150dp"
+                            android:background="@drawable/bg_action_card"
+                            android:visibility="gone"
+                            android:layout_marginBottom="8dp">
+
+                            <ImageView
+                                android:id="@+id/ivNicPreview"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop" />
+
+                            <ImageButton
+                                android:id="@+id/btnRemoveDoc"
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:layout_gravity="top|end"
+                                android:layout_margin="8dp"
+                                android:src="@drawable/ic_x"
+                                android:background="@drawable/bg_circle_icon_button"
+                                android:backgroundTint="#80000000"
+                                app:tint="#EF4444"
+                                android:padding="6dp"
+                                android:contentDescription="Remove NIC Front" />
+                        </FrameLayout>
+
+                        <!-- NIC Front Document Status Text -->
+                        <TextView
+                            android:id="@+id/tvDocStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="No front ID attached"
+                            android:textColor="@color/text_muted"
+                            android:textSize="11sp"
+                            android:layout_marginBottom="10dp" />
+
+                        <!-- NIC Front Action Buttons -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="16dp">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnCameraNic"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:minHeight="48dp"
+                                android:layout_weight="1"
+                                android:text="Camera"
+                                app:icon="@drawable/ic_camera"
+                                app:iconGravity="textStart"
+                                app:iconSize="18dp"
+                                app:iconTint="@color/primary"
+                                android:textAllCaps="false"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:paddingVertical="8dp"
+                                android:paddingHorizontal="10dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                app:strokeColor="@color/primary"
+                                app:strokeWidth="1.5dp"
+                                android:textColor="@color/primary"
+                                app:cornerRadius="10dp"
+                                android:layout_marginEnd="5dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnUploadNicDoc"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:minHeight="48dp"
+                                android:layout_weight="1"
+                                android:text="Browse Files"
+                                app:icon="@drawable/ic_image"
+                                app:iconGravity="textStart"
+                                app:iconSize="18dp"
+                                app:iconTint="@color/text_primary"
+                                android:textAllCaps="false"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:paddingVertical="8dp"
+                                android:paddingHorizontal="10dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                app:strokeColor="@color/card_border"
+                                app:strokeWidth="1dp"
+                                android:textColor="@color/text_primary"
+                                app:cornerRadius="10dp"
+                                android:layout_marginStart="5dp" />
+                        </LinearLayout>
+
+                        <!-- Document Slot 2: National Identity Card (Back Side) -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="2. NIC Back Side (Address &amp; Barcode) *"
+                            android:textColor="@color/text_primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="6dp" />
+
+                        <!-- NIC Back Preview Frame -->
+                        <FrameLayout
+                            android:id="@+id/layoutNicBackPreview"
+                            android:layout_width="match_parent"
+                            android:layout_height="150dp"
+                            android:background="@drawable/bg_action_card"
+                            android:visibility="gone"
+                            android:layout_marginBottom="8dp">
+
+                            <ImageView
+                                android:id="@+id/ivNicBackPreview"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop" />
+
+                            <ImageButton
+                                android:id="@+id/btnRemoveNicBackDoc"
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:layout_gravity="top|end"
+                                android:layout_margin="8dp"
+                                android:src="@drawable/ic_x"
+                                android:background="@drawable/bg_circle_icon_button"
+                                android:backgroundTint="#80000000"
+                                app:tint="#EF4444"
+                                android:padding="6dp"
+                                android:contentDescription="Remove NIC Back" />
+                        </FrameLayout>
+
+                        <!-- NIC Back Document Status Text -->
+                        <TextView
+                            android:id="@+id/tvDocBackStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="No back ID attached"
+                            android:textColor="@color/text_muted"
+                            android:textSize="11sp"
+                            android:layout_marginBottom="10dp" />
+
+                        <!-- NIC Back Action Buttons -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="16dp">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnCameraNicBack"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:minHeight="48dp"
+                                android:layout_weight="1"
+                                android:text="Camera"
+                                app:icon="@drawable/ic_camera"
+                                app:iconGravity="textStart"
+                                app:iconSize="18dp"
+                                app:iconTint="@color/primary"
+                                android:textAllCaps="false"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:paddingVertical="8dp"
+                                android:paddingHorizontal="10dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                app:strokeColor="@color/primary"
+                                app:strokeWidth="1.5dp"
+                                android:textColor="@color/primary"
+                                app:cornerRadius="10dp"
+                                android:layout_marginEnd="5dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnUploadNicBackDoc"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:minHeight="48dp"
+                                android:layout_weight="1"
+                                android:text="Browse Files"
+                                app:icon="@drawable/ic_image"
+                                app:iconGravity="textStart"
+                                app:iconSize="18dp"
+                                app:iconTint="@color/text_primary"
+                                android:textAllCaps="false"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:paddingVertical="8dp"
+                                android:paddingHorizontal="10dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                app:strokeColor="@color/card_border"
+                                app:strokeWidth="1dp"
+                                android:textColor="@color/text_primary"
+                                app:cornerRadius="10dp"
+                                android:layout_marginStart="5dp" />
+                        </LinearLayout>
+
+                        <!-- Document Slot 3: Electricity Bill / CEB Solar Interconnection (Proof of Grid Node) -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="3. CEB / LECO Electricity Bill (Proof of Grid Node)"
+                            android:textColor="@color/text_primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="6dp" />
+
+                        <!-- Utility Bill Preview Frame -->
+                        <FrameLayout
+                            android:id="@+id/layoutUtilityPreview"
+                            android:layout_width="match_parent"
+                            android:layout_height="140dp"
+                            android:background="@drawable/bg_action_card"
+                            android:visibility="gone"
+                            android:layout_marginBottom="8dp">
+
+                            <ImageView
+                                android:id="@+id/ivUtilityPreview"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop" />
+
+                            <ImageButton
+                                android:id="@+id/btnRemoveUtilityBill"
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:layout_gravity="top|end"
+                                android:layout_margin="8dp"
+                                android:src="@drawable/ic_x"
+                                android:background="@drawable/bg_circle_icon_button"
+                                android:backgroundTint="#80000000"
+                                app:tint="#EF4444"
+                                android:padding="6dp"
+                                android:contentDescription="Remove Utility Bill" />
+                        </FrameLayout>
+
+                        <!-- Utility Bill Status Text -->
+                        <TextView
+                            android:id="@+id/tvUtilityStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Optional (Fast-tracks grid authorization)"
+                            android:textColor="@color/text_muted"
+                            android:textSize="11sp"
+                            android:layout_marginBottom="10dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnUploadUtilityBill"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="44dp"
+                            android:text="Attach CEB / LECO Bill"
+                            app:icon="@drawable/ic_zap"
+                            app:iconGravity="textStart"
+                            app:iconSize="16dp"
+                            app:iconTint="@color/text_primary"
+                            android:textAllCaps="false"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:paddingVertical="8dp"
+                            android:paddingHorizontal="12dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            app:strokeColor="@color/card_border"
+                            app:strokeWidth="1dp"
+                            android:textColor="@color/text_primary"
+                            app:cornerRadius="10dp" />
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRegister"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="Submit Registration"
+                    app:icon="@drawable/ic_check_circle"
+                    app:iconTint="@color/background_dark"
+                    app:iconGravity="textStart"
+                    app:iconSize="18dp"
+                    android:textAllCaps="false"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:backgroundTint="@color/primary"
+                    android:textColor="@color/background_dark"
+                    app:cornerRadius="14dp" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:id="@+id/tvBackToLogin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Already registered? Sign In"
+            android:textColor="@color/primary"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:layout_gravity="center"
+            android:padding="10dp"
+            android:drawableEnd="@drawable/ic_arrow_right"
+            android:drawableTint="@color/primary"
+            android:drawablePadding="6dp" />
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:layout_gravity="center"
+            android:layout_marginTop="16dp"
+            android:indeterminateTint="@color/primary" />
+
+    </LinearLayout>
+</ScrollView>

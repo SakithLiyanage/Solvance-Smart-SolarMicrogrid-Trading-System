@@ -13,9 +13,11 @@
 
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using SolarMicrogridApi.Data;
 using SolarMicrogridApi.Models;
+using SolarMicrogridApi.Models.Config;
 
 namespace SolarMicrogridApi.Services
 {
@@ -25,13 +27,17 @@ namespace SolarMicrogridApi.Services
     public class ReservationService : IReservationService
     {
         private readonly MongoDbContext _context;
+        private readonly ReservationSettings _settings;
         private readonly string _qrSigningSecret;
 
-        public ReservationService(MongoDbContext context, IConfiguration configuration)
+        public ReservationService(MongoDbContext context, IOptions<ReservationSettings> settings, IConfiguration configuration)
         {
             // Method: ReservationService Constructor - Injects MongoDbContext.
             _context = context;
-            _qrSigningSecret = configuration["QrSettings:SigningSecret"] ?? string.Empty;
+            _settings = settings?.Value ?? new ReservationSettings();
+            _qrSigningSecret = _settings.QrSecretSalt
+                ?? configuration["QrSettings:SigningSecret"]
+                ?? string.Empty;
         }
 
         public async Task<EnergyReservation> CreateReservationAsync(CreateReservationDto dto)
@@ -40,9 +46,11 @@ namespace SolarMicrogridApi.Services
             var now = DateTime.UtcNow;
 
             // Business Rule: Scheduled within 7 days
-            if (dto.ScheduledDateTime < now.AddMinutes(-10) || dto.ScheduledDateTime > now.AddDays(7))
+            var maxAdvanceDays = _settings.MaxAdvanceBookingDays > 0 ? _settings.MaxAdvanceBookingDays : 7;
+            var gracePeriodMinutes = _settings.GracePeriodMinutes >= 0 ? _settings.GracePeriodMinutes : 10;
+            if (dto.ScheduledDateTime < now.AddMinutes(-gracePeriodMinutes) || dto.ScheduledDateTime > now.AddDays(maxAdvanceDays))
             {
-                throw new ArgumentException("Power trading reservations must be scheduled within 7 days from today.");
+                throw new ArgumentException($"Power trading reservations must be scheduled within {maxAdvanceDays} days from today.");
             }
 
             // Verify prosumer is active
@@ -147,16 +155,19 @@ namespace SolarMicrogridApi.Services
 
             // Business Rule: Updates require at least 12 hours' notice prior to original scheduled time
             var hoursNotice = (reservation.ScheduledDateTime - DateTime.UtcNow).TotalHours;
-            if (hoursNotice < 12)
+            var modificationNoticeHours = _settings.ModificationNoticeHours > 0 ? _settings.ModificationNoticeHours : 12;
+            if (hoursNotice < modificationNoticeHours)
             {
-                throw new InvalidOperationException($"Modifications require at least 12 hours' notice. Only {hoursNotice:F1} hours remain before scheduled time.");
+                throw new InvalidOperationException($"Modifications require at least {modificationNoticeHours} hours' notice. Only {hoursNotice:F1} hours remain before scheduled time.");
             }
 
             // Business Rule: Updated schedule must also be within 7 days from now
             var now = DateTime.UtcNow;
-            if (dto.ScheduledDateTime < now.AddMinutes(-10) || dto.ScheduledDateTime > now.AddDays(7))
+            var maxAdvanceDays = _settings.MaxAdvanceBookingDays > 0 ? _settings.MaxAdvanceBookingDays : 7;
+            var gracePeriodMinutes = _settings.GracePeriodMinutes >= 0 ? _settings.GracePeriodMinutes : 10;
+            if (dto.ScheduledDateTime < now.AddMinutes(-gracePeriodMinutes) || dto.ScheduledDateTime > now.AddDays(maxAdvanceDays))
             {
-                throw new ArgumentException("Updated reservation must be scheduled within 7 days from today.");
+                throw new ArgumentException($"Updated reservation must be scheduled within {maxAdvanceDays} days from today.");
             }
 
             var update = Builders<EnergyReservation>.Update
@@ -195,9 +206,10 @@ namespace SolarMicrogridApi.Services
             if (userRole == "Prosumer" || (!string.IsNullOrEmpty(requestingNic) && userRole != "GridOperator" && userRole != "Backoffice"))
             {
                 var hoursNotice = (reservation.ScheduledDateTime - DateTime.UtcNow).TotalHours;
-                if (hoursNotice < 12)
+                var cancellationNoticeHours = _settings.CancellationNoticeHours > 0 ? _settings.CancellationNoticeHours : 12;
+                if (hoursNotice < cancellationNoticeHours)
                 {
-                    throw new InvalidOperationException($"Cancellations require at least 12 hours' notice. Only {hoursNotice:F1} hours remain before scheduled time.");
+                    throw new InvalidOperationException($"Cancellations require at least {cancellationNoticeHours} hours' notice. Only {hoursNotice:F1} hours remain before scheduled time.");
                 }
             }
 
