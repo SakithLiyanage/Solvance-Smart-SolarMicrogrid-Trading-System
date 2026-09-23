@@ -201,8 +201,8 @@ public class CreateReservationActivity extends AppCompatActivity {
     }
 
     private void updateDateTimeText() {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US);
-        tvSelectedDateTime.setText("Scheduled: " + sdf.format(selectedCalendar.getTime()) + " UTC");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm (EEE)", Locale.getDefault());
+        tvSelectedDateTime.setText("Selected Slot: " + sdf.format(selectedCalendar.getTime()));
     }
 
     private void setupSubmitListener() {
@@ -237,7 +237,11 @@ public class CreateReservationActivity extends AppCompatActivity {
             String tradeType = rbDropOff.isChecked() ? "DropOff" : "Charging";
 
             SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
+            isoFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
             String scheduledIso = isoFormat.format(selectedCalendar.getTime());
+
+            SimpleDateFormat localDisplayFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm (EEE)", Locale.getDefault());
+            String localDisplayTime = localDisplayFormat.format(selectedCalendar.getTime());
 
             progressBar.setVisibility(View.VISIBLE);
             btnConfirmBooking.setEnabled(false);
@@ -261,7 +265,7 @@ public class CreateReservationActivity extends AppCompatActivity {
                                 .setTitle("Booking Confirmed & Pass Issued")
                                 .setMessage("Your power trading slot has been reserved successfully!\n\n" +
                                         "Station: " + selectedStation.getName() + "\n" +
-                                        "Schedule: " + scheduledIso + "\n" +
+                                        "Schedule: " + localDisplayTime + "\n" +
                                         "Energy: " + energy + " kWh (" + tradeType + ")\n\n" +
                                         "Digital Pass with secure transaction QR generated.")
                                 .setPositiveButton("View Booking Details", (dialog, which) -> {
@@ -271,7 +275,25 @@ public class CreateReservationActivity extends AppCompatActivity {
                                 .setCancelable(false)
                                 .show();
                     } else {
-                        Toast.makeText(CreateReservationActivity.this, "Booking rejected: Verify 7-day rule and account status.", Toast.LENGTH_LONG).show();
+                        String errorMsg = "Booking rejected: Verify 7-day rule and account status.";
+                        try {
+                            if (response.errorBody() != null) {
+                                String raw = response.errorBody().string();
+                                try {
+                                    org.json.JSONObject obj = new org.json.JSONObject(raw);
+                                    if (obj.has("message")) errorMsg = obj.getString("message");
+                                    else errorMsg = raw;
+                                } catch (Exception ex) {
+                                    if (!raw.isEmpty()) errorMsg = raw;
+                                }
+                            }
+                        } catch (Exception ignored) {}
+
+                        new AlertDialog.Builder(CreateReservationActivity.this)
+                                .setTitle("Reservation Request Failed")
+                                .setMessage(errorMsg)
+                                .setPositiveButton("OK", null)
+                                .show();
                     }
                 }
 

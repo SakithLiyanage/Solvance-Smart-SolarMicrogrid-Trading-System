@@ -47,7 +47,7 @@ public class LoginActivity extends AppCompatActivity {
     private TextInputEditText etUsername, etPassword;
     private Button btnLogin, btnQuickProsumer, btnQuickOperator;
     private ImageButton btnThemeToggle;
-    private TextView tvRegister, tvServerConfig;
+    private TextView tvRegister;
     private ProgressBar progressBar;
     private DatabaseHelper dbHelper;
 
@@ -74,7 +74,6 @@ public class LoginActivity extends AppCompatActivity {
 
         initViews();
         setupListeners();
-        updateServerBadge();
 
         if (autoUser != null && autoPass != null) {
             dbHelper.clearSession();
@@ -91,16 +90,8 @@ public class LoginActivity extends AppCompatActivity {
         tvRegister = findViewById(R.id.tvRegister);
         btnQuickProsumer = findViewById(R.id.btnQuickProsumer);
         btnQuickOperator = findViewById(R.id.btnQuickOperator);
-        tvServerConfig = findViewById(R.id.tvServerConfig);
         progressBar = findViewById(R.id.progressBar);
         btnThemeToggle = findViewById(R.id.btnThemeToggle);
-    }
-
-    private void updateServerBadge() {
-        if (tvServerConfig != null) {
-            String currentUrl = ApiClient.getBaseUrl(this);
-            tvServerConfig.setText("Server: " + currentUrl);
-        }
     }
 
     private void setupListeners() {
@@ -125,68 +116,6 @@ public class LoginActivity extends AppCompatActivity {
             etUsername.setText("OPERATOR001");
             etPassword.setText("Operator@123");
         });
-
-        if (tvServerConfig != null) {
-            tvServerConfig.setOnClickListener(v -> showServerConfigDialog());
-        }
-    }
-
-    private void showServerConfigDialog() {
-        String[] options = {
-                "USB Cable Reverse (127.0.0.1:5000) [Default USB]",
-                "Wi-Fi LAN (192.168.1.105:5000) [Current Host PC]",
-                "Android Emulator (10.0.2.2:5000)",
-                "Custom URL..."
-        };
-
-        new AlertDialog.Builder(this)
-                .setTitle("Select Server API Endpoint")
-                .setItems(options, (dialog, which) -> {
-                    switch (which) {
-                        case 0:
-                            ApiClient.setBaseUrl(this, "http://127.0.0.1:5000/api/");
-                            updateServerBadge();
-                            Toast.makeText(this, "Switched to USB Reverse (127.0.0.1:5000)", Toast.LENGTH_SHORT).show();
-                            break;
-                        case 1:
-                            ApiClient.setBaseUrl(this, "http://192.168.1.105:5000/api/");
-                            updateServerBadge();
-                            Toast.makeText(this, "Switched to Wi-Fi LAN (192.168.1.105:5000)", Toast.LENGTH_SHORT).show();
-                            break;
-                        case 2:
-                            ApiClient.setBaseUrl(this, "http://10.0.2.2:5000/api/");
-                            updateServerBadge();
-                            Toast.makeText(this, "Switched to Emulator (10.0.2.2:5000)", Toast.LENGTH_SHORT).show();
-                            break;
-                        case 3:
-                            showCustomUrlDialog();
-                            break;
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void showCustomUrlDialog() {
-        final EditText input = new EditText(this);
-        input.setText(ApiClient.getBaseUrl(this));
-        input.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.text_primary));
-        input.setHintTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.text_muted));
-        input.setPadding(32, 24, 32, 24);
-
-        new AlertDialog.Builder(this)
-                .setTitle("Enter Custom Web API URL")
-                .setView(input)
-                .setPositiveButton("Save", (dialog, which) -> {
-                    String url = input.getText().toString().trim();
-                    if (!url.isEmpty()) {
-                        ApiClient.setBaseUrl(this, url);
-                        updateServerBadge();
-                        Toast.makeText(this, "Server updated to: " + url, Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
     }
 
     private void performLogin() {

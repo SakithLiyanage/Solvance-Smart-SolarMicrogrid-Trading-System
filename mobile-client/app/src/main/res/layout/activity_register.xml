@@ -707,18 +707,6 @@
             android:drawableTint="@color/primary"
             android:drawablePadding="6dp" />
 
-        <TextView
-            android:id="@+id/tvRegisterServerBadge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Server: http://127.0.0.1:5000/api/ (Tap to switch)"
-            android:textColor="@color/text_secondary"
-            android:textSize="10sp"
-            android:fontFamily="monospace"
-            android:layout_gravity="center"
-            android:padding="6dp"
-            android:background="?attr/selectableItemBackground" />
-
         <ProgressBar
             android:id="@+id/progressBar"
             android:layout_width="wrap_content"

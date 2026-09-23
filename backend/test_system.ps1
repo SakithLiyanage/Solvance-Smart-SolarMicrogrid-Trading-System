@@ -69,8 +69,13 @@ $validBooking = @{
 
 $createdRes = Invoke-RestMethod -Uri "$baseUrl/reservations" -Method Post -Body $validBooking -ContentType "application/json" -Headers @{ Authorization = "Bearer $prosumerToken" }
 $newResId = $createdRes.reservation.id
-$qrToken = $createdRes.reservation.qrCodeToken
-Write-Host " PASS (Created: $($createdRes.reservation.reservationNumber) | QR Generated: $qrToken)" -ForegroundColor Green
+Write-Host " PASS (Created: $($createdRes.reservation.reservationNumber) | Status: $($createdRes.reservation.status))" -ForegroundColor Green
+
+# 5b. Approve Reservation to generate cryptographic QR code
+Write-Host "[Test 5b] Approving reservation & generating QR pass..." -NoNewline
+$approvedRes = Invoke-RestMethod -Uri "$baseUrl/reservations/$newResId/approve" -Method Post -Headers @{ Authorization = "Bearer $adminToken" }
+$qrToken = $approvedRes.reservation.qrCodeToken
+Write-Host " PASS (Approved | QR Token: $qrToken)" -ForegroundColor Green
 
 # 6. Test Node Deactivation Blocker
 Write-Host "[Test 6] Testing Station Deactivation Blocker (Hub with active bookings)..." -NoNewline
@@ -81,8 +86,29 @@ try {
     Write-Host " PASS (Deactivation properly blocked by active reservation)" -ForegroundColor Green
 }
 
-# 7. Test Operator QR Verification & Finalization
-Write-Host "[Test 7] Authenticating Operator & Scanning Prosumer QR Code..." -NoNewline
+# 7. Test 12-Hour Cancellation Rule Enforcement
+Write-Host "[Test 7] Testing 12-Hour Cancellation Deadband (attempting cancel on booking < 12h away)..." -NoNewline
+$nearDate = (Get-Date).ToUniversalTime().AddHours(4).ToString("yyyy-MM-ddTHH:mm:ssZ")
+$nearBooking = @{
+    prosumerNic = "200012345678"
+    stationId = $stationId
+    scheduledDateTime = $nearDate
+    energyAmountKwh = 10.0
+    tradeType = "DropOff"
+} | ConvertTo-Json
+$nearRes = Invoke-RestMethod -Uri "$baseUrl/reservations" -Method Post -Body $nearBooking -ContentType "application/json" -Headers @{ Authorization = "Bearer $prosumerToken" }
+$nearResId = $nearRes.reservation.id
+
+try {
+    $cancelBody = @{ reason = "Prosumer requested late cancellation" } | ConvertTo-Json
+    $cancelRes = Invoke-RestMethod -Uri "$baseUrl/reservations/$nearResId/cancel" -Method Post -Body $cancelBody -ContentType "application/json" -Headers @{ Authorization = "Bearer $prosumerToken" }
+    Write-Host " FAIL (Should have blocked cancellation < 12h)" -ForegroundColor Red
+} catch {
+    Write-Host " PASS (Properly rejected: 12-hour cancellation notice strictly enforced)" -ForegroundColor Green
+}
+
+# 8. Test Operator QR Verification & Finalization
+Write-Host "[Test 8] Authenticating Operator & Scanning Prosumer QR Code..." -NoNewline
 $opLogin = @{ usernameOrNic = "OPERATOR001"; password = "Operator@123" } | ConvertTo-Json
 $opAuth = Invoke-RestMethod -Uri "$baseUrl/auth/login" -Method Post -Body $opLogin -ContentType "application/json"
 $opToken = $opAuth.token

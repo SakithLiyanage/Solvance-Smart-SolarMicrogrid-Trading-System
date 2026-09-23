@@ -13,9 +13,11 @@
 
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using SolarMicrogridApi.Data;
 using SolarMicrogridApi.Models;
+using SolarMicrogridApi.Models.Config;
 
 namespace SolarMicrogridApi.Services
 {
@@ -25,22 +27,27 @@ namespace SolarMicrogridApi.Services
     public class ReservationService : IReservationService
     {
         private readonly MongoDbContext _context;
+        private readonly ReservationSettings _settings;
 
-        public ReservationService(MongoDbContext context)
+        public ReservationService(MongoDbContext context, IOptions<ReservationSettings> settings)
         {
-            // Method: ReservationService Constructor - Injects MongoDbContext.
+            // Method: ReservationService Constructor - Injects MongoDbContext and strongly-typed ReservationSettings options.
             _context = context;
+            _settings = settings?.Value ?? new ReservationSettings();
         }
 
         public async Task<EnergyReservation> CreateReservationAsync(CreateReservationDto dto)
         {
             // Method: CreateReservationAsync - Validates 7-day scheduling constraint, verifies prosumer/station state, and creates booking.
             var now = DateTime.UtcNow;
+            var scheduledUtc = dto.ScheduledDateTime.ToUniversalTime();
+            var maxDays = _settings.MaxAdvanceBookingDays > 0 ? _settings.MaxAdvanceBookingDays : 7;
+            var graceMinutes = _settings.GracePeriodMinutes >= 0 ? _settings.GracePeriodMinutes : 10;
 
-            // Business Rule: Scheduled within 7 days
-            if (dto.ScheduledDateTime < now.AddMinutes(-10) || dto.ScheduledDateTime > now.AddDays(7))
+            // Business Rule: Scheduled within configurable advance days (default: 7 days)
+            if (scheduledUtc < now.AddMinutes(-graceMinutes) || scheduledUtc > now.AddDays(maxDays))
             {
-                throw new ArgumentException("Power trading reservations must be scheduled within 7 days from today.");
+                throw new ArgumentException($"Power trading reservations must be scheduled within {maxDays} days from today.");
             }
 
             // Verify prosumer is active
@@ -72,10 +79,10 @@ namespace SolarMicrogridApi.Services
                 StationId = station.Id!,
                 StationName = station.Name,
                 SlotId = dto.SlotId ?? string.Empty,
-                ScheduledDateTime = dto.ScheduledDateTime,
+                ScheduledDateTime = scheduledUtc,
                 EnergyAmountKwh = dto.EnergyAmountKwh,
                 TradeType = dto.TradeType,
-                Status = "Pending", // Set as Pending until approved by Backoffice/Operator
+                Status = !string.IsNullOrEmpty(_settings.DefaultBookingStatus) ? _settings.DefaultBookingStatus : "Pending",
                 QrCodeToken = string.Empty,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -105,28 +112,34 @@ namespace SolarMicrogridApi.Services
                 throw new InvalidOperationException($"Cannot modify a reservation that is already {reservation.Status}.");
             }
 
-            // Business Rule: Updates require at least 12 hours' notice prior to original scheduled time
-            var hoursNotice = (reservation.ScheduledDateTime - DateTime.UtcNow).TotalHours;
-            if (hoursNotice < 12)
+            var modNoticeHours = _settings.ModificationNoticeHours > 0 ? _settings.ModificationNoticeHours : 12;
+            var maxDays = _settings.MaxAdvanceBookingDays > 0 ? _settings.MaxAdvanceBookingDays : 7;
+            var graceMinutes = _settings.GracePeriodMinutes >= 0 ? _settings.GracePeriodMinutes : 10;
+            var scheduledUtc = dto.ScheduledDateTime.ToUniversalTime();
+            var resScheduledUtc = reservation.ScheduledDateTime.ToUniversalTime();
+
+            // Business Rule: Updates require at least configurable hours notice (default: 12h) prior to original scheduled time
+            var hoursNotice = (resScheduledUtc - DateTime.UtcNow).TotalHours;
+            if (hoursNotice < modNoticeHours)
             {
-                throw new InvalidOperationException($"Modifications require at least 12 hours' notice. Only {hoursNotice:F1} hours remain before scheduled time.");
+                throw new InvalidOperationException($"Modifications require at least {modNoticeHours} hours' notice. Only {hoursNotice:F1} hours remain before scheduled time.");
             }
 
             // Business Rule: Updated schedule must also be within 7 days from now
             var now = DateTime.UtcNow;
-            if (dto.ScheduledDateTime < now.AddMinutes(-10) || dto.ScheduledDateTime > now.AddDays(7))
+            if (scheduledUtc < now.AddMinutes(-graceMinutes) || scheduledUtc > now.AddDays(maxDays))
             {
-                throw new ArgumentException("Updated reservation must be scheduled within 7 days from today.");
+                throw new ArgumentException($"Updated reservation must be scheduled within {maxDays} days from today.");
             }
 
             var update = Builders<EnergyReservation>.Update
-                .Set(r => r.ScheduledDateTime, dto.ScheduledDateTime)
+                .Set(r => r.ScheduledDateTime, scheduledUtc)
                 .Set(r => r.EnergyAmountKwh, dto.EnergyAmountKwh)
                 .Set(r => r.TradeType, dto.TradeType)
                 .Set(r => r.UpdatedAt, DateTime.UtcNow);
 
             // Refresh QR code token with new schedule
-            reservation.ScheduledDateTime = dto.ScheduledDateTime;
+            reservation.ScheduledDateTime = scheduledUtc;
             reservation.EnergyAmountKwh = dto.EnergyAmountKwh;
             reservation.TradeType = dto.TradeType;
             var newQr = GenerateSecureQrToken(reservation);
@@ -151,13 +164,16 @@ namespace SolarMicrogridApi.Services
                 throw new InvalidOperationException($"Reservation is already {reservation.Status}.");
             }
 
+            var cancelNoticeHours = _settings.CancellationNoticeHours > 0 ? _settings.CancellationNoticeHours : 12;
+            var resScheduledUtc = reservation.ScheduledDateTime.ToUniversalTime();
+
             // If requested by prosumer, enforce strict 12-hour rule
             if (userRole == "Prosumer" || (!string.IsNullOrEmpty(requestingNic) && userRole != "GridOperator" && userRole != "Backoffice"))
             {
-                var hoursNotice = (reservation.ScheduledDateTime - DateTime.UtcNow).TotalHours;
-                if (hoursNotice < 12)
+                var hoursNotice = (resScheduledUtc - DateTime.UtcNow).TotalHours;
+                if (hoursNotice < cancelNoticeHours)
                 {
-                    throw new InvalidOperationException($"Cancellations require at least 12 hours' notice. Only {hoursNotice:F1} hours remain before scheduled time.");
+                    throw new InvalidOperationException($"Cancellations require at least {cancelNoticeHours} hours' notice. Only {hoursNotice:F1} hours remain before scheduled time.");
                 }
             }
 
@@ -326,12 +342,13 @@ namespace SolarMicrogridApi.Services
             };
         }
 
-        private static string GenerateSecureQrToken(EnergyReservation reservation)
+        private string GenerateSecureQrToken(EnergyReservation reservation)
         {
             // Method: GenerateSecureQrToken - Creates tamper-resistant signed string for mobile QR rendering and operator scanning.
             var raw = $"{reservation.ReservationNumber}|{reservation.ProsumerNic}|{reservation.StationId}|{reservation.ScheduledDateTime:yyyyMMddHHmm}|{reservation.EnergyAmountKwh}";
+            var salt = !string.IsNullOrEmpty(_settings.QrSecretSalt) ? _settings.QrSecretSalt : "EnterpriseMicrogridSecretSalt2026";
             using var sha = SHA256.Create();
-            var hashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(raw + "EnterpriseMicrogridSecretSalt2026"));
+            var hashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(raw + salt));
             var sig = Convert.ToHexString(hashBytes)[..12];
             return $"SOLAR-TX:{reservation.ReservationNumber}:{sig}";
         }

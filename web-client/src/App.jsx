@@ -24,6 +24,7 @@ import ProsumerManagement from './pages/ProsumerManagement';
 import NodeManagement from './pages/NodeManagement';
 import OperatorDashboard from './pages/OperatorDashboard';
 import StaffManagement from './pages/StaffManagement';
+import ReservationManagement from './pages/ReservationManagement';
 import api from './api/client';
 import { UserPlus, Shield, Zap, CheckCircle2, ShieldCheck, Activity } from 'lucide-react';
 
@@ -167,7 +168,11 @@ export default function App() {
         )}
 
         {activeTab === 'bookings' && (
-          <OperatorDashboard user={user} theme={theme} activeTab={activeTab} />
+          user.role === 'Backoffice' ? (
+            <ReservationManagement theme={theme} />
+          ) : (
+            <OperatorDashboard user={user} theme={theme} activeTab={activeTab} />
+          )
         )}
       </main>
 
