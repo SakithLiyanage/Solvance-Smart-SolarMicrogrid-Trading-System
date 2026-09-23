@@ -32,6 +32,7 @@ builder.Services.AddOpenApi();
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 builder.Services.Configure<SecuritySettings>(builder.Configuration.GetSection("SecuritySettings"));
 builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDbSettings"));
+builder.Services.Configure<ReservationSettings>(builder.Configuration.GetSection("ReservationSettings"));
 
 // Register MongoDB Context
 builder.Services.AddSingleton<MongoDbContext>();

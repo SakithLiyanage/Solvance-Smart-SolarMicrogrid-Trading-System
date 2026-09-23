@@ -207,14 +207,9 @@ public class RegisterActivity extends AppCompatActivity {
         tvUtilityStatus = findViewById(R.id.tvUtilityStatus);
         btnUploadUtilityBill = findViewById(R.id.btnUploadUtilityBill);
 
-        tvRegisterServerBadge = findViewById(R.id.tvRegisterServerBadge);
-        updateServerBadge();
     }
 
     private void setupListeners() {
-        if (tvRegisterServerBadge != null) {
-            tvRegisterServerBadge.setOnClickListener(v -> showServerConfigDialog());
-        }
         // Real-time Sri Lankan NIC demographic validation feedback
         etNic.addTextChangedListener(new TextWatcher() {
             @Override
@@ -378,72 +373,7 @@ public class RegisterActivity extends AppCompatActivity {
         }
     }
 
-    private TextView tvRegisterServerBadge;
 
-    private void updateServerBadge() {
-        if (tvRegisterServerBadge != null) {
-            String url = ApiClient.getBaseUrl(this);
-            tvRegisterServerBadge.setText("Server: " + url + " (Tap to switch)");
-        }
-    }
-
-    private void showServerConfigDialog() {
-        String[] options = {
-                "USB Cable Reverse (127.0.0.1:5000) [Default USB]",
-                "Wi-Fi LAN (192.168.1.105:5000) [Current Host PC]",
-                "Android Emulator (10.0.2.2:5000)",
-                "Custom URL..."
-        };
-
-        new AlertDialog.Builder(this)
-                .setTitle("Select Server API Endpoint")
-                .setItems(options, (dialog, which) -> {
-                    switch (which) {
-                        case 0:
-                            ApiClient.setBaseUrl(this, "http://127.0.0.1:5000/api/");
-                            updateServerBadge();
-                            Toast.makeText(this, "Switched to USB Reverse (127.0.0.1:5000)", Toast.LENGTH_SHORT).show();
-                            break;
-                        case 1:
-                            ApiClient.setBaseUrl(this, "http://192.168.1.105:5000/api/");
-                            updateServerBadge();
-                            Toast.makeText(this, "Switched to Wi-Fi LAN (192.168.1.105:5000)", Toast.LENGTH_SHORT).show();
-                            break;
-                        case 2:
-                            ApiClient.setBaseUrl(this, "http://10.0.2.2:5000/api/");
-                            updateServerBadge();
-                            Toast.makeText(this, "Switched to Emulator (10.0.2.2:5000)", Toast.LENGTH_SHORT).show();
-                            break;
-                        case 3:
-                            showCustomUrlDialog();
-                            break;
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void showCustomUrlDialog() {
-        final EditText input = new EditText(this);
-        input.setText(ApiClient.getBaseUrl(this));
-        input.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
-        input.setHintTextColor(ContextCompat.getColor(this, R.color.text_muted));
-        input.setPadding(32, 24, 32, 24);
-
-        new AlertDialog.Builder(this)
-                .setTitle("Enter Custom Web API URL")
-                .setView(input)
-                .setPositiveButton("Save", (dialog, which) -> {
-                    String url = input.getText().toString().trim();
-                    if (!url.isEmpty()) {
-                        ApiClient.setBaseUrl(this, url);
-                        updateServerBadge();
-                        Toast.makeText(this, "Server updated to: " + url, Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
 
     private void performRegistration() {
         String nic = etNic.getText() != null ? etNic.getText().toString().trim().toUpperCase() : "";
@@ -583,9 +513,8 @@ public class RegisterActivity extends AppCompatActivity {
                 String currentUrl = ApiClient.getBaseUrl(RegisterActivity.this);
                 new AlertDialog.Builder(RegisterActivity.this)
                         .setTitle("Connection Error")
-                        .setMessage("Failed to reach server at:\n" + currentUrl + "\n\nError: " + t.getMessage() + "\n\n• For USB testing: Ensure 'adb reverse tcp:5000 tcp:5000' is active on PC.\n• For Wi-Fi: Switch endpoint to Wi-Fi LAN (192.168.1.105:5000).")
-                        .setPositiveButton("Switch Server", (dialog, which) -> showServerConfigDialog())
-                        .setNegativeButton("Close", null)
+                        .setMessage("Failed to reach server at:\n" + currentUrl + "\n\nError: " + t.getMessage() + "\n\nPlease ensure the backend server is running and network is connected.")
+                        .setPositiveButton("OK", null)
                         .show();
             }
         });
