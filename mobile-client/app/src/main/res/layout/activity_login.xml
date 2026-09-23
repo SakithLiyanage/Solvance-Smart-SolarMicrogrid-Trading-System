@@ -59,6 +59,7 @@
 
         <!-- Prominent Brand Logo (Auto-adapts to Light/Dark mode) -->
         <ImageView
+            android:id="@+id/ivBrandLogo"
             android:layout_width="260dp"
             android:layout_height="120dp"
             android:src="@drawable/app_brand_logo"
@@ -252,25 +253,7 @@
                 app:strokeWidth="1.2dp" />
         </LinearLayout>
 
-        <!-- Server Endpoint Badge -->
-        <TextView
-            android:id="@+id/tvServerConfig"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Server: http://127.0.0.1:5000/api/"
-            android:textColor="@color/text_muted"
-            android:textSize="11sp"
-            android:fontFamily="monospace"
-            android:paddingHorizontal="14dp"
-            android:paddingVertical="6dp"
-            android:background="@drawable/bg_pill_chip"
-            android:drawableStart="@drawable/ic_settings"
-            android:drawableTint="@color/text_muted"
-            android:drawablePadding="8dp"
-            android:clickable="true"
-            android:focusable="true" />
-
+        <!-- Progress Indicator -->
         <ProgressBar
             android:id="@+id/progressBar"
             android:layout_width="wrap_content"
