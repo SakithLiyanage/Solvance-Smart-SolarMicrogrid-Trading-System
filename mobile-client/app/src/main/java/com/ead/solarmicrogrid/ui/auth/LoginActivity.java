@@ -47,6 +47,7 @@ public class LoginActivity extends AppCompatActivity {
     private TextInputEditText etUsername, etPassword;
     private Button btnLogin, btnQuickProsumer, btnQuickOperator;
     private ImageButton btnThemeToggle;
+    private android.widget.ImageView ivBrandLogo;
     private TextView tvRegister;
     private ProgressBar progressBar;
     private DatabaseHelper dbHelper;
@@ -92,12 +93,20 @@ public class LoginActivity extends AppCompatActivity {
         btnQuickOperator = findViewById(R.id.btnQuickOperator);
         progressBar = findViewById(R.id.progressBar);
         btnThemeToggle = findViewById(R.id.btnThemeToggle);
+        ivBrandLogo = findViewById(R.id.ivBrandLogo);
     }
 
     private void setupListeners() {
         if (btnThemeToggle != null) {
             btnThemeToggle.setImageResource(ThemeManager.isDarkMode(this) ? R.drawable.ic_sun : R.drawable.ic_moon);
             btnThemeToggle.setOnClickListener(v -> ThemeManager.toggleTheme(this));
+        }
+
+        if (ivBrandLogo != null) {
+            ivBrandLogo.setOnLongClickListener(v -> {
+                showServerConfigDialog();
+                return true;
+            });
         }
 
         btnLogin.setOnClickListener(v -> performLogin());
@@ -217,9 +226,67 @@ public class LoginActivity extends AppCompatActivity {
                 progressBar.setVisibility(View.GONE);
                 btnLogin.setEnabled(true);
                 String currentEndpoint = ApiClient.getBaseUrl(LoginActivity.this);
-                Toast.makeText(LoginActivity.this, "Unable to reach Web API at: " + currentEndpoint + "\nTap Server at bottom to switch.", Toast.LENGTH_LONG).show();
+                new AlertDialog.Builder(LoginActivity.this)
+                        .setTitle("Server Connection Notice")
+                        .setMessage("Unable to reach Solvance Web API at:\n" + currentEndpoint + "\n\nError: " + (t != null ? t.getMessage() : "Network timeout") + "\n\nTip: Long-press the Solvance Logo at top to switch endpoint anytime.")
+                        .setPositiveButton("Switch Server", (dialog, which) -> showServerConfigDialog())
+                        .setNegativeButton("Retry", (dialog, which) -> performLogin())
+                        .setNeutralButton("Dismiss", null)
+                        .show();
             }
         });
+    }
+
+    private void showServerConfigDialog() {
+        String[] options = {
+                "Host PC Wi-Fi LAN (192.168.1.105:5000) [Recommended]",
+                "USB Cable Reverse (127.0.0.1:5000) [ADB]",
+                "Android Emulator (10.0.2.2:5000)",
+                "Custom URL..."
+        };
+
+        new AlertDialog.Builder(this)
+                .setTitle("Solvance Server API Endpoint")
+                .setItems(options, (dialog, which) -> {
+                    switch (which) {
+                        case 0:
+                            ApiClient.setBaseUrl(this, "http://192.168.1.105:5000/api/");
+                            Toast.makeText(this, "Server set to PC Wi-Fi LAN (192.168.1.105:5000)", Toast.LENGTH_SHORT).show();
+                            break;
+                        case 1:
+                            ApiClient.setBaseUrl(this, "http://127.0.0.1:5000/api/");
+                            Toast.makeText(this, "Server set to USB Reverse (127.0.0.1:5000)", Toast.LENGTH_SHORT).show();
+                            break;
+                        case 2:
+                            ApiClient.setBaseUrl(this, "http://10.0.2.2:5000/api/");
+                            Toast.makeText(this, "Server set to Emulator (10.0.2.2:5000)", Toast.LENGTH_SHORT).show();
+                            break;
+                        case 3:
+                            showCustomUrlDialog();
+                            break;
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showCustomUrlDialog() {
+        final EditText input = new EditText(this);
+        input.setText(ApiClient.getBaseUrl(this));
+        input.setPadding(32, 24, 32, 24);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Enter Web API URL")
+                .setView(input)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String url = input.getText().toString().trim();
+                    if (!url.isEmpty()) {
+                        ApiClient.setBaseUrl(this, url);
+                        Toast.makeText(this, "Server updated to: " + url, Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void navigateForRole(String role) {

@@ -59,6 +59,7 @@
 
         <!-- Prominent Brand Logo (Auto-adapts to Light/Dark mode) -->
         <ImageView
+            android:id="@+id/ivBrandLogo"
             android:layout_width="260dp"
             android:layout_height="120dp"
             android:src="@drawable/app_brand_logo"
