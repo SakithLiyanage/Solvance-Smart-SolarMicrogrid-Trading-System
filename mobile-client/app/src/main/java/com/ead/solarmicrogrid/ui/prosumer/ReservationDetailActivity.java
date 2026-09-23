@@ -123,6 +123,28 @@ public class ReservationDetailActivity extends AppCompatActivity {
                 btnEditReservation.setEnabled(false);
                 btnEditReservation.setAlpha(0.4f);
             }
+        } else if (scheduledDateTime != null && !scheduledDateTime.isEmpty()) {
+            // Proactive 12-hour notice calculation for prosumer UI feedback
+            try {
+                java.text.SimpleDateFormat parseFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US);
+                parseFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                String clean = scheduledDateTime.replace("Z", "");
+                java.util.Date parsed = parseFormat.parse(clean);
+                if (parsed != null) {
+                    long diffMs = parsed.getTime() - System.currentTimeMillis();
+                    double hoursLeft = diffMs / (1000.0 * 3600.0);
+                    if (hoursLeft < 12.0) {
+                        btnCancelReservation.setEnabled(false);
+                        btnCancelReservation.setAlpha(0.4f);
+                        btnCancelReservation.setText("Cancel Locked (<12h)");
+                        if (btnEditReservation != null) {
+                            btnEditReservation.setEnabled(false);
+                            btnEditReservation.setAlpha(0.4f);
+                            btnEditReservation.setText("Modification Locked (<12h)");
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
         }
     }
 
@@ -204,19 +226,94 @@ public class ReservationDetailActivity extends AppCompatActivity {
         }
 
         btnCancelReservation.setOnClickListener(v -> {
-            new AlertDialog.Builder(this)
-                    .setTitle("Cancel Reservation")
-                    .setMessage("Are you sure you want to cancel this booking?\n\nPer Microgrid business rule: Cancellations require at least 12 hours' advance notice before the scheduled appointment.")
-                    .setPositiveButton("Confirm Cancel", (dialog, which) -> executeCancel())
-                    .setNegativeButton("Keep Booking", null)
-                    .show();
+            if ("Cancelled".equalsIgnoreCase(status) || "Completed".equalsIgnoreCase(status)) {
+                Toast.makeText(this, "Finalized reservations cannot be cancelled.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            double hoursLeft = getHoursRemainingUntilBooking();
+            if (hoursLeft < 12.0) {
+                com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                        this,
+                        "Cancellation Locked",
+                        "12-HOUR POLICY ENFORCEMENT",
+                        "Cancellations require at least 12 hours' advance notice before the scheduled appointment.\n\nTime remaining: " + String.format(java.util.Locale.US, "%.1f", Math.max(0, hoursLeft)) + " hours.\n\nPlease contact your local Grid Operator for immediate assistance.",
+                        "Understood",
+                        null
+                );
+                return;
+            }
+
+            com.ead.solarmicrogrid.util.SolvanceDialog.showConfirm(
+                    this,
+                    "Cancel Reservation",
+                    "12-HOUR CANCELLATION RULE",
+                    "Are you sure you want to cancel this booking?\n\nNotice remaining: " + String.format(java.util.Locale.US, "%.1f", hoursLeft) + " hours (12-hour policy rule satisfied).",
+                    "Confirm Cancel",
+                    "Keep Booking",
+                    () -> executeCancel(),
+                    null
+            );
         });
+    }
+
+    public static java.util.Date parseDateSafely(String str) {
+        if (str == null || str.trim().isEmpty()) return null;
+        String[] formats = new String[]{
+                "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+                "yyyy-MM-dd'T'HH:mm:ss.SSS",
+                "yyyy-MM-dd'T'HH:mm:ss'Z'",
+                "yyyy-MM-dd'T'HH:mm:ss",
+                "yyyy-MM-dd HH:mm:ss",
+                "yyyy-MM-dd HH:mm"
+        };
+        for (String f : formats) {
+            try {
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat(f, java.util.Locale.US);
+                if (f.contains("'Z'") || f.endsWith("Z")) {
+                    sdf.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                }
+                return sdf.parse(str);
+            } catch (Exception ignored) {}
+        }
+        return null;
+    }
+
+    private double getHoursRemainingUntilBooking() {
+        if (scheduledDateTime == null || scheduledDateTime.isEmpty()) return 999.0;
+        try {
+            java.util.Date parsed = parseDateSafely(scheduledDateTime);
+            if (parsed != null) {
+                long diffMillis = parsed.getTime() - System.currentTimeMillis();
+                return diffMillis / (1000.0 * 60.0 * 60.0);
+            }
+        } catch (Exception ignored) {}
+        return 999.0;
     }
 
     private void showEditReservationDialog() {
         if ("Cancelled".equalsIgnoreCase(status) || "Completed".equalsIgnoreCase(status)) {
             Toast.makeText(this, "Finalized reservations cannot be modified.", Toast.LENGTH_SHORT).show();
             return;
+        }
+
+        double hoursLeft = getHoursRemainingUntilBooking();
+        if (hoursLeft < 12.0) {
+            com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                    this,
+                    "Reschedule Window Locked",
+                    "12-HOUR POLICY ENFORCEMENT",
+                    "Modifications require at least 12 hours' advance notice.\n\nTime remaining: " + String.format(java.util.Locale.US, "%.1f", Math.max(0, hoursLeft)) + " hours.\n\nPlease contact your local Grid Operator for immediate assistance.",
+                    "Understood",
+                    null
+            );
+            return;
+        }
+
+        final java.util.Calendar editCalendar = java.util.Calendar.getInstance();
+        if (scheduledDateTime != null && !scheduledDateTime.isEmpty()) {
+            java.util.Date parsed = parseDateSafely(scheduledDateTime);
+            if (parsed != null) editCalendar.setTime(parsed);
         }
 
         LinearLayout layout = new LinearLayout(this);
@@ -251,6 +348,64 @@ public class ReservationDetailActivity extends AppCompatActivity {
         }
         layout.addView(spTrade);
 
+        TextView tvDatePrompt = new TextView(this);
+        tvDatePrompt.setText("\nScheduled Slot (Within 7 Days):");
+        tvDatePrompt.setTextSize(13);
+        tvDatePrompt.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+        layout.addView(tvDatePrompt);
+
+        final TextView tvCurrentSchedule = new TextView(this);
+        java.text.SimpleDateFormat displaySdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm (EEE)", java.util.Locale.getDefault());
+        tvCurrentSchedule.setText(displaySdf.format(editCalendar.getTime()));
+        tvCurrentSchedule.setTextSize(13);
+        tvCurrentSchedule.setTextColor(ContextCompat.getColor(this, R.color.primary));
+        tvCurrentSchedule.setPadding(0, 8, 0, 12);
+        layout.addView(tvCurrentSchedule);
+
+        Button btnChangeSchedule = new Button(this);
+        btnChangeSchedule.setText("Reschedule Date & Time");
+        btnChangeSchedule.setTextSize(12);
+        layout.addView(btnChangeSchedule);
+
+        btnChangeSchedule.setOnClickListener(v -> {
+            final java.util.Calendar nowCal = java.util.Calendar.getInstance();
+            final java.util.Calendar maxCal = java.util.Calendar.getInstance();
+            maxCal.add(java.util.Calendar.DAY_OF_YEAR, 7);
+            maxCal.set(java.util.Calendar.HOUR_OF_DAY, 23);
+            maxCal.set(java.util.Calendar.MINUTE, 59);
+            maxCal.set(java.util.Calendar.SECOND, 59);
+            maxCal.set(java.util.Calendar.MILLISECOND, 999);
+
+            android.app.DatePickerDialog dateDialog = new android.app.DatePickerDialog(
+                    this,
+                    (view, year, month, dayOfMonth) -> {
+                        editCalendar.set(java.util.Calendar.YEAR, year);
+                        editCalendar.set(java.util.Calendar.MONTH, month);
+                        editCalendar.set(java.util.Calendar.DAY_OF_MONTH, dayOfMonth);
+
+                        android.app.TimePickerDialog timeDialog = new android.app.TimePickerDialog(
+                                this,
+                                (tView, hourOfDay, minute) -> {
+                                    editCalendar.set(java.util.Calendar.HOUR_OF_DAY, hourOfDay);
+                                    editCalendar.set(java.util.Calendar.MINUTE, minute);
+                                    editCalendar.set(java.util.Calendar.SECOND, 0);
+                                    tvCurrentSchedule.setText(displaySdf.format(editCalendar.getTime()));
+                                },
+                                editCalendar.get(java.util.Calendar.HOUR_OF_DAY),
+                                editCalendar.get(java.util.Calendar.MINUTE),
+                                true
+                        );
+                        timeDialog.show();
+                    },
+                    editCalendar.get(java.util.Calendar.YEAR),
+                    editCalendar.get(java.util.Calendar.MONTH),
+                    editCalendar.get(java.util.Calendar.DAY_OF_MONTH)
+            );
+            dateDialog.getDatePicker().setMinDate(nowCal.getTimeInMillis() - 60000);
+            dateDialog.getDatePicker().setMaxDate(maxCal.getTimeInMillis());
+            dateDialog.show();
+        });
+
         new AlertDialog.Builder(this)
                 .setTitle("Modify Reservation")
                 .setMessage("Modifications require at least 12 hours' advance notice before the scheduled appointment window.")
@@ -261,7 +416,12 @@ public class ReservationDetailActivity extends AppCompatActivity {
                     try {
                         double newKwh = Double.parseDouble(energyStr);
                         String newTrade = spTrade.getSelectedItem().toString();
-                        executeEditReservation(newKwh, newTrade);
+
+                        java.text.SimpleDateFormat isoFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US);
+                        isoFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                        String newScheduleIso = isoFormat.format(editCalendar.getTime());
+
+                        executeEditReservation(newKwh, newTrade, newScheduleIso);
                     } catch (Exception ex) {
                         Toast.makeText(this, "Invalid energy amount entered.", Toast.LENGTH_SHORT).show();
                     }
@@ -270,7 +430,7 @@ public class ReservationDetailActivity extends AppCompatActivity {
                 .show();
     }
 
-    private void executeEditReservation(double newKwh, String newTrade) {
+    private void executeEditReservation(double newKwh, String newTrade, String scheduleTimeToSend) {
         if (reservationId == null || reservationId.isEmpty()) {
             reservationId = resNumber;
         }
@@ -281,10 +441,6 @@ public class ReservationDetailActivity extends AppCompatActivity {
 
         progressBar.setVisibility(View.VISIBLE);
         if (btnEditReservation != null) btnEditReservation.setEnabled(false);
-
-        String scheduleTimeToSend = scheduledDateTime != null && !scheduledDateTime.isEmpty() 
-                ? scheduledDateTime 
-                : new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).format(new java.util.Date(System.currentTimeMillis() + 86400000));
 
         AuthDtos.UpdateReservationRequest request = new AuthDtos.UpdateReservationRequest(
                 scheduleTimeToSend, newKwh, newTrade
@@ -299,13 +455,24 @@ public class ReservationDetailActivity extends AppCompatActivity {
                 if (response.isSuccessful()) {
                     currentKwh = newKwh;
                     currentTradeType = newTrade;
+                    scheduledDateTime = scheduleTimeToSend;
                     updateEnergyDisplay(currentKwh, currentTradeType);
+                    tvScheduledDetail.setText("Scheduled: " + scheduleTimeToSend);
 
-                    new AlertDialog.Builder(ReservationDetailActivity.this)
-                            .setTitle("Modification Saved")
-                            .setMessage("Your reservation quota has been updated successfully!\n\nNew Energy Quota: " + newKwh + " kWh\nTrade Direction: " + newTrade)
-                            .setPositiveButton("OK", null)
-                            .show();
+                    java.util.List<com.ead.solarmicrogrid.util.SolvanceDialog.DetailItem> details = new java.util.ArrayList<>();
+                    details.add(new com.ead.solarmicrogrid.util.SolvanceDialog.DetailItem("New Schedule", scheduleTimeToSend));
+                    details.add(new com.ead.solarmicrogrid.util.SolvanceDialog.DetailItem("Energy Quota", newKwh + " kWh"));
+                    details.add(new com.ead.solarmicrogrid.util.SolvanceDialog.DetailItem("Trade Mode", newTrade));
+
+                    com.ead.solarmicrogrid.util.SolvanceDialog.showSuccess(
+                            ReservationDetailActivity.this,
+                            "Modification Saved",
+                            "RESERVATION UPDATED",
+                            "Your reservation schedule and energy quota have been successfully updated.",
+                            details,
+                            "OK",
+                            null
+                    );
                 } else {
                     String errorMsg = "Modifications require at least 12 hours' notice before scheduled appointment.";
                     try {
@@ -321,11 +488,14 @@ public class ReservationDetailActivity extends AppCompatActivity {
                         }
                     } catch (Exception ignored) {}
 
-                    new AlertDialog.Builder(ReservationDetailActivity.this)
-                            .setTitle("Modification Blocked")
-                            .setMessage("Modification could not be completed.\n\nReason: " + errorMsg + "\n\nNotice: Modifications strictly require at least 12 hours' notice per Microgrid policy.")
-                            .setPositiveButton("Understood", null)
-                            .show();
+                    com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                            ReservationDetailActivity.this,
+                            "Modification Blocked",
+                            "POLICY RULE ENFORCEMENT",
+                            errorMsg + "\n\nNotice: Schedule updates strictly require at least 12 hours' notice per Microgrid policy.",
+                            "Understood",
+                            null
+                    );
                 }
             }
 
@@ -364,15 +534,18 @@ public class ReservationDetailActivity extends AppCompatActivity {
                     applyStatusBadgeStyle(tvStatusDetail, "Cancelled");
                     cardQr.setVisibility(View.GONE);
 
-                    new AlertDialog.Builder(ReservationDetailActivity.this)
-                            .setTitle("Cancellation Summary")
-                            .setMessage("Your reservation has been cancelled successfully.\n\nStatus: Cancelled\nNotice Requirement: 12-hour rule satisfied.")
-                            .setPositiveButton("OK", (dialog, which) -> {
+                    com.ead.solarmicrogrid.util.SolvanceDialog.showSuccess(
+                            ReservationDetailActivity.this,
+                            "Cancellation Completed",
+                            "BOOKING CANCELLED",
+                            "Your reservation slot has been released back to the microgrid capacity pool.\n\n12-hour cancellation notice policy was satisfied.",
+                            null,
+                            "Back to Reservations",
+                            () -> {
                                 finish();
                                 overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
-                            })
-                            .setCancelable(false)
-                            .show();
+                            }
+                    );
                 } else {
                     btnCancelReservation.setEnabled(true);
                     String errorMsg = "Cancellations require at least 12 hours' notice before scheduled appointment.";
@@ -392,11 +565,14 @@ public class ReservationDetailActivity extends AppCompatActivity {
                         }
                     } catch (Exception ignored) {}
 
-                    new AlertDialog.Builder(ReservationDetailActivity.this)
-                            .setTitle("Cancellation Blocked")
-                            .setMessage("Cancellation could not be completed.\n\nReason: " + errorMsg + "\n\nNotice: Modifications and cancellations require at least 12 hours' advance notice per Microgrid policy. Please contact your Grid Operator for assistance if needed.")
-                            .setPositiveButton("Understood", null)
-                            .show();
+                    com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                            ReservationDetailActivity.this,
+                            "Cancellation Blocked",
+                            "POLICY RESTRICTION",
+                            errorMsg + "\n\nModifications and cancellations require at least 12 hours' advance notice per Microgrid policy. Please contact your Grid Operator for assistance if needed.",
+                            "Understood",
+                            null
+                    );
                 }
             }
 

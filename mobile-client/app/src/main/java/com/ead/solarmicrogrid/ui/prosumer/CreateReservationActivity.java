@@ -159,11 +159,15 @@ public class CreateReservationActivity extends AppCompatActivity {
     }
 
     private void setupDateTimePickers() {
-        final Calendar now = Calendar.getInstance();
-        final Calendar maxDate = Calendar.getInstance();
-        maxDate.add(Calendar.DAY_OF_YEAR, 7);
-
         btnPickDate.setOnClickListener(v -> {
+            final Calendar now = Calendar.getInstance();
+            final Calendar maxDate = Calendar.getInstance();
+            maxDate.add(Calendar.DAY_OF_YEAR, 7);
+            maxDate.set(Calendar.HOUR_OF_DAY, 23);
+            maxDate.set(Calendar.MINUTE, 59);
+            maxDate.set(Calendar.SECOND, 59);
+            maxDate.set(Calendar.MILLISECOND, 999);
+
             DatePickerDialog dialog = new DatePickerDialog(
                     CreateReservationActivity.this,
                     (view, year, month, dayOfMonth) -> {
@@ -173,11 +177,11 @@ public class CreateReservationActivity extends AppCompatActivity {
                         isDateSelected = true;
                         updateDateTimeText();
                     },
-                    now.get(Calendar.YEAR),
-                    now.get(Calendar.MONTH),
-                    now.get(Calendar.DAY_OF_MONTH)
+                    selectedCalendar.get(Calendar.YEAR),
+                    selectedCalendar.get(Calendar.MONTH),
+                    selectedCalendar.get(Calendar.DAY_OF_MONTH)
             );
-            dialog.getDatePicker().setMinDate(now.getTimeInMillis());
+            dialog.getDatePicker().setMinDate(now.getTimeInMillis() - 60000);
             dialog.getDatePicker().setMaxDate(maxDate.getTimeInMillis());
             dialog.show();
         });
@@ -201,14 +205,27 @@ public class CreateReservationActivity extends AppCompatActivity {
     }
 
     private void updateDateTimeText() {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US);
-        tvSelectedDateTime.setText("Scheduled: " + sdf.format(selectedCalendar.getTime()) + " UTC");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm (EEE)", Locale.getDefault());
+        tvSelectedDateTime.setText("Selected Slot: " + sdf.format(selectedCalendar.getTime()));
     }
 
     private void setupSubmitListener() {
         btnConfirmBooking.setOnClickListener(v -> {
             if (!isDateSelected || !isTimeSelected) {
                 Toast.makeText(this, "Please select both date and time (within 7 days).", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            long diffMillis = selectedCalendar.getTimeInMillis() - System.currentTimeMillis();
+            if (diffMillis < -600000) { // more than 10 mins in past
+                com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                        this,
+                        "Invalid Appointment Time",
+                        "SCHEDULE POLICY",
+                        "Cannot schedule bookings in the past. Please select a future time slot within 7 days.",
+                        "Adjust Time",
+                        null
+                );
                 return;
             }
 
@@ -237,7 +254,11 @@ public class CreateReservationActivity extends AppCompatActivity {
             String tradeType = rbDropOff.isChecked() ? "DropOff" : "Charging";
 
             SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
+            isoFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
             String scheduledIso = isoFormat.format(selectedCalendar.getTime());
+
+            SimpleDateFormat localDisplayFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm (EEE)", Locale.getDefault());
+            String localDisplayTime = localDisplayFormat.format(selectedCalendar.getTime());
 
             progressBar.setVisibility(View.VISIBLE);
             btnConfirmBooking.setEnabled(false);
@@ -257,21 +278,52 @@ public class CreateReservationActivity extends AppCompatActivity {
                     btnConfirmBooking.setEnabled(true);
 
                     if (response.isSuccessful()) {
-                        new AlertDialog.Builder(CreateReservationActivity.this)
-                                .setTitle("Booking Confirmed & Pass Issued")
-                                .setMessage("Your power trading slot has been reserved successfully!\n\n" +
-                                        "Station: " + selectedStation.getName() + "\n" +
-                                        "Schedule: " + scheduledIso + "\n" +
-                                        "Energy: " + energy + " kWh (" + tradeType + ")\n\n" +
-                                        "Digital Pass with secure transaction QR generated.")
-                                .setPositiveButton("View Booking Details", (dialog, which) -> {
+                        java.util.List<com.ead.solarmicrogrid.util.SolvanceDialog.DetailItem> details = new java.util.ArrayList<>();
+                        details.add(new com.ead.solarmicrogrid.util.SolvanceDialog.DetailItem("Station", selectedStation.getName()));
+                        details.add(new com.ead.solarmicrogrid.util.SolvanceDialog.DetailItem("Schedule Time", localDisplayTime));
+                        details.add(new com.ead.solarmicrogrid.util.SolvanceDialog.DetailItem("Energy Quota", energy + " kWh"));
+                        details.add(new com.ead.solarmicrogrid.util.SolvanceDialog.DetailItem("Trading Mode", tradeType));
+
+                        com.ead.solarmicrogrid.util.SolvanceDialog.showModal(
+                                CreateReservationActivity.this,
+                                com.ead.solarmicrogrid.util.SolvanceDialog.DialogType.SUCCESS,
+                                "Booking Confirmed & Pass Issued",
+                                "RESERVATION CONFIRMED",
+                                "Your power trading slot has been reserved successfully in the microgrid scheduler.",
+                                details,
+                                "Digital Pass with dynamic security QR generated for physical station check-in.",
+                                "View Booking Details",
+                                null,
+                                false,
+                                () -> {
                                     finish();
                                     overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
-                                })
-                                .setCancelable(false)
-                                .show();
+                                },
+                                null
+                        );
                     } else {
-                        Toast.makeText(CreateReservationActivity.this, "Booking rejected: Verify 7-day rule and account status.", Toast.LENGTH_LONG).show();
+                        String errorMsg = "Booking rejected: Verify 7-day rule and account status.";
+                        try {
+                            if (response.errorBody() != null) {
+                                String raw = response.errorBody().string();
+                                try {
+                                    org.json.JSONObject obj = new org.json.JSONObject(raw);
+                                    if (obj.has("message")) errorMsg = obj.getString("message");
+                                    else errorMsg = raw;
+                                } catch (Exception ex) {
+                                    if (!raw.isEmpty()) errorMsg = raw;
+                                }
+                            }
+                        } catch (Exception ignored) {}
+
+                        com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                                CreateReservationActivity.this,
+                                "Reservation Request Blocked",
+                                "SCHEDULE RULE",
+                                errorMsg,
+                                "Review & Retry",
+                                null
+                        );
                     }
                 }
 

@@ -47,7 +47,8 @@ public class LoginActivity extends AppCompatActivity {
     private TextInputEditText etUsername, etPassword;
     private Button btnLogin, btnQuickProsumer, btnQuickOperator;
     private ImageButton btnThemeToggle;
-    private TextView tvRegister, tvServerConfig;
+    private android.widget.ImageView ivBrandLogo;
+    private TextView tvRegister;
     private ProgressBar progressBar;
     private DatabaseHelper dbHelper;
 
@@ -74,7 +75,6 @@ public class LoginActivity extends AppCompatActivity {
 
         initViews();
         setupListeners();
-        updateServerBadge();
 
         if (autoUser != null && autoPass != null) {
             dbHelper.clearSession();
@@ -91,22 +91,22 @@ public class LoginActivity extends AppCompatActivity {
         tvRegister = findViewById(R.id.tvRegister);
         btnQuickProsumer = findViewById(R.id.btnQuickProsumer);
         btnQuickOperator = findViewById(R.id.btnQuickOperator);
-        tvServerConfig = findViewById(R.id.tvServerConfig);
         progressBar = findViewById(R.id.progressBar);
         btnThemeToggle = findViewById(R.id.btnThemeToggle);
-    }
-
-    private void updateServerBadge() {
-        if (tvServerConfig != null) {
-            String currentUrl = ApiClient.getBaseUrl(this);
-            tvServerConfig.setText("Server: " + currentUrl);
-        }
+        ivBrandLogo = findViewById(R.id.ivBrandLogo);
     }
 
     private void setupListeners() {
         if (btnThemeToggle != null) {
             btnThemeToggle.setImageResource(ThemeManager.isDarkMode(this) ? R.drawable.ic_sun : R.drawable.ic_moon);
             btnThemeToggle.setOnClickListener(v -> ThemeManager.toggleTheme(this));
+        }
+
+        if (ivBrandLogo != null) {
+            ivBrandLogo.setOnLongClickListener(v -> {
+                showServerConfigDialog();
+                return true;
+            });
         }
 
         btnLogin.setOnClickListener(v -> performLogin());
@@ -125,68 +125,6 @@ public class LoginActivity extends AppCompatActivity {
             etUsername.setText("OPERATOR001");
             etPassword.setText("Operator@123");
         });
-
-        if (tvServerConfig != null) {
-            tvServerConfig.setOnClickListener(v -> showServerConfigDialog());
-        }
-    }
-
-    private void showServerConfigDialog() {
-        String[] options = {
-                "USB Cable Reverse (127.0.0.1:5000) [Default USB]",
-                "Wi-Fi LAN (192.168.1.105:5000) [Current Host PC]",
-                "Android Emulator (10.0.2.2:5000)",
-                "Custom URL..."
-        };
-
-        new AlertDialog.Builder(this)
-                .setTitle("Select Server API Endpoint")
-                .setItems(options, (dialog, which) -> {
-                    switch (which) {
-                        case 0:
-                            ApiClient.setBaseUrl(this, "http://127.0.0.1:5000/api/");
-                            updateServerBadge();
-                            Toast.makeText(this, "Switched to USB Reverse (127.0.0.1:5000)", Toast.LENGTH_SHORT).show();
-                            break;
-                        case 1:
-                            ApiClient.setBaseUrl(this, "http://192.168.1.105:5000/api/");
-                            updateServerBadge();
-                            Toast.makeText(this, "Switched to Wi-Fi LAN (192.168.1.105:5000)", Toast.LENGTH_SHORT).show();
-                            break;
-                        case 2:
-                            ApiClient.setBaseUrl(this, "http://10.0.2.2:5000/api/");
-                            updateServerBadge();
-                            Toast.makeText(this, "Switched to Emulator (10.0.2.2:5000)", Toast.LENGTH_SHORT).show();
-                            break;
-                        case 3:
-                            showCustomUrlDialog();
-                            break;
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void showCustomUrlDialog() {
-        final EditText input = new EditText(this);
-        input.setText(ApiClient.getBaseUrl(this));
-        input.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.text_primary));
-        input.setHintTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.text_muted));
-        input.setPadding(32, 24, 32, 24);
-
-        new AlertDialog.Builder(this)
-                .setTitle("Enter Custom Web API URL")
-                .setView(input)
-                .setPositiveButton("Save", (dialog, which) -> {
-                    String url = input.getText().toString().trim();
-                    if (!url.isEmpty()) {
-                        ApiClient.setBaseUrl(this, url);
-                        updateServerBadge();
-                        Toast.makeText(this, "Server updated to: " + url, Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
     }
 
     private void performLogin() {
@@ -213,11 +151,14 @@ public class LoginActivity extends AppCompatActivity {
 
                     if ("Backoffice".equalsIgnoreCase(authData.role)) {
                         dbHelper.clearSession();
-                        new AlertDialog.Builder(LoginActivity.this)
-                                .setTitle("Solvance Web Portal Required")
-                                .setMessage("Welcome, " + authData.fullName + " (Backoffice Officer).\n\nBackoffice operations (e-KYC Verification, Staff Provisioning, and Grid Auditing) must be accessed via the Solvance Web Portal at:\nhttp://localhost:5173\n\nThe Android Mobile Client is reserved for Prosumers and Field Grid Operators.")
-                                .setPositiveButton("Understood", null)
-                                .show();
+                        com.ead.solarmicrogrid.util.SolvanceDialog.showInfo(
+                                LoginActivity.this,
+                                "Solvance Web Portal Required",
+                                "ROLE RESTRICTION",
+                                "Welcome, " + authData.fullName + " (Backoffice Officer).\n\nBackoffice operations (e-KYC Verification, Staff Provisioning, and Grid Auditing) must be accessed via the Solvance Web Portal on desktop/browser.\n\nThe Android Client is dedicated to Prosumers and Grid Operators.",
+                                "Understood",
+                                null
+                        );
                         return;
                     }
 
@@ -253,30 +194,40 @@ public class LoginActivity extends AppCompatActivity {
 
                     if (statusCode == 403) {
                         if ("ACCOUNT_PENDING".equalsIgnoreCase(errorCode) || errorMessage.toLowerCase().contains("pending")) {
-                            new AlertDialog.Builder(LoginActivity.this)
-                                    .setTitle("Account Pending KYC Review")
-                                    .setMessage("Your solar prosumer account is currently in 'Pending' status.\n\nPer system specification, a Backoffice administrator must verify and approve your registration before login.")
-                                    .setPositiveButton("Understood", null)
-                                    .show();
+                            com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                                    LoginActivity.this,
+                                    "Account Pending KYC Review",
+                                    "APPROVAL REQUIRED",
+                                    "Your solar prosumer account is currently awaiting verification.\n\nPer enterprise microgrid compliance, a Backoffice administrator must review and approve your submission before grid access is unlocked.",
+                                    "Understood",
+                                    null
+                            );
                         } else if ("ACCOUNT_DEACTIVATED".equalsIgnoreCase(errorCode) || errorMessage.toLowerCase().contains("deactivated")) {
-                            new AlertDialog.Builder(LoginActivity.this)
-                                    .setTitle("Account Deactivated")
-                                    .setMessage("Your account has been deactivated.\n\nPer Microgrid security policy, deactivated accounts can ONLY be reactivated by a Backoffice officer.")
-                                    .setPositiveButton("Contact Support", null)
-                                    .show();
+                            com.ead.solarmicrogrid.util.SolvanceDialog.showError(
+                                    LoginActivity.this,
+                                    "Account Deactivated",
+                                    "Your solar prosumer account has been deactivated.\n\nPer Microgrid security policy, deactivated accounts can ONLY be reactivated by a Backoffice officer.",
+                                    "Contact Support",
+                                    null
+                            );
                         } else {
-                            new AlertDialog.Builder(LoginActivity.this)
-                                    .setTitle("Access Forbidden")
-                                    .setMessage(errorMessage)
-                                    .setPositiveButton("OK", null)
-                                    .show();
+                            com.ead.solarmicrogrid.util.SolvanceDialog.showError(
+                                    LoginActivity.this,
+                                    "Access Forbidden",
+                                    errorMessage,
+                                    "OK",
+                                    null
+                            );
                         }
                     } else if (statusCode == 423 || "ACCOUNT_LOCKED".equalsIgnoreCase(errorCode)) {
-                        new AlertDialog.Builder(LoginActivity.this)
-                                .setTitle("Account Locked Out")
-                                .setMessage(errorMessage + "\n\nPlease wait before attempting to sign in again.")
-                                .setPositiveButton("OK", null)
-                                .show();
+                        com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                                LoginActivity.this,
+                                "Account Locked Out",
+                                "SECURITY TIMEOUT",
+                                errorMessage + "\n\nPlease wait before attempting to sign in again.",
+                                "OK",
+                                null
+                        );
                     } else {
                         Toast.makeText(LoginActivity.this, errorMessage, Toast.LENGTH_LONG).show();
                     }
@@ -288,9 +239,67 @@ public class LoginActivity extends AppCompatActivity {
                 progressBar.setVisibility(View.GONE);
                 btnLogin.setEnabled(true);
                 String currentEndpoint = ApiClient.getBaseUrl(LoginActivity.this);
-                Toast.makeText(LoginActivity.this, "Unable to reach Web API at: " + currentEndpoint + "\nTap Server at bottom to switch.", Toast.LENGTH_LONG).show();
+                new AlertDialog.Builder(LoginActivity.this)
+                        .setTitle("Server Connection Notice")
+                        .setMessage("Unable to reach Solvance Web API at:\n" + currentEndpoint + "\n\nError: " + (t != null ? t.getMessage() : "Network timeout") + "\n\nTip: Long-press the Solvance Logo at top to switch endpoint anytime.")
+                        .setPositiveButton("Switch Server", (dialog, which) -> showServerConfigDialog())
+                        .setNegativeButton("Retry", (dialog, which) -> performLogin())
+                        .setNeutralButton("Dismiss", null)
+                        .show();
             }
         });
+    }
+
+    private void showServerConfigDialog() {
+        String[] options = {
+                "Host PC Wi-Fi LAN (192.168.1.105:5000) [Recommended]",
+                "USB Cable Reverse (127.0.0.1:5000) [ADB]",
+                "Android Emulator (10.0.2.2:5000)",
+                "Custom URL..."
+        };
+
+        new AlertDialog.Builder(this)
+                .setTitle("Solvance Server API Endpoint")
+                .setItems(options, (dialog, which) -> {
+                    switch (which) {
+                        case 0:
+                            ApiClient.setBaseUrl(this, "http://192.168.1.105:5000/api/");
+                            Toast.makeText(this, "Server set to PC Wi-Fi LAN (192.168.1.105:5000)", Toast.LENGTH_SHORT).show();
+                            break;
+                        case 1:
+                            ApiClient.setBaseUrl(this, "http://127.0.0.1:5000/api/");
+                            Toast.makeText(this, "Server set to USB Reverse (127.0.0.1:5000)", Toast.LENGTH_SHORT).show();
+                            break;
+                        case 2:
+                            ApiClient.setBaseUrl(this, "http://10.0.2.2:5000/api/");
+                            Toast.makeText(this, "Server set to Emulator (10.0.2.2:5000)", Toast.LENGTH_SHORT).show();
+                            break;
+                        case 3:
+                            showCustomUrlDialog();
+                            break;
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showCustomUrlDialog() {
+        final EditText input = new EditText(this);
+        input.setText(ApiClient.getBaseUrl(this));
+        input.setPadding(32, 24, 32, 24);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Enter Web API URL")
+                .setView(input)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String url = input.getText().toString().trim();
+                    if (!url.isEmpty()) {
+                        ApiClient.setBaseUrl(this, url);
+                        Toast.makeText(this, "Server updated to: " + url, Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void navigateForRole(String role) {

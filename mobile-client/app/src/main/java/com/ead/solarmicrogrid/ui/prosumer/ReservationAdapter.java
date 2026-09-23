@@ -118,27 +118,10 @@ public class ReservationAdapter extends RecyclerView.Adapter<ReservationAdapter.
 
     private String formatScheduleDate(String rawIso) {
         if (rawIso == null || rawIso.trim().isEmpty()) return "-";
-        try {
-            String clean = rawIso;
-            if (clean.endsWith("Z")) {
-                clean = clean.substring(0, clean.length() - 1);
-            }
-            java.text.SimpleDateFormat isoFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
-            isoFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
-            java.util.Date date = isoFormat.parse(clean);
-            if (date != null) {
-                java.text.SimpleDateFormat displayFormat = new java.text.SimpleDateFormat("dd MMM yyyy • hh:mm a", Locale.US);
-                return displayFormat.format(date);
-            }
-        } catch (Exception e) {
-            try {
-                java.text.SimpleDateFormat simpleFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US);
-                java.util.Date date = simpleFormat.parse(rawIso);
-                if (date != null) {
-                    java.text.SimpleDateFormat displayFormat = new java.text.SimpleDateFormat("dd MMM yyyy • hh:mm a", Locale.US);
-                    return displayFormat.format(date);
-                }
-            } catch (Exception ignored) {}
+        java.util.Date date = ReservationDetailActivity.parseDateSafely(rawIso);
+        if (date != null) {
+            java.text.SimpleDateFormat displayFormat = new java.text.SimpleDateFormat("dd MMM yyyy • hh:mm a", Locale.US);
+            return displayFormat.format(date);
         }
         return rawIso;
     }
