@@ -226,11 +226,29 @@ public class ReservationDetailActivity extends AppCompatActivity {
         }
 
         btnCancelReservation.setOnClickListener(v -> {
+            if ("Cancelled".equalsIgnoreCase(status) || "Completed".equalsIgnoreCase(status)) {
+                Toast.makeText(this, "Finalized reservations cannot be cancelled.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            double hoursLeft = getHoursRemainingUntilBooking();
+            if (hoursLeft < 12.0) {
+                com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                        this,
+                        "Cancellation Locked",
+                        "12-HOUR POLICY ENFORCEMENT",
+                        "Cancellations require at least 12 hours' advance notice before the scheduled appointment.\n\nTime remaining: " + String.format(java.util.Locale.US, "%.1f", Math.max(0, hoursLeft)) + " hours.\n\nPlease contact your local Grid Operator for immediate assistance.",
+                        "Understood",
+                        null
+                );
+                return;
+            }
+
             com.ead.solarmicrogrid.util.SolvanceDialog.showConfirm(
                     this,
                     "Cancel Reservation",
                     "12-HOUR CANCELLATION RULE",
-                    "Are you sure you want to cancel this booking?\n\nPer Microgrid business rules, cancellations require at least 12 hours' advance notice before the scheduled appointment window.",
+                    "Are you sure you want to cancel this booking?\n\nNotice remaining: " + String.format(java.util.Locale.US, "%.1f", hoursLeft) + " hours (12-hour policy rule satisfied).",
                     "Confirm Cancel",
                     "Keep Booking",
                     () -> executeCancel(),
@@ -239,9 +257,37 @@ public class ReservationDetailActivity extends AppCompatActivity {
         });
     }
 
+    private double getHoursRemainingUntilBooking() {
+        if (scheduledDateTime == null || scheduledDateTime.isEmpty()) return 999.0;
+        try {
+            java.text.SimpleDateFormat parseFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US);
+            parseFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+            String clean = scheduledDateTime.replace("Z", "");
+            java.util.Date parsed = parseFormat.parse(clean);
+            if (parsed != null) {
+                long diffMillis = parsed.getTime() - System.currentTimeMillis();
+                return diffMillis / (1000.0 * 60.0 * 60.0);
+            }
+        } catch (Exception ignored) {}
+        return 999.0;
+    }
+
     private void showEditReservationDialog() {
         if ("Cancelled".equalsIgnoreCase(status) || "Completed".equalsIgnoreCase(status)) {
             Toast.makeText(this, "Finalized reservations cannot be modified.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        double hoursLeft = getHoursRemainingUntilBooking();
+        if (hoursLeft < 12.0) {
+            com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                    this,
+                    "Reschedule Window Locked",
+                    "12-HOUR POLICY ENFORCEMENT",
+                    "Modifications require at least 12 hours' advance notice.\n\nTime remaining: " + String.format(java.util.Locale.US, "%.1f", Math.max(0, hoursLeft)) + " hours.\n\nPlease contact your local Grid Operator for immediate assistance.",
+                    "Understood",
+                    null
+            );
             return;
         }
 
