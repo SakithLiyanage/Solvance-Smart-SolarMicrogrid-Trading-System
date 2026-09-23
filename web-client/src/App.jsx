@@ -1,17 +1,37 @@
+/**
+ * Solvance Web Client — Grid Management & Administration Console
+ * Authors:
+ *   - M.L. Booso (IT23452916) - Prosumer & Auth Portals
+ *   - G.L.S. Chanlaka (IT23151260) - Station Nodes & Google Maps
+ *   - L.T. Jayawardhana (IT23156760) - Reservations & Rules View
+ *   - H.N. Madubashini (IT23192300) - Operator & Telemetry Views
+ * Module: SE4040 - Enterprise Application Development (SLIIT)
+ *
+ * References & Third-Party Libraries:
+ * - React 18: https://react.dev/
+ * - Tailwind CSS: https://tailwindcss.com/
+ * - Lucide React (Icons): https://lucide.dev/
+ * - Vite Build Tool: https://vitejs.dev/
+ */
+
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Modal from './components/Modal';
 import Login from './pages/Login';
+import LandingPage from './pages/LandingPage';
 import BackofficeDashboard from './pages/BackofficeDashboard';
 import ProsumerManagement from './pages/ProsumerManagement';
 import NodeManagement from './pages/NodeManagement';
 import OperatorDashboard from './pages/OperatorDashboard';
+import StaffManagement from './pages/StaffManagement';
+import ReservationManagement from './pages/ReservationManagement';
 import api from './api/client';
 import { UserPlus, Shield, Zap, CheckCircle2, ShieldCheck, Activity } from 'lucide-react';
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [publicView, setPublicView] = useState('home'); // 'home' | 'login'
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('solar_theme') || 'dark';
   });
@@ -60,6 +80,7 @@ export default function App() {
     localStorage.removeItem('solar_user_data');
     setUser(null);
     setActiveTab('overview');
+    setPublicView('home');
   };
 
   const handleCreateStaff = async (e) => {
@@ -88,11 +109,21 @@ export default function App() {
   };
 
   if (!user) {
+    if (publicView === 'home') {
+      return (
+        <LandingPage
+          onGoToLogin={() => setPublicView('login')}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+        />
+      );
+    }
     return (
       <Login 
         onLoginSuccess={(userData) => setUser(userData)} 
         theme={theme}
         onToggleTheme={toggleTheme}
+        onBackToHome={() => setPublicView('home')}
       />
     );
   }
@@ -132,8 +163,16 @@ export default function App() {
           <NodeManagement theme={theme} />
         )}
 
+        {activeTab === 'staff' && user.role === 'Backoffice' && (
+          <StaffManagement theme={theme} currentUser={user} />
+        )}
+
         {activeTab === 'bookings' && (
-          <OperatorDashboard user={user} theme={theme} activeTab={activeTab} />
+          user.role === 'Backoffice' ? (
+            <ReservationManagement theme={theme} />
+          ) : (
+            <OperatorDashboard user={user} theme={theme} activeTab={activeTab} />
+          )
         )}
       </main>
 

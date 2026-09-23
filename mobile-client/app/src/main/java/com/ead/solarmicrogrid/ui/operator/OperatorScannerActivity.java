@@ -1,3 +1,18 @@
+// ============================================================================
+// File: OperatorScannerActivity.java
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: H.N. Madubashini (IT23192300)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
+// Description: Grid Operator mobile terminal with camera QR scanner, server-side pass verification, and energy dispatch finalization.
+// References & Citations:
+//   - JourneyApps ZXing Android Embedded BarcodeView:
+//     https://github.com/journeyapps/zxing-android-embedded
+//   - Android Camera Permissions & CameraManager API:
+//     https://developer.android.com/training/camera
+//   - Square Retrofit 2 REST Client Integration:
+//     https://square.github.io/retrofit/
+// ============================================================================
+
 package com.ead.solarmicrogrid.ui.operator;
 
 import android.Manifest;
@@ -34,6 +49,7 @@ import com.ead.solarmicrogrid.data.models.SolarStation;
 import com.ead.solarmicrogrid.data.models.User;
 import com.ead.solarmicrogrid.data.remote.ApiClient;
 import com.ead.solarmicrogrid.ui.auth.LoginActivity;
+import com.ead.solarmicrogrid.util.ThemeManager;
 import com.google.android.material.card.MaterialCardView;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.ResultPoint;
@@ -51,6 +67,19 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+/**
+ * Grid Station Operator Barcode & QR Code Scanner.
+ * Author: H.N. Madubashini (IT23192300)
+ * Module: SE4040 - Enterprise Application Development (SLIIT)
+ *
+ * References & Third-Party SDKs:
+ * - JourneyApps ZXing Android Embedded (Barcode Scanner):
+ *   https://github.com/journeyapps/zxing-android-embedded
+ * - Google ZXing Core Library:
+ *   https://github.com/zxing/zxing
+ * - Android Camera Permissions & Lifecycle Handling:
+ *   https://developer.android.com/training/permissions/requesting
+ */
 public class OperatorScannerActivity extends AppCompatActivity {
 
     private static final int CAMERA_PERMISSION_REQ = 101;
@@ -64,7 +93,7 @@ public class OperatorScannerActivity extends AppCompatActivity {
 
     // Header & KPIs
     private TextView tvOperatorNic, tvOperatorStatusSub;
-    private ImageButton btnOperatorRefresh, btnOperatorLogout;
+    private ImageButton btnOperatorRefresh, btnOperatorLogout, btnThemeToggle;
     private TextView tvKpiQueueCount, tvKpiVerifiedCount, tvKpiBatterySlots;
 
     // Segmented Navigation Tabs
@@ -144,6 +173,7 @@ public class OperatorScannerActivity extends AppCompatActivity {
         tvOperatorStatusSub = findViewById(R.id.tvOperatorStatusSub);
         btnOperatorRefresh = findViewById(R.id.btnOperatorRefresh);
         btnOperatorLogout = findViewById(R.id.btnOperatorLogout);
+        btnThemeToggle = findViewById(R.id.btnThemeToggle);
 
         // KPIs
         tvKpiQueueCount = findViewById(R.id.tvKpiQueueCount);
@@ -378,6 +408,11 @@ public class OperatorScannerActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
+        if (btnThemeToggle != null) {
+            btnThemeToggle.setImageResource(ThemeManager.isDarkMode(this) ? R.drawable.ic_sun : R.drawable.ic_moon);
+            btnThemeToggle.setOnClickListener(v -> ThemeManager.toggleTheme(this));
+        }
+
         btnOperatorRefresh.setOnClickListener(v -> {
             fetchOperatorData();
             Toast.makeText(this, "Refreshing grid data...", Toast.LENGTH_SHORT).show();

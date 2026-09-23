@@ -63,7 +63,6 @@ namespace SolarMicrogridApi.Controllers
                 ? NotFound(new { message = "Station not found." })
                 : Ok(telemetry);
         }
-
         /// <summary>
         /// Registers a new solar microgrid hub (Backoffice role only).
         /// </summary>
