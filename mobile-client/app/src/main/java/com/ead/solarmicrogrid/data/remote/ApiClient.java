@@ -50,22 +50,26 @@ public class ApiClient {
     private static String cachedBaseUrl = null;
 
     public static boolean isEmulator() {
-        return (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
-                || Build.FINGERPRINT.startsWith("generic")
-                || Build.FINGERPRINT.startsWith("unknown")
-                || Build.HARDWARE.contains("goldfish")
-                || Build.HARDWARE.contains("ranchu")
-                || Build.MODEL.contains("google_sdk")
-                || Build.MODEL.contains("Emulator")
-                || Build.MODEL.contains("Android SDK built for x86")
-                || Build.MANUFACTURER.contains("Genymotion")
-                || Build.PRODUCT.contains("sdk_google")
-                || Build.PRODUCT.contains("google_sdk")
-                || Build.PRODUCT.contains("sdk")
-                || Build.PRODUCT.contains("sdk_x86")
-                || Build.PRODUCT.contains("vbox86p")
-                || Build.PRODUCT.contains("emulator")
-                || Build.PRODUCT.contains("simulator");
+        if (Build.BRAND != null && (
+                Build.BRAND.equalsIgnoreCase("Xiaomi")
+                || Build.BRAND.equalsIgnoreCase("Redmi")
+                || Build.BRAND.equalsIgnoreCase("Samsung")
+                || Build.BRAND.equalsIgnoreCase("OnePlus")
+                || Build.BRAND.equalsIgnoreCase("Oppo")
+                || Build.BRAND.equalsIgnoreCase("Vivo")
+                || Build.BRAND.equalsIgnoreCase("Realme")
+                || Build.BRAND.equalsIgnoreCase("Huawei")
+                || Build.BRAND.equalsIgnoreCase("Honor")
+                || Build.BRAND.equalsIgnoreCase("Motorola")
+                || Build.BRAND.equalsIgnoreCase("Sony"))) {
+            return false;
+        }
+
+        return (Build.FINGERPRINT != null && (Build.FINGERPRINT.startsWith("google/sdk_gphone") || Build.FINGERPRINT.startsWith("generic")))
+                || (Build.MODEL != null && (Build.MODEL.contains("google_sdk") || Build.MODEL.contains("Emulator") || Build.MODEL.contains("Android SDK built for x86")))
+                || (Build.HARDWARE != null && (Build.HARDWARE.equals("goldfish") || Build.HARDWARE.equals("ranchu")))
+                || (Build.PRODUCT != null && (Build.PRODUCT.equals("sdk_gphone64_x86_64") || Build.PRODUCT.equals("sdk_gphone_x86") || Build.PRODUCT.equals("sdk_google")))
+                || (Build.MANUFACTURER != null && Build.MANUFACTURER.contains("Genymotion"));
     }
 
     public static String getBaseUrl(Context context) {
@@ -90,6 +94,7 @@ public class ApiClient {
         if (isEmulator()) {
             activeHost = "10.0.2.2";
         } else {
+            // Default to USB reverse, with Wi-Fi fallback
             activeHost = "127.0.0.1";
         }
         activePort = 5000;
@@ -121,8 +126,8 @@ public class ApiClient {
                     : HttpLoggingInterceptor.Level.BASIC);
 
             OkHttpClient client = new OkHttpClient.Builder()
-                    .connectTimeout(6, TimeUnit.SECONDS)
-                    .readTimeout(10, TimeUnit.SECONDS)
+                    .connectTimeout(2500, TimeUnit.MILLISECONDS)
+                    .readTimeout(8, TimeUnit.SECONDS)
                     .addInterceptor(logging)
                     .addInterceptor(new AutoDetectHostInterceptor(context.getApplicationContext()))
                     .addInterceptor(chain -> {
@@ -180,14 +185,12 @@ public class ApiClient {
                 if (isEmulator()) {
                     candidates.add("10.0.2.2");
                     candidates.add("127.0.0.1");
-                    candidates.add("10.0.3.2");
                     candidates.add("192.168.1.105");
+                    candidates.add("10.0.3.2");
                 } else {
-                    candidates.add("127.0.0.1"); // ADB reverse USB cable
+                    candidates.add("127.0.0.1"); // ADB reverse USB cable (instant 2ms)
                     candidates.add("192.168.1.105"); // Host PC Wi-Fi LAN
-                    candidates.add("10.0.2.2");
                     candidates.add("192.168.1.100");
-                    candidates.add("192.168.1.101");
                 }
 
                 // Dynamic Wi-Fi gateway subnet discovery
@@ -201,20 +204,20 @@ public class ApiClient {
                                     (gateway >> 8 & 0xff),
                                     (gateway >> 16 & 0xff),
                                     (gateway >> 24 & 0xff));
-                            if (!candidates.contains(gatewayIp)) candidates.add(gatewayIp);
                             String prefix = gatewayIp.substring(0, gatewayIp.lastIndexOf('.') + 1);
                             String host105 = prefix + "105";
-                            if (!candidates.contains(host105)) candidates.add(0, host105);
+                            if (!candidates.contains(host105)) candidates.add(1, host105);
+                            if (!candidates.contains(gatewayIp)) candidates.add(gatewayIp);
                         }
                     }
                 } catch (Exception ignored) {}
 
                 String failedHost = request.url().host();
 
-                // Fast probe client with 1.5s connect timeout
+                // Ultra-fast probe client with 800ms connect timeout
                 OkHttpClient probeClient = new OkHttpClient.Builder()
-                        .connectTimeout(1500, TimeUnit.MILLISECONDS)
-                        .readTimeout(2000, TimeUnit.MILLISECONDS)
+                        .connectTimeout(800, TimeUnit.MILLISECONDS)
+                        .readTimeout(1200, TimeUnit.MILLISECONDS)
                         .build();
 
                 for (String candidate : candidates) {
