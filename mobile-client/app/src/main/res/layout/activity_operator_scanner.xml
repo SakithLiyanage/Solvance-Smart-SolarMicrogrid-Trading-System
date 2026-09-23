@@ -98,6 +98,16 @@
                 android:layout_centerVertical="true">
 
                 <ImageButton
+                    android:id="@+id/btnOperatorMap"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:src="@drawable/ic_map_pin"
+                    app:tint="@color/accent"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Nearby Solar Stations Map"
+                    android:padding="8dp" />
+
+                <ImageButton
                     android:id="@+id/btnThemeToggle"
                     android:layout_width="38dp"
                     android:layout_height="38dp"
@@ -378,19 +388,6 @@
                             android:id="@+id/barcodeScannerView"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent" />
-
-                        <!-- Torch Button Floating in Top-Right Corner -->
-                        <ImageButton
-                            android:id="@+id/btnToggleTorch"
-                            android:layout_width="38dp"
-                            android:layout_height="38dp"
-                            android:layout_gravity="top|end"
-                            android:layout_margin="10dp"
-                            android:src="@drawable/ic_zap"
-                            app:tint="@color/primary"
-                            android:background="@drawable/bg_stat_pending"
-                            android:contentDescription="Toggle Torch"
-                            android:padding="8dp" />
                     </FrameLayout>
                 </com.google.android.material.card.MaterialCardView>
 
@@ -563,7 +560,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Enter QR Payload Token or Res #:"
+                               android:text="Enter QR token:"
                             android:textColor="@color/text_primary"
                             android:textSize="13sp"
                             android:textStyle="bold"
@@ -579,7 +576,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="46dp"
                                 android:layout_weight="1"
-                                android:hint="SOLAR-TX:... or RES-..."
+                                android:hint="SOLAR-TX:RES-...:signature"
                                 android:textColorHint="@color/text_muted"
                                 android:textColor="@color/text_primary"
                                 android:background="@drawable/bg_search_input"
