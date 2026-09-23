@@ -16,6 +16,7 @@ namespace SolarMicrogridApi.Services
         Task<SolarStation> CreateStationAsync(SolarStationDto dto);
         Task<bool> UpdateStationAsync(string id, SolarStationDto dto);
         Task<bool> UpdateBatterySlotsAsync(string id, int availableSlots);
+        Task<StationTelemetryDto?> GetTelemetryAsync(string id);
         Task<bool> DeactivateStationAsync(string id);
         Task<bool> ReactivateStationAsync(string id);
     }
