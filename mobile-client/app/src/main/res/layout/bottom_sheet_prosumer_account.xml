@@ -4,12 +4,15 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@drawable/bg_glass_card"
-    android:padding="20dp">
+    android:background="@drawable/bg_ticket_pass_card"
+    android:paddingStart="20dp"
+    android:paddingTop="12dp"
+    android:paddingEnd="20dp"
+    android:paddingBottom="24dp">
 
     <!-- BottomSheet Drag Handle -->
     <View
-        android:layout_width="40dp"
+        android:layout_width="44dp"
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
         android:background="@drawable/bg_pill_chip"
@@ -24,8 +27,8 @@
         android:layout_marginBottom="16dp">
 
         <FrameLayout
-            android:layout_width="54dp"
-            android:layout_height="54dp"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
             android:layout_marginEnd="14dp">
 
             <TextView
@@ -34,7 +37,7 @@
                 android:layout_height="match_parent"
                 android:background="@drawable/bg_prosumer_avatar"
                 android:gravity="center"
-                android:text="SS"
+                android:text="LB"
                 android:textColor="@color/avatar_text"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -57,8 +60,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="SOLVANCE PROSUMER"
-                android:textColor="@color/primary"
-                android:textSize="11sp"
+                android:textColor="#059669"
+                android:textSize="10sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.08" />
 
@@ -66,7 +69,7 @@
                 android:id="@+id/tvSheetFullName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Sunil Shantha"
+                android:text="Lahiru B."
                 android:textColor="@color/text_primary"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -84,40 +87,162 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Active"
-            android:textColor="@color/accent"
+            android:text="✓ Active"
+            android:textColor="#065F46"
             android:textSize="11sp"
             android:textStyle="bold"
-            android:background="@drawable/bg_live_pill"
-            android:paddingHorizontal="10dp"
-            android:paddingVertical="4dp" />
+            android:background="@drawable/bg_pill_mint"
+            android:paddingStart="10dp"
+            android:paddingTop="3dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="3dp" />
     </LinearLayout>
 
+    <!-- Solar Inverter & Telemetry Specification Card -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_telemetry_hero"
+        android:padding="14dp"
+        android:layout_marginBottom="16dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_alignParentStart="true">
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_solar_panel"
+                    app:tint="#059669"
+                    android:layout_marginEnd="6dp"
+                    android:contentDescription="Solar" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SOLAR INVERTER &amp; TELEMETRY"
+                    android:textColor="@color/text_primary"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.06" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Grid Locked"
+                android:textColor="#059669"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:background="@drawable/bg_pill_mint"
+                android:paddingStart="6dp"
+                android:paddingTop="1dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="1dp"
+                android:layout_alignParentEnd="true" />
+        </RelativeLayout>
+
+        <!-- 2-Column Metrics -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:background="@drawable/bg_telemetry_metric_box"
+                android:layout_marginEnd="6dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Solar Capacity"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvSheetCapacity"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="18.5 kWp"
+                    android:textColor="#059669"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:background="@drawable/bg_telemetry_metric_box"
+                android:layout_marginStart="6dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Inverter Serial"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvSheetInverter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="INV-SL-9042A"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Divider -->
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="@color/divider_color"
-        android:layout_marginBottom="12dp" />
+        android:layout_marginBottom="8dp" />
 
-    <!-- Action 1: Edit Contact Profile -->
+    <!-- Action 1: Edit Contact & Solar Profile -->
     <LinearLayout
         android:id="@+id/sheetItemEditProfile"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="?attr/selectableItemBackground"
-        android:paddingVertical="12dp"
-        android:paddingHorizontal="8dp"
+        android:background="@drawable/bg_execution_white_card"
+        android:padding="12dp"
         android:clickable="true"
-        android:focusable="true">
+        android:focusable="true"
+        android:layout_marginBottom="8dp">
 
         <ImageView
-            android:layout_width="22dp"
-            android:layout_height="22dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:src="@drawable/ic_edit"
-            app:tint="@color/primary"
-            android:layout_marginEnd="14dp" />
+            app:tint="#059669"
+            android:background="@drawable/bg_pill_mint"
+            android:padding="6dp"
+            android:layout_marginEnd="12dp"
+            android:contentDescription="Edit" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -128,15 +253,15 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Edit Contact Profile"
+                android:text="Edit Solar &amp; Contact Profile"
                 android:textColor="@color/text_primary"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Update phone number, email and contact info"
+                android:text="Update phone, email, inverter serial, and solar capacity"
                 android:textColor="@color/text_secondary"
                 android:textSize="11sp" />
         </LinearLayout>
@@ -145,29 +270,32 @@
             android:layout_width="16dp"
             android:layout_height="16dp"
             android:src="@drawable/ic_chevron_forward"
-            app:tint="@color/text_muted" />
+            app:tint="@color/text_muted"
+            android:contentDescription="Arrow" />
     </LinearLayout>
 
-    <!-- Action 2: Toggle Theme -->
+    <!-- Action 2: Microgrid P2P Rules & Tariff -->
     <LinearLayout
-        android:id="@+id/sheetItemThemeToggle"
+        android:id="@+id/sheetItemGridRules"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="?attr/selectableItemBackground"
-        android:paddingVertical="12dp"
-        android:paddingHorizontal="8dp"
+        android:background="@drawable/bg_execution_white_card"
+        android:padding="12dp"
         android:clickable="true"
-        android:focusable="true">
+        android:focusable="true"
+        android:layout_marginBottom="8dp">
 
         <ImageView
-            android:id="@+id/ivSheetThemeIcon"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:src="@drawable/ic_theme_toggle"
-            app:tint="@color/text_secondary"
-            android:layout_marginEnd="14dp" />
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_shield_check"
+            app:tint="#0369A1"
+            android:background="@drawable/bg_pill_blue"
+            android:padding="6dp"
+            android:layout_marginEnd="12dp"
+            android:contentDescription="Rules" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -178,16 +306,15 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Theme Appearance"
+                android:text="Microgrid Trading Rules &amp; Tariff"
                 android:textColor="@color/text_primary"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/tvSheetThemeSub"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Switch between Light and Dark interface"
+                android:text="7-Day advance window &amp; 12-hour cancellation notice"
                 android:textColor="@color/text_secondary"
                 android:textSize="11sp" />
         </LinearLayout>
@@ -196,127 +323,32 @@
             android:layout_width="16dp"
             android:layout_height="16dp"
             android:src="@drawable/ic_chevron_forward"
-            app:tint="@color/text_muted" />
+            app:tint="@color/text_muted"
+            android:contentDescription="Arrow" />
     </LinearLayout>
 
-    <!-- Action 3: Live Sync Telemetry -->
-    <LinearLayout
-        android:id="@+id/sheetItemSyncLive"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:background="?attr/selectableItemBackground"
-        android:paddingVertical="12dp"
-        android:paddingHorizontal="8dp"
-        android:clickable="true"
-        android:focusable="true">
-
-        <ImageView
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:src="@drawable/ic_refresh"
-            app:tint="@color/accent"
-            android:layout_marginEnd="14dp" />
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Sync Grid Telemetry"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Refresh live reservation slots and stats"
-                android:textColor="@color/text_secondary"
-                android:textSize="11sp" />
-        </LinearLayout>
-
-        <ImageView
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:src="@drawable/ic_chevron_forward"
-            app:tint="@color/text_muted" />
-    </LinearLayout>
-
-    <!-- Action 4: Request Account Deactivation -->
+    <!-- Action 3: Deactivate Account -->
     <LinearLayout
         android:id="@+id/sheetItemDeactivate"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="?attr/selectableItemBackground"
-        android:paddingVertical="12dp"
-        android:paddingHorizontal="8dp"
-        android:clickable="true"
-        android:focusable="true">
-
-        <ImageView
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:src="@drawable/ic_user_x"
-            app:tint="@color/danger"
-            android:layout_marginEnd="14dp" />
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Request Deactivation"
-                android:textColor="@color/danger"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Submit account suspension request to backoffice"
-                android:textColor="@color/text_secondary"
-                android:textSize="11sp" />
-        </LinearLayout>
-
-        <ImageView
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:src="@drawable/ic_chevron_forward"
-            app:tint="@color/danger" />
-    </LinearLayout>
-
-    <!-- Action 5: Logout -->
-    <LinearLayout
-        android:id="@+id/sheetItemLogout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:background="?attr/selectableItemBackground"
-        android:paddingVertical="12dp"
-        android:paddingHorizontal="8dp"
+        android:background="@drawable/bg_execution_white_card"
+        android:padding="12dp"
         android:clickable="true"
         android:focusable="true"
-        android:layout_marginTop="4dp">
+        android:layout_marginBottom="8dp">
 
         <ImageView
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:src="@drawable/ic_logout"
-            app:tint="@color/text_secondary"
-            android:layout_marginEnd="14dp" />
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_user_x"
+            app:tint="#DC2626"
+            android:background="@drawable/bg_badge_cancelled"
+            android:padding="6dp"
+            android:layout_marginEnd="12dp"
+            android:contentDescription="Deactivate" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -327,16 +359,16 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Sign Out"
-                android:textColor="@color/text_secondary"
-                android:textSize="14sp"
+                android:text="Deactivate Account"
+                android:textColor="@color/text_primary"
+                android:textSize="13sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Log out of this device session"
-                android:textColor="@color/text_muted"
+                android:text="Safely pause solar trading and close active registrations"
+                android:textColor="@color/text_secondary"
                 android:textSize="11sp" />
         </LinearLayout>
 
@@ -344,7 +376,20 @@
             android:layout_width="16dp"
             android:layout_height="16dp"
             android:src="@drawable/ic_chevron_forward"
-            app:tint="@color/text_muted" />
+            app:tint="@color/text_muted"
+            android:contentDescription="Arrow" />
     </LinearLayout>
+
+    <!-- Action 4: Logout Button -->
+    <Button
+        android:id="@+id/sheetItemLogout"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:text="Sign Out of Solvance"
+        android:textColor="#DC2626"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:background="@drawable/bg_btn_modify_time"
+        android:layout_marginTop="8dp" />
 
 </LinearLayout>

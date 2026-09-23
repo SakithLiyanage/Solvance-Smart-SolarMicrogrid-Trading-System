@@ -473,79 +473,62 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
     }
 
     private void showEditProfileDialog() {
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(50, 40, 50, 20);
+        android.app.Dialog dialog = new android.app.Dialog(this);
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_edit_profile);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+            dialog.getWindow().setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
 
-        TextView tvNameLabel = new TextView(this);
-        tvNameLabel.setText("Full Name:");
-        tvNameLabel.setTextSize(13);
-        tvNameLabel.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
-        layout.addView(tvNameLabel);
+        EditText etName = dialog.findViewById(R.id.etEditFullName);
+        EditText etEmail = dialog.findViewById(R.id.etEditEmail);
+        EditText etPhone = dialog.findViewById(R.id.etEditPhone);
+        EditText etAddress = dialog.findViewById(R.id.etEditAddress);
+        EditText etCapacity = dialog.findViewById(R.id.etEditCapacity);
+        EditText etInverter = dialog.findViewById(R.id.etEditInverterSerial);
 
-        final EditText etName = new EditText(this);
-        etName.setText(currentUser.getFullName());
-        etName.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
-        layout.addView(etName);
+        Button btnCancel = dialog.findViewById(R.id.btnCancelEdit);
+        Button btnSave = dialog.findViewById(R.id.btnSaveEditProfile);
 
-        TextView tvEmailLabel = new TextView(this);
-        tvEmailLabel.setText("\nEmail Address:");
-        tvEmailLabel.setTextSize(13);
-        tvEmailLabel.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
-        layout.addView(tvEmailLabel);
+        if (currentUser != null) {
+            etName.setText(currentUser.getFullName());
+            etEmail.setText(currentUser.getEmail());
+            etPhone.setText(currentUser.getPhone());
+            etAddress.setText(currentUser.getAddress());
+            etCapacity.setText(currentUser.getSolarCapacityKw() > 0 ? String.format(Locale.US, "%.1f", currentUser.getSolarCapacityKw()) : "18.5");
+            etInverter.setText(currentUser.getInverterSerial() != null && !currentUser.getInverterSerial().isEmpty() ? currentUser.getInverterSerial() : "INV-SL-9042A");
+        }
 
-        final EditText etEmail = new EditText(this);
-        etEmail.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-        etEmail.setText(currentUser.getEmail());
-        etEmail.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
-        layout.addView(etEmail);
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
 
-        TextView tvPhoneLabel = new TextView(this);
-        tvPhoneLabel.setText("\nPhone Number:");
-        tvPhoneLabel.setTextSize(13);
-        tvPhoneLabel.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
-        layout.addView(tvPhoneLabel);
+        btnSave.setOnClickListener(v -> {
+            String name = etName.getText().toString().trim();
+            String email = etEmail.getText().toString().trim();
+            String phone = etPhone.getText().toString().trim();
+            String address = etAddress.getText().toString().trim();
+            String capStr = etCapacity.getText().toString().trim();
+            String inverter = etInverter.getText().toString().trim();
 
-        final EditText etPhone = new EditText(this);
-        etPhone.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
-        etPhone.setText(currentUser.getPhone());
-        etPhone.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
-        layout.addView(etPhone);
+            if (name.isEmpty() || email.isEmpty()) {
+                Toast.makeText(this, "Full name and email are required.", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
-        TextView tvAddressLabel = new TextView(this);
-        tvAddressLabel.setText("\nProperty / Solar Node Address:");
-        tvAddressLabel.setTextSize(13);
-        tvAddressLabel.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
-        layout.addView(tvAddressLabel);
+            double capacity = 18.5;
+            try {
+                if (!capStr.isEmpty()) capacity = Double.parseDouble(capStr);
+            } catch (Exception ignored) {}
 
-        final EditText etAddress = new EditText(this);
-        etAddress.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_POSTAL_ADDRESS);
-        etAddress.setText(currentUser.getAddress());
-        etAddress.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
-        layout.addView(etAddress);
+            dialog.dismiss();
+            executeEditProfile(name, email, phone, address, capacity, inverter);
+        });
 
-        new AlertDialog.Builder(this)
-                .setTitle("Edit Contact Profile")
-                .setMessage("Update your prosumer contact details stored in the central microgrid database.")
-                .setView(layout)
-                .setPositiveButton("Save Profile", (dialog, which) -> {
-                    String name = etName.getText().toString().trim();
-                    String email = etEmail.getText().toString().trim();
-                    String phone = etPhone.getText().toString().trim();
-                    String address = etAddress.getText().toString().trim();
-
-                    if (name.isEmpty() || email.isEmpty()) {
-                        Toast.makeText(this, "Full name and email are required.", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    executeEditProfile(name, email, phone, address);
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
+        dialog.show();
     }
 
-    private void executeEditProfile(String name, String email, String phone, String address) {
-        AuthDtos.UpdateProfileRequest request = new AuthDtos.UpdateProfileRequest(name, email, phone, address);
+    private void executeEditProfile(String name, String email, String phone, String address, double solarCapacityKw, String inverterSerial) {
+        AuthDtos.UpdateProfileRequest request = new AuthDtos.UpdateProfileRequest(name, email, phone, address, solarCapacityKw, inverterSerial);
         ApiClient.getService(this).updateProfile(request).enqueue(new Callback<ResponseBody>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
@@ -554,7 +537,9 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
                     currentUser.setEmail(email);
                     currentUser.setPhone(phone);
                     currentUser.setAddress(address);
-                    dbHelper.updateUserProfile(currentUser.getNic(), name, email, phone, address);
+                    currentUser.setSolarCapacityKw(solarCapacityKw);
+                    currentUser.setInverterSerial(inverterSerial);
+                    dbHelper.updateUserProfile(currentUser.getNic(), name, email, phone, address, solarCapacityKw, inverterSerial);
 
                     tvWelcomeName.setText(name);
                     TextView tvInitials = findViewById(R.id.tvProsumerInitials);
@@ -566,7 +551,12 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
                         tvInitials.setText(initials);
                     }
 
-                    Toast.makeText(ProsumerDashboardActivity.this, "Profile updated successfully!", Toast.LENGTH_SHORT).show();
+                    TextView tvSolarGen = findViewById(R.id.tvSolarGenKw);
+                    if (tvSolarGen != null && solarCapacityKw > 0) {
+                        tvSolarGen.setText(String.format(Locale.US, "%.1f", solarCapacityKw));
+                    }
+
+                    Toast.makeText(ProsumerDashboardActivity.this, "Solar Profile updated successfully!", Toast.LENGTH_SHORT).show();
                 } else {
                     Toast.makeText(ProsumerDashboardActivity.this, "Failed to update profile on central server.", Toast.LENGTH_SHORT).show();
                 }
@@ -588,7 +578,8 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
         TextView tvSheetInitials = sheetView.findViewById(R.id.tvSheetInitials);
         TextView tvSheetFullName = sheetView.findViewById(R.id.tvSheetFullName);
         TextView tvSheetNic = sheetView.findViewById(R.id.tvSheetNic);
-        ImageView ivSheetThemeIcon = sheetView.findViewById(R.id.ivSheetThemeIcon);
+        TextView tvSheetCapacity = sheetView.findViewById(R.id.tvSheetCapacity);
+        TextView tvSheetInverter = sheetView.findViewById(R.id.tvSheetInverter);
 
         if (currentUser != null) {
             String name = currentUser.getFullName() != null ? currentUser.getFullName().trim() : "Prosumer";
@@ -602,10 +593,18 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
             if (tvSheetInitials != null) {
                 tvSheetInitials.setText(initials);
             }
-        }
 
-        if (ivSheetThemeIcon != null) {
-            ivSheetThemeIcon.setImageResource(ThemeManager.isDarkMode(this) ? R.drawable.ic_sun : R.drawable.ic_moon);
+            if (tvSheetCapacity != null) {
+                double cap = currentUser.getSolarCapacityKw() > 0 ? currentUser.getSolarCapacityKw() : 18.5;
+                tvSheetCapacity.setText(String.format(Locale.US, "%.1f kWp", cap));
+            }
+
+            if (tvSheetInverter != null) {
+                String inv = currentUser.getInverterSerial() != null && !currentUser.getInverterSerial().isEmpty()
+                        ? currentUser.getInverterSerial()
+                        : "INV-SL-9042A";
+                tvSheetInverter.setText(inv);
+            }
         }
 
         View itemEdit = sheetView.findViewById(R.id.sheetItemEditProfile);
@@ -616,19 +615,11 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
             });
         }
 
-        View itemTheme = sheetView.findViewById(R.id.sheetItemThemeToggle);
-        if (itemTheme != null) {
-            itemTheme.setOnClickListener(v -> {
+        View itemRules = sheetView.findViewById(R.id.sheetItemGridRules);
+        if (itemRules != null) {
+            itemRules.setOnClickListener(v -> {
                 sheetDialog.dismiss();
-                ThemeManager.toggleTheme(this);
-            });
-        }
-
-        View itemSync = sheetView.findViewById(R.id.sheetItemSyncLive);
-        if (itemSync != null) {
-            itemSync.setOnClickListener(v -> {
-                sheetDialog.dismiss();
-                refreshLiveData();
+                showGridPolicyDialog();
             });
         }
 

@@ -178,16 +178,26 @@ public class AuthDtos {
         public String phone;
         @SerializedName("address")
         public String address;
+        @SerializedName("solarCapacityKw")
+        public double solarCapacityKw;
+        @SerializedName("inverterSerial")
+        public String inverterSerial;
 
-        public UpdateProfileRequest(String fullName, String email, String phone, String address) {
+        public UpdateProfileRequest(String fullName, String email, String phone, String address, double solarCapacityKw, String inverterSerial) {
             this.fullName = fullName;
             this.email = email;
             this.phone = phone;
             this.address = address;
+            this.solarCapacityKw = solarCapacityKw;
+            this.inverterSerial = inverterSerial;
+        }
+
+        public UpdateProfileRequest(String fullName, String email, String phone, String address) {
+            this(fullName, email, phone, address, 15.0, "INV-SL-2026-DEFAULT");
         }
 
         public UpdateProfileRequest(String fullName, String email, String phone) {
-            this(fullName, email, phone, "");
+            this(fullName, email, phone, "", 15.0, "INV-SL-2026-DEFAULT");
         }
     }
 
