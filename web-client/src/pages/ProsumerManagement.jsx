@@ -595,7 +595,8 @@ export default function ProsumerManagement({ theme }) {
           setShowKycModal(false);
           setSelectedKycUser(null);
         }}
-        title="Prosumer e-KYC Verification &amp; Dual-Document Dossier"
+        maxWidth="max-w-4xl"
+        title="Prosumer e-KYC Verification & Dual-Document Dossier"
       >
         {selectedKycUser && (() => {
           const assessment = calculateKycTrustAssessment(selectedKycUser);
@@ -637,8 +638,8 @@ export default function ProsumerManagement({ theme }) {
                 </div>
               </div>
 
-              {/* Document Switcher Tabs */}
-              <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800">
+              {/* Document Switcher Tabs (Sticky) */}
+              <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 p-1.5 bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                 <button
                   type="button"
                   onClick={() => setKycDocTab('front')}
