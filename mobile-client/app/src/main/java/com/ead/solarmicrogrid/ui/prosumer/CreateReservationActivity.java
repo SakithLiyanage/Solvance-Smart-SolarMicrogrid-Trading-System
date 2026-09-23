@@ -159,11 +159,15 @@ public class CreateReservationActivity extends AppCompatActivity {
     }
 
     private void setupDateTimePickers() {
-        final Calendar now = Calendar.getInstance();
-        final Calendar maxDate = Calendar.getInstance();
-        maxDate.add(Calendar.DAY_OF_YEAR, 7);
-
         btnPickDate.setOnClickListener(v -> {
+            final Calendar now = Calendar.getInstance();
+            final Calendar maxDate = Calendar.getInstance();
+            maxDate.add(Calendar.DAY_OF_YEAR, 7);
+            maxDate.set(Calendar.HOUR_OF_DAY, 23);
+            maxDate.set(Calendar.MINUTE, 59);
+            maxDate.set(Calendar.SECOND, 59);
+            maxDate.set(Calendar.MILLISECOND, 999);
+
             DatePickerDialog dialog = new DatePickerDialog(
                     CreateReservationActivity.this,
                     (view, year, month, dayOfMonth) -> {
@@ -173,11 +177,11 @@ public class CreateReservationActivity extends AppCompatActivity {
                         isDateSelected = true;
                         updateDateTimeText();
                     },
-                    now.get(Calendar.YEAR),
-                    now.get(Calendar.MONTH),
-                    now.get(Calendar.DAY_OF_MONTH)
+                    selectedCalendar.get(Calendar.YEAR),
+                    selectedCalendar.get(Calendar.MONTH),
+                    selectedCalendar.get(Calendar.DAY_OF_MONTH)
             );
-            dialog.getDatePicker().setMinDate(now.getTimeInMillis());
+            dialog.getDatePicker().setMinDate(now.getTimeInMillis() - 60000);
             dialog.getDatePicker().setMaxDate(maxDate.getTimeInMillis());
             dialog.show();
         });
@@ -209,6 +213,19 @@ public class CreateReservationActivity extends AppCompatActivity {
         btnConfirmBooking.setOnClickListener(v -> {
             if (!isDateSelected || !isTimeSelected) {
                 Toast.makeText(this, "Please select both date and time (within 7 days).", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            long diffMillis = selectedCalendar.getTimeInMillis() - System.currentTimeMillis();
+            if (diffMillis < -600000) { // more than 10 mins in past
+                com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                        this,
+                        "Invalid Appointment Time",
+                        "SCHEDULE POLICY",
+                        "Cannot schedule bookings in the past. Please select a future time slot within 7 days.",
+                        "Adjust Time",
+                        null
+                );
                 return;
             }
 

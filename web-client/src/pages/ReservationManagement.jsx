@@ -212,11 +212,19 @@ export default function ReservationManagement({ theme }) {
     }
   };
 
-  // Min and max date strings for HTML input
-  const minIsoString = new Date().toISOString().slice(0, 16);
+  // Helper to format local Date into YYYY-MM-DDTHH:mm for datetime-local inputs
+  const toLocalIsoString = (date) => {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  // Min and max date strings for HTML input (within 7 days, up to 23:59 on 7th day)
+  const nowObj = new Date();
+  const minIsoString = toLocalIsoString(nowObj);
   const maxDateObj = new Date();
   maxDateObj.setDate(maxDateObj.getDate() + 7);
-  const maxIsoString = maxDateObj.toISOString().slice(0, 16);
+  maxDateObj.setHours(23, 59, 59, 999);
+  const maxIsoString = toLocalIsoString(maxDateObj);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">

@@ -68,10 +68,18 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
 
   const [cancellingReservation, setCancellingReservation] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
-  const [cancelError, setCancelError] = useState('');
-  const [cancelSuccess, setCancelSuccess] = useState('');
-
   const [approvalMsg, setApprovalMsg] = useState('');
+
+  // 7-day schedule window helpers for datetime-local picker
+  const toLocalIsoString = (date) => {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+  const minBookingLocalIso = toLocalIsoString(new Date());
+  const maxBookingLimitObj = new Date();
+  maxBookingLimitObj.setDate(maxBookingLimitObj.getDate() + 7);
+  maxBookingLimitObj.setHours(23, 59, 59, 999);
+  const maxBookingLocalIso = toLocalIsoString(maxBookingLimitObj);
 
   // QR Verification
   const [qrToken, setQrToken] = useState('');
@@ -724,6 +732,8 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
             <input
               type="datetime-local"
               required
+              min={minBookingLocalIso}
+              max={maxBookingLocalIso}
               value={createForm.scheduledDateTime}
               onChange={(e) => setCreateForm({ ...createForm, scheduledDateTime: e.target.value })}
               className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
@@ -800,6 +810,8 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
             <input
               type="datetime-local"
               required
+              min={minBookingLocalIso}
+              max={maxBookingLocalIso}
               value={editForm.scheduledDateTime}
               onChange={(e) => setEditForm({ ...editForm, scheduledDateTime: e.target.value })}
               className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
