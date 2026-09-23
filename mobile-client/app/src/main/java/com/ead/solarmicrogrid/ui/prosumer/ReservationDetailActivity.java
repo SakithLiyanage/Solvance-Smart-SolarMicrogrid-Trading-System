@@ -226,12 +226,16 @@ public class ReservationDetailActivity extends AppCompatActivity {
         }
 
         btnCancelReservation.setOnClickListener(v -> {
-            new AlertDialog.Builder(this)
-                    .setTitle("Cancel Reservation")
-                    .setMessage("Are you sure you want to cancel this booking?\n\nPer Microgrid business rule: Cancellations require at least 12 hours' advance notice before the scheduled appointment.")
-                    .setPositiveButton("Confirm Cancel", (dialog, which) -> executeCancel())
-                    .setNegativeButton("Keep Booking", null)
-                    .show();
+            com.ead.solarmicrogrid.util.SolvanceDialog.showConfirm(
+                    this,
+                    "Cancel Reservation",
+                    "12-HOUR CANCELLATION RULE",
+                    "Are you sure you want to cancel this booking?\n\nPer Microgrid business rules, cancellations require at least 12 hours' advance notice before the scheduled appointment window.",
+                    "Confirm Cancel",
+                    "Keep Booking",
+                    () -> executeCancel(),
+                    null
+            );
         });
     }
 
@@ -391,11 +395,20 @@ public class ReservationDetailActivity extends AppCompatActivity {
                     updateEnergyDisplay(currentKwh, currentTradeType);
                     tvScheduledDetail.setText("Scheduled: " + scheduleTimeToSend);
 
-                    new AlertDialog.Builder(ReservationDetailActivity.this)
-                            .setTitle("Modification Saved")
-                            .setMessage("Your reservation has been updated successfully!\n\nNew Schedule: " + scheduleTimeToSend + "\nNew Energy Quota: " + newKwh + " kWh\nTrade Direction: " + newTrade)
-                            .setPositiveButton("OK", null)
-                            .show();
+                    java.util.List<com.ead.solarmicrogrid.util.SolvanceDialog.DetailItem> details = new java.util.ArrayList<>();
+                    details.add(new com.ead.solarmicrogrid.util.SolvanceDialog.DetailItem("New Schedule", scheduleTimeToSend));
+                    details.add(new com.ead.solarmicrogrid.util.SolvanceDialog.DetailItem("Energy Quota", newKwh + " kWh"));
+                    details.add(new com.ead.solarmicrogrid.util.SolvanceDialog.DetailItem("Trade Mode", newTrade));
+
+                    com.ead.solarmicrogrid.util.SolvanceDialog.showSuccess(
+                            ReservationDetailActivity.this,
+                            "Modification Saved",
+                            "RESERVATION UPDATED",
+                            "Your reservation schedule and energy quota have been successfully updated.",
+                            details,
+                            "OK",
+                            null
+                    );
                 } else {
                     String errorMsg = "Modifications require at least 12 hours' notice before scheduled appointment.";
                     try {
@@ -411,11 +424,14 @@ public class ReservationDetailActivity extends AppCompatActivity {
                         }
                     } catch (Exception ignored) {}
 
-                    new AlertDialog.Builder(ReservationDetailActivity.this)
-                            .setTitle("Modification Blocked")
-                            .setMessage("Modification could not be completed.\n\nReason: " + errorMsg + "\n\nNotice: Modifications strictly require at least 12 hours' notice per Microgrid policy.")
-                            .setPositiveButton("Understood", null)
-                            .show();
+                    com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                            ReservationDetailActivity.this,
+                            "Modification Blocked",
+                            "POLICY RULE ENFORCEMENT",
+                            errorMsg + "\n\nNotice: Schedule updates strictly require at least 12 hours' notice per Microgrid policy.",
+                            "Understood",
+                            null
+                    );
                 }
             }
 
@@ -454,15 +470,18 @@ public class ReservationDetailActivity extends AppCompatActivity {
                     applyStatusBadgeStyle(tvStatusDetail, "Cancelled");
                     cardQr.setVisibility(View.GONE);
 
-                    new AlertDialog.Builder(ReservationDetailActivity.this)
-                            .setTitle("Cancellation Summary")
-                            .setMessage("Your reservation has been cancelled successfully.\n\nStatus: Cancelled\nNotice Requirement: 12-hour rule satisfied.")
-                            .setPositiveButton("OK", (dialog, which) -> {
+                    com.ead.solarmicrogrid.util.SolvanceDialog.showSuccess(
+                            ReservationDetailActivity.this,
+                            "Cancellation Completed",
+                            "BOOKING CANCELLED",
+                            "Your reservation slot has been released back to the microgrid capacity pool.\n\n12-hour cancellation notice policy was satisfied.",
+                            null,
+                            "Back to Reservations",
+                            () -> {
                                 finish();
                                 overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
-                            })
-                            .setCancelable(false)
-                            .show();
+                            }
+                    );
                 } else {
                     btnCancelReservation.setEnabled(true);
                     String errorMsg = "Cancellations require at least 12 hours' notice before scheduled appointment.";
@@ -482,11 +501,14 @@ public class ReservationDetailActivity extends AppCompatActivity {
                         }
                     } catch (Exception ignored) {}
 
-                    new AlertDialog.Builder(ReservationDetailActivity.this)
-                            .setTitle("Cancellation Blocked")
-                            .setMessage("Cancellation could not be completed.\n\nReason: " + errorMsg + "\n\nNotice: Modifications and cancellations require at least 12 hours' advance notice per Microgrid policy. Please contact your Grid Operator for assistance if needed.")
-                            .setPositiveButton("Understood", null)
-                            .show();
+                    com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                            ReservationDetailActivity.this,
+                            "Cancellation Blocked",
+                            "POLICY RESTRICTION",
+                            errorMsg + "\n\nModifications and cancellations require at least 12 hours' advance notice per Microgrid policy. Please contact your Grid Operator for assistance if needed.",
+                            "Understood",
+                            null
+                    );
                 }
             }
 

@@ -261,19 +261,29 @@ public class CreateReservationActivity extends AppCompatActivity {
                     btnConfirmBooking.setEnabled(true);
 
                     if (response.isSuccessful()) {
-                        new AlertDialog.Builder(CreateReservationActivity.this)
-                                .setTitle("Booking Confirmed & Pass Issued")
-                                .setMessage("Your power trading slot has been reserved successfully!\n\n" +
-                                        "Station: " + selectedStation.getName() + "\n" +
-                                        "Schedule: " + localDisplayTime + "\n" +
-                                        "Energy: " + energy + " kWh (" + tradeType + ")\n\n" +
-                                        "Digital Pass with secure transaction QR generated.")
-                                .setPositiveButton("View Booking Details", (dialog, which) -> {
+                        java.util.List<com.ead.solarmicrogrid.util.SolvanceDialog.DetailItem> details = new java.util.ArrayList<>();
+                        details.add(new com.ead.solarmicrogrid.util.SolvanceDialog.DetailItem("Station", selectedStation.getName()));
+                        details.add(new com.ead.solarmicrogrid.util.SolvanceDialog.DetailItem("Schedule Time", localDisplayTime));
+                        details.add(new com.ead.solarmicrogrid.util.SolvanceDialog.DetailItem("Energy Quota", energy + " kWh"));
+                        details.add(new com.ead.solarmicrogrid.util.SolvanceDialog.DetailItem("Trading Mode", tradeType));
+
+                        com.ead.solarmicrogrid.util.SolvanceDialog.showModal(
+                                CreateReservationActivity.this,
+                                com.ead.solarmicrogrid.util.SolvanceDialog.DialogType.SUCCESS,
+                                "Booking Confirmed & Pass Issued",
+                                "RESERVATION CONFIRMED",
+                                "Your power trading slot has been reserved successfully in the microgrid scheduler.",
+                                details,
+                                "Digital Pass with dynamic security QR generated for physical station check-in.",
+                                "View Booking Details",
+                                null,
+                                false,
+                                () -> {
                                     finish();
                                     overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
-                                })
-                                .setCancelable(false)
-                                .show();
+                                },
+                                null
+                        );
                     } else {
                         String errorMsg = "Booking rejected: Verify 7-day rule and account status.";
                         try {
@@ -289,11 +299,14 @@ public class CreateReservationActivity extends AppCompatActivity {
                             }
                         } catch (Exception ignored) {}
 
-                        new AlertDialog.Builder(CreateReservationActivity.this)
-                                .setTitle("Reservation Request Failed")
-                                .setMessage(errorMsg)
-                                .setPositiveButton("OK", null)
-                                .show();
+                        com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                                CreateReservationActivity.this,
+                                "Reservation Request Blocked",
+                                "SCHEDULE RULE",
+                                errorMsg,
+                                "Review & Retry",
+                                null
+                        );
                     }
                 }
 
