@@ -24,6 +24,15 @@ using SolarMicrogridApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var qrSigningSecret = builder.Configuration["QrSettings:SigningSecret"];
+if (string.IsNullOrWhiteSpace(qrSigningSecret) ||
+    qrSigningSecret == "CHANGE-ME-USE-A-SECRET-VIA-ENVIRONMENT-VARIABLE")
+{
+    throw new InvalidOperationException(
+        "QrSettings:SigningSecret must be configured with a non-placeholder secret. " +
+        "Use the QrSettings__SigningSecret environment variable or user secrets.");
+}
+
 // Method: ConfigureServices - Registers controllers, MongoDB context, enterprise services, and JWT.
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -100,7 +109,7 @@ app.UseCors("AllowAllClients");
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<MongoDbContext>();
-    await DbSeeder.SeedAsync(context);
+    await DbSeeder.SeedAsync(context, builder.Configuration);
 }
 
 app.UseAuthentication();

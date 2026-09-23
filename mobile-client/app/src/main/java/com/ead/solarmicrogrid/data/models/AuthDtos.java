@@ -138,9 +138,16 @@ public class AuthDtos {
     public static class VerifyQrRequest {
         @SerializedName("qrCodeToken")
         public String qrCodeToken;
+        @SerializedName("stationId")
+        public String stationId;
+
+        public VerifyQrRequest(String qrCodeToken, String stationId) {
+            this.qrCodeToken = qrCodeToken;
+            this.stationId = stationId;
+        }
 
         public VerifyQrRequest(String qrCodeToken) {
-            this.qrCodeToken = qrCodeToken;
+            this(qrCodeToken, null);
         }
     }
 
