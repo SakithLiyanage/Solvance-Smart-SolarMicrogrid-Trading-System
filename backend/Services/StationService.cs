@@ -104,6 +104,35 @@ namespace SolarMicrogridApi.Services
             return result.MatchedCount > 0;
         }
 
+        public async Task<StationTelemetryDto?> GetTelemetryAsync(string id)
+        {
+            var station = await GetStationByIdAsync(id);
+            if (station == null)
+            {
+                return null;
+            }
+
+            var pending = await _context.Reservations.CountDocumentsAsync(r => r.StationId == id && r.Status == "Pending");
+            var approved = await _context.Reservations.CountDocumentsAsync(r => r.StationId == id && r.Status == "Approved");
+            var completed = await _context.Reservations.CountDocumentsAsync(r => r.StationId == id && r.Status == "Completed");
+            var occupied = Math.Max(0, station.TotalBatterySlots - station.AvailableBatterySlots);
+
+            return new StationTelemetryDto
+            {
+                StationId = station.Id ?? id,
+                StationCode = station.StationCode,
+                StationName = station.Name,
+                IsActive = station.IsActive,
+                TotalBatterySlots = station.TotalBatterySlots,
+                AvailableBatterySlots = station.AvailableBatterySlots,
+                OccupiedBatterySlots = occupied,
+                BatteryOccupancyPercent = station.TotalBatterySlots == 0 ? 0 : occupied * 100d / station.TotalBatterySlots,
+                PendingReservations = (int)pending,
+                ApprovedReservations = (int)approved,
+                CompletedReservations = (int)completed,
+                CapturedAt = DateTime.UtcNow
+            };
+        }
         public async Task<bool> DeactivateStationAsync(string id)
         {
             // Method: DeactivateStationAsync - Deactivates station while strictly blocking if active energy reservations exist.

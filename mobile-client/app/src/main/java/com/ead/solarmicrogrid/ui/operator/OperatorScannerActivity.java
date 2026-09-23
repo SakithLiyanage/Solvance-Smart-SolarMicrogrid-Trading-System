@@ -89,11 +89,10 @@ public class OperatorScannerActivity extends AppCompatActivity {
 
     private int activeTab = TAB_SCANNER;
     private boolean isProcessingScan = false;
-    private boolean isTorchOn = false;
 
     // Header & KPIs
     private TextView tvOperatorNic, tvOperatorStatusSub;
-    private ImageButton btnOperatorRefresh, btnOperatorLogout, btnThemeToggle;
+    private ImageButton btnOperatorRefresh, btnOperatorLogout, btnThemeToggle, btnOperatorMap;
     private TextView tvKpiQueueCount, tvKpiVerifiedCount, tvKpiBatterySlots;
 
     // Segmented Navigation Tabs
@@ -103,7 +102,6 @@ public class OperatorScannerActivity extends AppCompatActivity {
 
     // Tab 1: Scanner Views
     private DecoratedBarcodeView barcodeScannerView;
-    private ImageButton btnToggleTorch;
     private MaterialCardView cardCameraPermission;
     private Button btnGrantCamera;
     private EditText etManualQr;
@@ -174,6 +172,7 @@ public class OperatorScannerActivity extends AppCompatActivity {
         btnOperatorRefresh = findViewById(R.id.btnOperatorRefresh);
         btnOperatorLogout = findViewById(R.id.btnOperatorLogout);
         btnThemeToggle = findViewById(R.id.btnThemeToggle);
+        btnOperatorMap = findViewById(R.id.btnOperatorMap);
 
         // KPIs
         tvKpiQueueCount = findViewById(R.id.tvKpiQueueCount);
@@ -193,7 +192,6 @@ public class OperatorScannerActivity extends AppCompatActivity {
 
         // Scanner Section
         barcodeScannerView = findViewById(R.id.barcodeScannerView);
-        btnToggleTorch = findViewById(R.id.btnToggleTorch);
         cardCameraPermission = findViewById(R.id.cardCameraPermission);
         btnGrantCamera = findViewById(R.id.btnGrantCamera);
         etManualQr = findViewById(R.id.etManualQr);
@@ -315,10 +313,11 @@ public class OperatorScannerActivity extends AppCompatActivity {
             @Override
             public void onVerify(EnergyReservation reservation) {
                 String token = reservation.getQrCodeToken();
-                if (token == null || token.isEmpty()) {
-                    token = reservation.getReservationNumber();
+                if (token != null && !token.isEmpty()) {
+                    verifyQrCodeOnServer(token);
+                } else {
+                    Toast.makeText(OperatorScannerActivity.this, "This reservation has no QR token.", Toast.LENGTH_SHORT).show();
                 }
-                verifyQrCodeOnServer(token);
             }
 
             @Override
@@ -424,27 +423,28 @@ public class OperatorScannerActivity extends AppCompatActivity {
             finish();
         });
 
+        if (btnOperatorMap != null) {
+            btnOperatorMap.setOnClickListener(v -> {
+                Intent intent = new Intent(OperatorScannerActivity.this, com.ead.solarmicrogrid.ui.prosumer.StationsMapActivity.class);
+                startActivity(intent);
+                overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+            });
+        }
+
         if (btnGrantCamera != null) {
             btnGrantCamera.setOnClickListener(v -> {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQ);
             });
         }
 
-        btnToggleTorch.setOnClickListener(v -> {
-            isTorchOn = !isTorchOn;
-            if (isTorchOn) {
-                barcodeScannerView.setTorchOn();
-                btnToggleTorch.setColorFilter(ContextCompat.getColor(this, R.color.accent));
-            } else {
-                barcodeScannerView.setTorchOff();
-                btnToggleTorch.setColorFilter(ContextCompat.getColor(this, R.color.primary));
-            }
-        });
-
         btnVerifyManual.setOnClickListener(v -> {
             String token = etManualQr.getText() != null ? etManualQr.getText().toString().trim() : "";
             if (token.isEmpty()) {
-                Toast.makeText(OperatorScannerActivity.this, "Enter QR token or Res # to verify.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(OperatorScannerActivity.this, "Enter QR token to verify.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (!token.matches("SOLAR-TX:RES-[^:]+:[0-9A-Fa-f]{12}")) {
+                Toast.makeText(OperatorScannerActivity.this, "Enter a valid QR token, not a reservation number.", Toast.LENGTH_SHORT).show();
                 return;
             }
             verifyQrCodeOnServer(token);
@@ -633,7 +633,8 @@ public class OperatorScannerActivity extends AppCompatActivity {
         progressBarOperator.setVisibility(View.VISIBLE);
         cardVerifiedResult.setVisibility(View.GONE);
 
-        AuthDtos.VerifyQrRequest request = new AuthDtos.VerifyQrRequest(qrToken);
+        String stationId = selectedStation != null ? selectedStation.getId() : null;
+        AuthDtos.VerifyQrRequest request = new AuthDtos.VerifyQrRequest(qrToken, stationId);
 
         ApiClient.getService(this).verifyQr(request).enqueue(new Callback<ResponseBody>() {
             @Override

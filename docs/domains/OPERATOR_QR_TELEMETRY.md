@@ -20,7 +20,7 @@ The Grid Operator Terminal and Telemetry subsystem facilitates physical handoffs
              |                             |                              |
              | [Scan QR Pass]              |                              |
              | POST /api/Reservations/     |                              |
-             |       verify-pass           |                              |
+             |       verify-qr             |                              |
              +-----------------------------+----------------------------->|
              |                             |                              | [Validate Cryptographic Hash]
              |                             |                              | [Check Status is Approved]
@@ -39,7 +39,7 @@ The Grid Operator Terminal and Telemetry subsystem facilitates physical handoffs
 ## 2. Core Components & File Mapping
 
 ### Backend Service & REST Controllers (ASP.NET Core 8)
-- `backend/Controllers/ReservationsController.cs`: Verification endpoint (`POST /api/Reservations/verify-pass`).
+- `backend/Controllers/ReservationsController.cs`: Verification endpoint (`POST /api/Reservations/verify-qr`).
 - `backend/Services/ReservationService.cs`: Business logic for verifying cryptographic QR tokens, confirming active booking validity, and transitioning reservations to `Completed`.
 - `backend/Services/StationService.cs`: Real-time telemetry aggregator compiling solar generation, battery storage state, and grid feed-in rates.
 
@@ -57,12 +57,13 @@ The Grid Operator Terminal and Telemetry subsystem facilitates physical handoffs
 
 1. **Cryptographic Digital Pass Integrity**:
    - Prosumer digital energy passes are formatted as structured cryptographic payloads:  
-     `SOLAR-TX:{ReservationId}:{SlotId}:{Timestamp}`
-   - The central API validates that the reservation exists, belongs to the targeted station, and is currently in `Approved` status.
+   `SOLAR-TX:{ReservationNumber}:{Signature}`
+   - The central API validates the HMAC-SHA256 signature, matches only the QR token, confirms the optional station, and requires `Approved` status.
 
 2. **Energy Handshake State Synchronization**:
-   - Once verified, the reservation status atomically transitions to `Completed`.
-   - The associated `EnergySlot` status transitions from `Occupied` / `Reserved` to `Available`, allowing immediate reallocation for upcoming prosumers.
+   - Once verified, an atomic status-guarded update transitions the reservation from `Approved` to `Completed`.
+   - The associated `EnergySlot` releases one available slot and returns to `Open` when capacity is available, allowing immediate reallocation.
+   - A completed `DropOff` releases one station battery slot, bounded by the station's total capacity.
 
 3. **ZXing Optical Scanning Engine**:
    - Built on `com.journeyapps:zxing-android-embedded:4.3.0` and `com.google.zxing:core:3.5.3`.
@@ -75,8 +76,8 @@ The Grid Operator Terminal and Telemetry subsystem facilitates physical handoffs
 | Test ID | Test Description | Expected Result | Status |
 | :--- | :--- | :--- | :--- |
 | OPER-01 | Prosumer generates QR digital pass | 512x512 high-contrast bitmap rendered with `SOLAR-TX` payload | PASS |
-| OPER-02 | Operator scans valid approved QR pass | HTTP 200 OK, Booking marked `Completed`, Slot freed | PASS |
-| OPER-03 | Operator scans expired or cancelled pass | HTTP 400 Bad Request ("Reservation is not in Approved state") | PASS |
-| OPER-04 | Operator scans tampered or invalid QR | HTTP 400 Bad Request ("Invalid QR format or reservation ID") | PASS |
+| OPER-02 | Operator scans valid approved QR pass | HTTP 200 OK, Booking marked `Completed`, Slot freed | IMPLEMENTED |
+| OPER-03 | Operator scans expired or cancelled pass | HTTP 400 Bad Request ("Reservation is not in Approved state") | IMPLEMENTED |
+| OPER-04 | Operator scans tampered or invalid QR | HTTP 400 Bad Request ("Invalid QR token format/signature") | IMPLEMENTED |
 | OPER-05 | Camera torch toggle in dark conditions | Device camera flash activates/deactivates instantly | PASS |
-| OPER-06 | Web Operator Dashboard telemetry update | KPI cards display live energy transfer rates and active capacity | PASS |
+| OPER-06 | Web Operator Dashboard telemetry update | KPI cards display station telemetry returned by the API | IMPLEMENTED |

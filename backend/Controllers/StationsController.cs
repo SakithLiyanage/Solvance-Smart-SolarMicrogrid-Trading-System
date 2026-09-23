@@ -54,6 +54,15 @@ namespace SolarMicrogridApi.Controllers
             return Ok(station);
         }
 
+        [HttpGet("{id}/telemetry")]
+        [Authorize(Roles = "Backoffice,GridOperator")]
+        public async Task<IActionResult> GetTelemetry(string id)
+        {
+            var telemetry = await _stationService.GetTelemetryAsync(id);
+            return telemetry == null
+                ? NotFound(new { message = "Station not found." })
+                : Ok(telemetry);
+        }
         /// <summary>
         /// Registers a new solar microgrid hub (Backoffice role only).
         /// </summary>

@@ -24,6 +24,7 @@ namespace SolarMicrogridApi.Data
     /// </summary>
     public class MongoDbContext
     {
+        private readonly IMongoClient _client;
         private readonly IMongoDatabase _database;
         private readonly MongoDbSettings _settings;
 
@@ -44,6 +45,7 @@ namespace SolarMicrogridApi.Data
                 : (configuration["MongoDbSettings:DatabaseName"] ?? "SolarMicrogridDb");
 
             IMongoDatabase? targetDb = null;
+            IMongoClient? targetClient = null;
 
             try
             {
@@ -61,6 +63,7 @@ namespace SolarMicrogridApi.Data
                 var client = new MongoClient(settings);
                 var testDb = client.GetDatabase(databaseName);
                 testDb.RunCommandAsync((Command<BsonDocument>)"{ping:1}").GetAwaiter().GetResult();
+                targetClient = client;
                 targetDb = testDb;
             }
             catch
@@ -71,20 +74,25 @@ namespace SolarMicrogridApi.Data
                     var fallbackSettings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
                     fallbackSettings.ServerSelectionTimeout = TimeSpan.FromSeconds(5);
                     var fallbackClient = new MongoClient(fallbackSettings);
+                    targetClient = fallbackClient;
                     targetDb = fallbackClient.GetDatabase(databaseName);
                 }
                 catch
                 {
                     // Fallback to default client
                     var defaultClient = new MongoClient(connectionString);
+                    targetClient = defaultClient;
                     targetDb = defaultClient.GetDatabase(databaseName);
                 }
             }
 
+            _client = targetClient!;
             _database = targetDb;
 
             EnsureIndexesCreated();
         }
+
+        public IMongoClient Client => _client;
 
         /// <summary>
         /// Collection 1: "User's detail" per specification.
