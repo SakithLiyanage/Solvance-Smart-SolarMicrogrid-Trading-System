@@ -80,6 +80,12 @@ public class ApiClient {
             return "http://" + activeHost + ":" + activePort + "/api/";
         }
 
+        String lastWorkingHost = prefs.getString("last_working_host", null);
+        if (lastWorkingHost != null && !lastWorkingHost.isEmpty()) {
+            activeHost = lastWorkingHost;
+            return "http://" + activeHost + ":" + activePort + "/api/";
+        }
+
         // Default initial candidate:
         if (isEmulator()) {
             activeHost = "10.0.2.2";
@@ -115,7 +121,7 @@ public class ApiClient {
                     : HttpLoggingInterceptor.Level.BASIC);
 
             OkHttpClient client = new OkHttpClient.Builder()
-                    .connectTimeout(8, TimeUnit.SECONDS)
+                    .connectTimeout(6, TimeUnit.SECONDS)
                     .readTimeout(10, TimeUnit.SECONDS)
                     .addInterceptor(logging)
                     .addInterceptor(new AutoDetectHostInterceptor(context.getApplicationContext()))
@@ -145,7 +151,7 @@ public class ApiClient {
     }
 
     /**
-     * Interceptor that transparently tries alternate localhost/emulator IP candidates if connection fails.
+     * Interceptor that transparently tries alternate localhost/LAN/emulator IP candidates if connection fails.
      */
     private static class AutoDetectHostInterceptor implements Interceptor {
         private final Context context;
@@ -175,32 +181,61 @@ public class ApiClient {
                     candidates.add("10.0.2.2");
                     candidates.add("127.0.0.1");
                     candidates.add("10.0.3.2");
+                    candidates.add("192.168.1.105");
                 } else {
                     candidates.add("127.0.0.1"); // ADB reverse USB cable
+                    candidates.add("192.168.1.105"); // Host PC Wi-Fi LAN
                     candidates.add("10.0.2.2");
                     candidates.add("192.168.1.100");
+                    candidates.add("192.168.1.101");
                 }
 
+                // Dynamic Wi-Fi gateway subnet discovery
+                try {
+                    android.net.wifi.WifiManager wm = (android.net.wifi.WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                    if (wm != null && wm.getDhcpInfo() != null) {
+                        int gateway = wm.getDhcpInfo().gateway;
+                        if (gateway != 0) {
+                            String gatewayIp = String.format(java.util.Locale.US, "%d.%d.%d.%d",
+                                    (gateway & 0xff),
+                                    (gateway >> 8 & 0xff),
+                                    (gateway >> 16 & 0xff),
+                                    (gateway >> 24 & 0xff));
+                            if (!candidates.contains(gatewayIp)) candidates.add(gatewayIp);
+                            String prefix = gatewayIp.substring(0, gatewayIp.lastIndexOf('.') + 1);
+                            String host105 = prefix + "105";
+                            if (!candidates.contains(host105)) candidates.add(0, host105);
+                        }
+                    }
+                } catch (Exception ignored) {}
+
                 String failedHost = request.url().host();
+
+                // Fast probe client with 1.5s connect timeout
+                OkHttpClient probeClient = new OkHttpClient.Builder()
+                        .connectTimeout(1500, TimeUnit.MILLISECONDS)
+                        .readTimeout(2000, TimeUnit.MILLISECONDS)
+                        .build();
 
                 for (String candidate : candidates) {
                     if (candidate.equalsIgnoreCase(failedHost)) continue;
 
-                    HttpUrl newUrl = request.url().newBuilder()
+                    HttpUrl probeUrl = request.url().newBuilder()
                             .host(candidate)
                             .port(5000)
                             .build();
 
-                    Request newRequest = request.newBuilder()
-                            .url(newUrl)
+                    Request probeRequest = request.newBuilder()
+                            .url(probeUrl)
                             .build();
 
                     try {
-                        Response response = chain.proceed(newRequest);
+                        Response response = probeClient.newCall(probeRequest).execute();
                         if (response.isSuccessful() || response.code() < 500) {
                             Log.i(TAG, "Successfully auto-switched backend host to: " + candidate);
                             activeHost = candidate;
                             activePort = 5000;
+                            prefs.edit().putString("last_working_host", candidate).apply();
                             return response;
                         }
                     } catch (IOException ignored) {
