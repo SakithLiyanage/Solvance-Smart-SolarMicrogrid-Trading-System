@@ -77,6 +77,11 @@ namespace SolarMicrogridApi.Models
         [BsonElement("completedAt")]
         public DateTime? CompletedAt { get; set; }
 
+        [BsonElement("completedByOperatorNic")]
+        public string? CompletedByOperatorNic { get; set; }
+
+        [BsonElement("slotReserved")]
+        public bool SlotReserved { get; set; }
         public EnergyReservation()
         {
             // Method: EnergyReservation Constructor - Initializes timestamps and unique reservation identifier.
