@@ -44,8 +44,9 @@ namespace SolarMicrogridApi.Services
             var maxDays = _settings.MaxAdvanceBookingDays > 0 ? _settings.MaxAdvanceBookingDays : 7;
             var graceMinutes = _settings.GracePeriodMinutes >= 0 ? _settings.GracePeriodMinutes : 10;
 
-            // Business Rule: Scheduled within configurable advance days (default: 7 days)
-            if (scheduledUtc < now.AddMinutes(-graceMinutes) || scheduledUtc > now.AddDays(maxDays))
+            // Business Rule: Scheduled within configurable advance days (default: 7 days, up to end of 7th calendar day)
+            var maxBookingWindowUtc = now.Date.AddDays(maxDays + 1).AddHours(14);
+            if (scheduledUtc < now.AddMinutes(-graceMinutes) || scheduledUtc > maxBookingWindowUtc)
             {
                 throw new ArgumentException($"Power trading reservations must be scheduled within {maxDays} days from today.");
             }
@@ -127,7 +128,8 @@ namespace SolarMicrogridApi.Services
 
             // Business Rule: Updated schedule must also be within 7 days from now
             var now = DateTime.UtcNow;
-            if (scheduledUtc < now.AddMinutes(-graceMinutes) || scheduledUtc > now.AddDays(maxDays))
+            var maxModWindowUtc = now.Date.AddDays(maxDays + 1).AddHours(14);
+            if (scheduledUtc < now.AddMinutes(-graceMinutes) || scheduledUtc > maxModWindowUtc)
             {
                 throw new ArgumentException($"Updated reservation must be scheduled within {maxDays} days from today.");
             }

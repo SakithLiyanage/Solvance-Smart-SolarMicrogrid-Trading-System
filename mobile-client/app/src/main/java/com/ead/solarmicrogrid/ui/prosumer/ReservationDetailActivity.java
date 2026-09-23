@@ -257,13 +257,32 @@ public class ReservationDetailActivity extends AppCompatActivity {
         });
     }
 
+    public static java.util.Date parseDateSafely(String str) {
+        if (str == null || str.trim().isEmpty()) return null;
+        String[] formats = new String[]{
+                "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+                "yyyy-MM-dd'T'HH:mm:ss.SSS",
+                "yyyy-MM-dd'T'HH:mm:ss'Z'",
+                "yyyy-MM-dd'T'HH:mm:ss",
+                "yyyy-MM-dd HH:mm:ss",
+                "yyyy-MM-dd HH:mm"
+        };
+        for (String f : formats) {
+            try {
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat(f, java.util.Locale.US);
+                if (f.contains("'Z'") || f.endsWith("Z")) {
+                    sdf.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                }
+                return sdf.parse(str);
+            } catch (Exception ignored) {}
+        }
+        return null;
+    }
+
     private double getHoursRemainingUntilBooking() {
         if (scheduledDateTime == null || scheduledDateTime.isEmpty()) return 999.0;
         try {
-            java.text.SimpleDateFormat parseFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US);
-            parseFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
-            String clean = scheduledDateTime.replace("Z", "");
-            java.util.Date parsed = parseFormat.parse(clean);
+            java.util.Date parsed = parseDateSafely(scheduledDateTime);
             if (parsed != null) {
                 long diffMillis = parsed.getTime() - System.currentTimeMillis();
                 return diffMillis / (1000.0 * 60.0 * 60.0);
@@ -293,13 +312,8 @@ public class ReservationDetailActivity extends AppCompatActivity {
 
         final java.util.Calendar editCalendar = java.util.Calendar.getInstance();
         if (scheduledDateTime != null && !scheduledDateTime.isEmpty()) {
-            try {
-                java.text.SimpleDateFormat parseFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US);
-                parseFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
-                String clean = scheduledDateTime.replace("Z", "");
-                java.util.Date parsed = parseFormat.parse(clean);
-                if (parsed != null) editCalendar.setTime(parsed);
-            } catch (Exception ignored) {}
+            java.util.Date parsed = parseDateSafely(scheduledDateTime);
+            if (parsed != null) editCalendar.setTime(parsed);
         }
 
         LinearLayout layout = new LinearLayout(this);
@@ -353,11 +367,15 @@ public class ReservationDetailActivity extends AppCompatActivity {
         btnChangeSchedule.setTextSize(12);
         layout.addView(btnChangeSchedule);
 
-        final java.util.Calendar nowCal = java.util.Calendar.getInstance();
-        final java.util.Calendar maxCal = java.util.Calendar.getInstance();
-        maxCal.add(java.util.Calendar.DAY_OF_YEAR, 7);
-
         btnChangeSchedule.setOnClickListener(v -> {
+            final java.util.Calendar nowCal = java.util.Calendar.getInstance();
+            final java.util.Calendar maxCal = java.util.Calendar.getInstance();
+            maxCal.add(java.util.Calendar.DAY_OF_YEAR, 7);
+            maxCal.set(java.util.Calendar.HOUR_OF_DAY, 23);
+            maxCal.set(java.util.Calendar.MINUTE, 59);
+            maxCal.set(java.util.Calendar.SECOND, 59);
+            maxCal.set(java.util.Calendar.MILLISECOND, 999);
+
             android.app.DatePickerDialog dateDialog = new android.app.DatePickerDialog(
                     this,
                     (view, year, month, dayOfMonth) -> {
@@ -383,7 +401,7 @@ public class ReservationDetailActivity extends AppCompatActivity {
                     editCalendar.get(java.util.Calendar.MONTH),
                     editCalendar.get(java.util.Calendar.DAY_OF_MONTH)
             );
-            dateDialog.getDatePicker().setMinDate(nowCal.getTimeInMillis());
+            dateDialog.getDatePicker().setMinDate(nowCal.getTimeInMillis() - 60000);
             dateDialog.getDatePicker().setMaxDate(maxCal.getTimeInMillis());
             dateDialog.show();
         });
