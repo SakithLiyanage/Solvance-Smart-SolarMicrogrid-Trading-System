@@ -151,11 +151,14 @@ public class LoginActivity extends AppCompatActivity {
 
                     if ("Backoffice".equalsIgnoreCase(authData.role)) {
                         dbHelper.clearSession();
-                        new AlertDialog.Builder(LoginActivity.this)
-                                .setTitle("Solvance Web Portal Required")
-                                .setMessage("Welcome, " + authData.fullName + " (Backoffice Officer).\n\nBackoffice operations (e-KYC Verification, Staff Provisioning, and Grid Auditing) must be accessed via the Solvance Web Portal at:\nhttp://localhost:5173\n\nThe Android Mobile Client is reserved for Prosumers and Field Grid Operators.")
-                                .setPositiveButton("Understood", null)
-                                .show();
+                        com.ead.solarmicrogrid.util.SolvanceDialog.showInfo(
+                                LoginActivity.this,
+                                "Solvance Web Portal Required",
+                                "ROLE RESTRICTION",
+                                "Welcome, " + authData.fullName + " (Backoffice Officer).\n\nBackoffice operations (e-KYC Verification, Staff Provisioning, and Grid Auditing) must be accessed via the Solvance Web Portal on desktop/browser.\n\nThe Android Client is dedicated to Prosumers and Grid Operators.",
+                                "Understood",
+                                null
+                        );
                         return;
                     }
 
@@ -191,30 +194,40 @@ public class LoginActivity extends AppCompatActivity {
 
                     if (statusCode == 403) {
                         if ("ACCOUNT_PENDING".equalsIgnoreCase(errorCode) || errorMessage.toLowerCase().contains("pending")) {
-                            new AlertDialog.Builder(LoginActivity.this)
-                                    .setTitle("Account Pending KYC Review")
-                                    .setMessage("Your solar prosumer account is currently in 'Pending' status.\n\nPer system specification, a Backoffice administrator must verify and approve your registration before login.")
-                                    .setPositiveButton("Understood", null)
-                                    .show();
+                            com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                                    LoginActivity.this,
+                                    "Account Pending KYC Review",
+                                    "APPROVAL REQUIRED",
+                                    "Your solar prosumer account is currently awaiting verification.\n\nPer enterprise microgrid compliance, a Backoffice administrator must review and approve your submission before grid access is unlocked.",
+                                    "Understood",
+                                    null
+                            );
                         } else if ("ACCOUNT_DEACTIVATED".equalsIgnoreCase(errorCode) || errorMessage.toLowerCase().contains("deactivated")) {
-                            new AlertDialog.Builder(LoginActivity.this)
-                                    .setTitle("Account Deactivated")
-                                    .setMessage("Your account has been deactivated.\n\nPer Microgrid security policy, deactivated accounts can ONLY be reactivated by a Backoffice officer.")
-                                    .setPositiveButton("Contact Support", null)
-                                    .show();
+                            com.ead.solarmicrogrid.util.SolvanceDialog.showError(
+                                    LoginActivity.this,
+                                    "Account Deactivated",
+                                    "Your solar prosumer account has been deactivated.\n\nPer Microgrid security policy, deactivated accounts can ONLY be reactivated by a Backoffice officer.",
+                                    "Contact Support",
+                                    null
+                            );
                         } else {
-                            new AlertDialog.Builder(LoginActivity.this)
-                                    .setTitle("Access Forbidden")
-                                    .setMessage(errorMessage)
-                                    .setPositiveButton("OK", null)
-                                    .show();
+                            com.ead.solarmicrogrid.util.SolvanceDialog.showError(
+                                    LoginActivity.this,
+                                    "Access Forbidden",
+                                    errorMessage,
+                                    "OK",
+                                    null
+                            );
                         }
                     } else if (statusCode == 423 || "ACCOUNT_LOCKED".equalsIgnoreCase(errorCode)) {
-                        new AlertDialog.Builder(LoginActivity.this)
-                                .setTitle("Account Locked Out")
-                                .setMessage(errorMessage + "\n\nPlease wait before attempting to sign in again.")
-                                .setPositiveButton("OK", null)
-                                .show();
+                        com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                                LoginActivity.this,
+                                "Account Locked Out",
+                                "SECURITY TIMEOUT",
+                                errorMessage + "\n\nPlease wait before attempting to sign in again.",
+                                "OK",
+                                null
+                        );
                     } else {
                         Toast.makeText(LoginActivity.this, errorMessage, Toast.LENGTH_LONG).show();
                     }

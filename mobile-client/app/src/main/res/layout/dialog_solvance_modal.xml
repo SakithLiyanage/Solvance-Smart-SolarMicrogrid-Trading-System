@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    android:layout_marginHorizontal="20dp"
+    app:cardCornerRadius="24dp"
+    app:cardElevation="16dp"
+    app:strokeWidth="1.5dp"
+    app:strokeColor="@color/card_border"
+    app:cardBackgroundColor="@color/surface_card">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:gravity="center_horizontal">
+
+        <!-- Glowing Icon Container -->
+        <FrameLayout
+            android:id="@+id/layoutIconContainer"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:background="@drawable/bg_icon_circle_emerald"
+            android:layout_marginBottom="16dp">
+
+            <ImageView
+                android:id="@+id/ivModalIcon"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_shield_check"
+                app:tint="@color/accent" />
+        </FrameLayout>
+
+        <!-- Category Badge / Pill -->
+        <TextView
+            android:id="@+id/tvModalBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="E-KYC VERIFICATION"
+            android:textColor="@color/accent"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08"
+            android:background="@drawable/bg_live_pill"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="4dp"
+            android:layout_marginBottom="10dp"
+            android:visibility="visible" />
+
+        <!-- Modal Title -->
+        <TextView
+            android:id="@+id/tvModalTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="e-KYC Prosumer Registered"
+            android:textColor="@color/text_primary"
+            android:textSize="19sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Modal Subtitle / Description -->
+        <TextView
+            android:id="@+id/tvModalMessage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Your solar prosumer node registration has been submitted with Front/Back ID verification."
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            android:lineSpacingExtra="3dp"
+            android:gravity="center"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Structured Details Card (for KYC / Spec Breakdown) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/layoutDetailsCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="14dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/card_border"
+            app:cardBackgroundColor="@color/background_dark"
+            app:cardElevation="0dp"
+            android:layout_marginBottom="18dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/layoutDetailsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Compliance / Footnote Text -->
+        <TextView
+            android:id="@+id/tvModalFootnote"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Per enterprise compliance, account status is 'Pending' awaiting Backoffice review."
+            android:textColor="@color/text_muted"
+            android:textSize="11sp"
+            android:gravity="center"
+            android:lineSpacingExtra="2dp"
+            android:layout_marginBottom="20dp"
+            android:visibility="gone" />
+
+        <!-- Action Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <!-- Secondary / Cancel Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnModalSecondary"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:text="Cancel"
+                android:textAllCaps="false"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_secondary"
+                app:strokeColor="@color/card_border"
+                app:strokeWidth="1.2dp"
+                app:cornerRadius="14dp"
+                android:visibility="gone" />
+
+            <!-- Primary Action Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnModalPrimary"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="1"
+                android:text="Go to Login"
+                android:textAllCaps="false"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:backgroundTint="@color/primary"
+                android:textColor="@color/background_dark"
+                app:cornerRadius="14dp" />
+        </LinearLayout>
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

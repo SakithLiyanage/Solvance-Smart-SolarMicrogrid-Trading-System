@@ -495,14 +495,25 @@ public class RegisterActivity extends AppCompatActivity {
                 btnRegister.setEnabled(true);
 
                 if (response.isSuccessful()) {
-                    new AlertDialog.Builder(RegisterActivity.this)
-                            .setTitle("e-KYC Prosumer Registered")
-                            .setMessage("Your solar prosumer node registration has been submitted with Front/Back ID verification.\n\nNIC: " + nic + "\nDemographics: " + nicResult.gender + ", Age " + nicResult.age + "\nSolar Array: " + solarKw + " kW\nInverter: " + inverterSerial + "\n\nPer enterprise compliance, account status is 'Pending' awaiting Backoffice review.")
-                            .setPositiveButton("Go to Login", (dialog, which) -> finish())
-                            .setCancelable(false)
-                            .show();
+                    String demographics = nicResult.gender + ", Age " + nicResult.age;
+                    com.ead.solarmicrogrid.util.SolvanceDialog.showKycSuccess(
+                            RegisterActivity.this,
+                            fullName,
+                            nic,
+                            demographics,
+                            String.valueOf(solarKw),
+                            inverterSerial,
+                            () -> finish()
+                    );
                 } else {
-                    Toast.makeText(RegisterActivity.this, "Registration failed: User with this NIC or Email may already exist.", Toast.LENGTH_LONG).show();
+                    com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                            RegisterActivity.this,
+                            "Registration Notice",
+                            "ACCOUNT CONFLICT",
+                            "A solar prosumer account with this National ID (NIC) or Email already exists in the Solvance network.",
+                            "Review Details",
+                            null
+                    );
                 }
             }
 
@@ -511,11 +522,13 @@ public class RegisterActivity extends AppCompatActivity {
                 progressBar.setVisibility(View.GONE);
                 btnRegister.setEnabled(true);
                 String currentUrl = ApiClient.getBaseUrl(RegisterActivity.this);
-                new AlertDialog.Builder(RegisterActivity.this)
-                        .setTitle("Connection Error")
-                        .setMessage("Failed to reach server at:\n" + currentUrl + "\n\nError: " + t.getMessage() + "\n\nPlease ensure the backend server is running and network is connected.")
-                        .setPositiveButton("OK", null)
-                        .show();
+                com.ead.solarmicrogrid.util.SolvanceDialog.showError(
+                        RegisterActivity.this,
+                        "Connection Error",
+                        "Unable to reach Solvance Web API at:\n" + currentUrl + "\n\nError: " + (t != null ? t.getMessage() : "Network timeout") + "\n\nPlease ensure the backend server is running and network is connected.",
+                        "OK",
+                        null
+                );
             }
         });
     }
