@@ -33,7 +33,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('overview');
   const [publicView, setPublicView] = useState('home'); // 'home' | 'login'
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('solar_theme') || 'dark';
+    return localStorage.getItem('solar_theme') || 'light';
   });
 
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
