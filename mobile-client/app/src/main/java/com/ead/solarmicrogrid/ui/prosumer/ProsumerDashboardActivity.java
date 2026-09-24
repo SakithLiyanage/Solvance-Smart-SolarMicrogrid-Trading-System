@@ -56,9 +56,11 @@ import retrofit2.Response;
 public class ProsumerDashboardActivity extends AppCompatActivity {
 
     private SwipeRefreshLayout swipeRefresh;
+    private androidx.core.widget.NestedScrollView nestedScrollView;
     private TextView tvWelcomeName, tvNicBadge;
     private TextView tvTotalKwhTraded, tvActiveCount, tvPendingCount, tvCompletedCount;
     private LinearLayout btnBookSlot, btnOpenMaps, btnActivePass, btnGridPolicy;
+    private View navTabGrid, navTabTrade, navTabSwap, navTabVault;
     private ImageButton btnSyncLive, btnThemeToggle;
     private View btnEditProfile, btnDeactivateAccount, btnLogout;
 
@@ -107,6 +109,7 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
 
     private void initViews() {
         swipeRefresh = findViewById(R.id.swipeRefresh);
+        nestedScrollView = findViewById(R.id.nestedScrollView);
         tvWelcomeName = findViewById(R.id.tvWelcomeName);
         tvNicBadge = findViewById(R.id.tvNicBadge);
 
@@ -119,6 +122,11 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
         btnOpenMaps = findViewById(R.id.btnOpenMaps);
         btnActivePass = findViewById(R.id.btnActivePass);
         btnGridPolicy = findViewById(R.id.btnGridPolicy);
+
+        navTabGrid = findViewById(R.id.navTabGrid);
+        navTabTrade = findViewById(R.id.navTabTrade);
+        navTabSwap = findViewById(R.id.navTabSwap);
+        navTabVault = findViewById(R.id.navTabVault);
 
         btnThemeToggle = findViewById(R.id.btnThemeToggle);
         btnSyncLive = findViewById(R.id.btnSyncLive);
@@ -185,6 +193,31 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
         btnActivePass.setOnClickListener(v -> openActivePass());
 
         btnGridPolicy.setOnClickListener(v -> showGridPolicyDialog());
+
+        // Bottom Navigation Bar Quick Action Hub
+        if (navTabGrid != null) {
+            navTabGrid.setOnClickListener(v -> {
+                if (nestedScrollView != null) {
+                    nestedScrollView.smoothScrollTo(0, 0);
+                }
+                refreshLiveData();
+            });
+        }
+
+        if (navTabTrade != null) {
+            navTabTrade.setOnClickListener(v -> openBookSlot());
+        }
+
+        if (navTabSwap != null) {
+            navTabSwap.setOnClickListener(v -> {
+                startActivity(new Intent(ProsumerDashboardActivity.this, StationsMapActivity.class));
+                overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+            });
+        }
+
+        if (navTabVault != null) {
+            navTabVault.setOnClickListener(v -> showAccountBottomSheet());
+        }
 
         btnLogout.setOnClickListener(v -> {
             dbHelper.clearSession();
