@@ -93,14 +93,14 @@ public class OperatorScannerActivity extends AppCompatActivity {
 
     // Header & KPIs
     private TextView tvOperatorNic, tvOperatorStatusSub;
-    private ImageButton btnOperatorRefresh, btnOperatorLogout, btnThemeToggle, btnOperatorMap;
+    private ImageButton btnOperatorMap, btnOperatorLogout, btnThemeToggle;
     private TextView tvKpiQueueCount, tvKpiVerifiedCount, tvKpiBatterySlots;
 
     // Bottom Navigation Bar Quick Action Hub
-    private View navTabScanner, navTabQueue, navTabStorage, navTabMap;
-    private ImageView ivNavScanner, ivNavQueue, ivNavStorage, ivNavMap;
-    private TextView tvNavScanner, tvNavQueue, tvNavStorage, tvNavMap;
-    private View dotNavScanner, dotNavQueue, dotNavStorage, dotNavMap;
+    private View navTabScanner, navTabQueue, navTabStorage;
+    private ImageView ivNavScanner, ivNavQueue, ivNavStorage;
+    private TextView tvNavScanner, tvNavQueue, tvNavStorage;
+    private View dotNavScanner, dotNavQueue, dotNavStorage;
     private View layoutSectionScanner, layoutSectionQueue, layoutSectionStorage;
     private ProgressBar progressBarOperator;
 
@@ -175,10 +175,9 @@ public class OperatorScannerActivity extends AppCompatActivity {
         // Header
         tvOperatorNic = findViewById(R.id.tvOperatorNic);
         tvOperatorStatusSub = findViewById(R.id.tvOperatorStatusSub);
-        btnOperatorRefresh = findViewById(R.id.btnOperatorRefresh);
+        btnOperatorMap = findViewById(R.id.btnOperatorMap);
         btnOperatorLogout = findViewById(R.id.btnOperatorLogout);
         btnThemeToggle = findViewById(R.id.btnThemeToggle);
-        btnOperatorMap = findViewById(R.id.btnOperatorMap);
 
         // KPIs
         tvKpiQueueCount = findViewById(R.id.tvKpiQueueCount);
@@ -189,22 +188,18 @@ public class OperatorScannerActivity extends AppCompatActivity {
         navTabScanner = findViewById(R.id.navTabScanner);
         navTabQueue = findViewById(R.id.navTabQueue);
         navTabStorage = findViewById(R.id.navTabStorage);
-        navTabMap = findViewById(R.id.navTabMap);
 
         ivNavScanner = findViewById(R.id.ivNavScanner);
         ivNavQueue = findViewById(R.id.ivNavQueue);
         ivNavStorage = findViewById(R.id.ivNavStorage);
-        ivNavMap = findViewById(R.id.ivNavMap);
 
         tvNavScanner = findViewById(R.id.tvNavScanner);
         tvNavQueue = findViewById(R.id.tvNavQueue);
         tvNavStorage = findViewById(R.id.tvNavStorage);
-        tvNavMap = findViewById(R.id.tvNavMap);
 
         dotNavScanner = findViewById(R.id.dotNavScanner);
         dotNavQueue = findViewById(R.id.dotNavQueue);
         dotNavStorage = findViewById(R.id.dotNavStorage);
-        dotNavMap = findViewById(R.id.dotNavMap);
 
         // Sections
         layoutSectionScanner = findViewById(R.id.layoutSectionScanner);
@@ -278,10 +273,6 @@ public class OperatorScannerActivity extends AppCompatActivity {
         if (navTabScanner != null) navTabScanner.setOnClickListener(v -> switchTab(TAB_SCANNER));
         if (navTabQueue != null) navTabQueue.setOnClickListener(v -> switchTab(TAB_QUEUE));
         if (navTabStorage != null) navTabStorage.setOnClickListener(v -> switchTab(TAB_STORAGE));
-        if (navTabMap != null) navTabMap.setOnClickListener(v -> {
-            startActivity(new Intent(OperatorScannerActivity.this, com.ead.solarmicrogrid.ui.prosumer.StationsMapActivity.class));
-            overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
-        });
     }
 
     private void switchTab(int targetTab) {
@@ -336,11 +327,6 @@ public class OperatorScannerActivity extends AppCompatActivity {
         if (ivNavStorage != null) ivNavStorage.setColorFilter(isStorage ? activeColor : inactiveColor);
         if (tvNavStorage != null) tvNavStorage.setTextColor(isStorage ? activeColor : inactiveColor);
         if (dotNavStorage != null) dotNavStorage.setVisibility(isStorage ? View.VISIBLE : View.INVISIBLE);
-
-        // Tab 4: Map
-        if (ivNavMap != null) ivNavMap.setColorFilter(inactiveColor);
-        if (tvNavMap != null) tvNavMap.setTextColor(inactiveColor);
-        if (dotNavMap != null) dotNavMap.setVisibility(View.INVISIBLE);
     }
 
     private void setupQueueRecyclerView() {
@@ -447,18 +433,6 @@ public class OperatorScannerActivity extends AppCompatActivity {
             btnThemeToggle.setOnClickListener(v -> ThemeManager.toggleTheme(this));
         }
 
-        btnOperatorRefresh.setOnClickListener(v -> {
-            fetchOperatorData();
-            Toast.makeText(this, "Refreshing grid data...", Toast.LENGTH_SHORT).show();
-        });
-
-        btnOperatorLogout.setOnClickListener(v -> {
-            dbHelper.clearSession();
-            startActivity(new Intent(OperatorScannerActivity.this, LoginActivity.class));
-            overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
-            finish();
-        });
-
         if (btnOperatorMap != null) {
             btnOperatorMap.setOnClickListener(v -> {
                 Intent intent = new Intent(OperatorScannerActivity.this, com.ead.solarmicrogrid.ui.prosumer.StationsMapActivity.class);
@@ -466,6 +440,13 @@ public class OperatorScannerActivity extends AppCompatActivity {
                 overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
             });
         }
+
+        btnOperatorLogout.setOnClickListener(v -> {
+            dbHelper.clearSession();
+            startActivity(new Intent(OperatorScannerActivity.this, LoginActivity.class));
+            overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
+            finish();
+        });
 
         if (btnGrantCamera != null) {
             btnGrantCamera.setOnClickListener(v -> {

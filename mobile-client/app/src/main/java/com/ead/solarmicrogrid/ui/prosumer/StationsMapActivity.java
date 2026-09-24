@@ -7,18 +7,18 @@
 // References & Citations:
 //   - Google Play Services Maps SDK for Android:
 //     https://developers.google.com/maps/documentation/android-sdk
-//   - OpenStreetMap Android (osmdroid) Fallback Integration:
-//     https://github.com/osmdroid/osmdroid
 //   - Android Runtime Permissions & Location Manager:
 //     https://developer.android.com/training/permissions/requesting
+//   - Android SQLite Database Session & Cache:
+//     https://developer.android.com/training/data-storage/sqlite
 // ============================================================================
 
 package com.ead.solarmicrogrid.ui.prosumer;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -35,17 +35,10 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
-
-import org.osmdroid.api.IMapController;
-import org.osmdroid.config.Configuration;
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
-import org.osmdroid.util.GeoPoint;
-import org.osmdroid.views.CustomZoomButtonsController;
-import org.osmdroid.views.MapView;
-import org.osmdroid.views.overlay.Marker;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -64,27 +57,19 @@ import retrofit2.Response;
  *   https://developers.google.com/maps/documentation/android-sdk
  * - Android SupportMapFragment & GoogleMap API:
  *   https://developers.google.com/android/reference/com/google/android/gms/maps/SupportMapFragment
- * - OpenStreetMap Android (org.osmdroid):
- *   https://github.com/osmdroid/osmdroid
  */
 public class StationsMapActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
     // Google Maps Components
     private GoogleMap googleMap;
     private SupportMapFragment googleMapFragment;
-    private View googleMapViewContainer;
-
-    // OpenStreetMap Components
-    private MapView osmMapView;
-    private IMapController osmMapController;
 
     // UI & State
-    private TextView tvMapTitle;
-    private MaterialButton btnSwitchEngine, btnCloseMap, btnNavigateMaps;
+    private TextView tvMapTitle, tvMapStationCountBadge;
+    private MaterialButton btnCloseMap, btnNavigateMaps;
     private MaterialCardView cardStationDetails;
-    private TextView tvMapStationName, tvMapStationAddress, tvMapCapacity, tvMapBatterySlots;
+    private TextView tvMapStationName, tvMapStationAddress, tvMapCapacity, tvMapBatterySlots, tvMapHubStatusPill;
 
-    private boolean isGoogleMapActive = true;
     private List<SolarStation> cachedStationList = new ArrayList<>();
     private SolarStation currentSelectedStation;
     private DatabaseHelper dbHelper;
@@ -92,57 +77,46 @@ public class StationsMapActivity extends AppCompatActivity implements OnMapReady
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        // Configure osmdroid user agent and preferences
-        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this));
-        Configuration.getInstance().setUserAgentValue(getPackageName());
-
         setContentView(R.layout.activity_stations_map);
 
         dbHelper = new DatabaseHelper(this);
 
         initViews();
         setupGoogleMap();
-        setupOsmMap();
         loadStationMarkers();
     }
 
     private void initViews() {
         tvMapTitle = findViewById(R.id.tvMapTitle);
-        btnSwitchEngine = findViewById(R.id.btnSwitchEngine);
+        tvMapStationCountBadge = findViewById(R.id.tvMapStationCountBadge);
         btnCloseMap = findViewById(R.id.btnCloseMap);
         btnNavigateMaps = findViewById(R.id.btnNavigateMaps);
 
-        googleMapViewContainer = findViewById(R.id.googleMapFragment);
-        osmMapView = findViewById(R.id.osmMapView);
         cardStationDetails = findViewById(R.id.cardStationDetails);
-
         tvMapStationName = findViewById(R.id.tvMapStationName);
         tvMapStationAddress = findViewById(R.id.tvMapStationAddress);
         tvMapCapacity = findViewById(R.id.tvMapCapacity);
         tvMapBatterySlots = findViewById(R.id.tvMapBatterySlots);
+        tvMapHubStatusPill = findViewById(R.id.tvMapHubStatusPill);
 
         btnCloseMap.setOnClickListener(v -> {
             finish();
             overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
         });
 
-        // Toggle between official Google Maps API and OSM offline layer
-        btnSwitchEngine.setOnClickListener(v -> toggleMapEngine());
-
         btnNavigateMaps.setOnClickListener(v -> {
             if (currentSelectedStation != null) {
                 double lat = currentSelectedStation.getLatitude();
                 double lng = currentSelectedStation.getLongitude();
                 String label = currentSelectedStation.getName();
-                android.net.Uri gmmIntentUri = android.net.Uri.parse("geo:" + lat + "," + lng + "?q=" + lat + "," + lng + "(" + android.net.Uri.encode(label) + ")");
-                android.content.Intent mapIntent = new android.content.Intent(android.content.Intent.ACTION_VIEW, gmmIntentUri);
+                Uri gmmIntentUri = Uri.parse("geo:" + lat + "," + lng + "?q=" + lat + "," + lng + "(" + Uri.encode(label) + ")");
+                Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
                 mapIntent.setPackage("com.google.android.apps.maps");
                 if (mapIntent.resolveActivity(getPackageManager()) != null) {
                     startActivity(mapIntent);
                 } else {
-                    android.net.Uri webUri = android.net.Uri.parse("https://www.google.com/maps/search/?api=1&query=" + lat + "," + lng);
-                    startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, webUri));
+                    Uri webUri = Uri.parse("https://www.google.com/maps/search/?api=1&query=" + lat + "," + lng);
+                    startActivity(new Intent(Intent.ACTION_VIEW, webUri));
                 }
             }
         });
@@ -173,7 +147,7 @@ public class StationsMapActivity extends AppCompatActivity implements OnMapReady
     }
 
     @Override
-    public boolean onMarkerClick(@NonNull com.google.android.gms.maps.model.Marker marker) {
+    public boolean onMarkerClick(@NonNull Marker marker) {
         Object tag = marker.getTag();
         if (tag instanceof SolarStation) {
             showStationDetails((SolarStation) tag);
@@ -181,54 +155,13 @@ public class StationsMapActivity extends AppCompatActivity implements OnMapReady
         return false; // Show default info window and center
     }
 
-    private void setupOsmMap() {
-        if (osmMapView == null) return;
-
-        osmMapView.setTileSource(TileSourceFactory.MAPNIK);
-        osmMapView.setMultiTouchControls(true);
-        osmMapView.getZoomController().setVisibility(CustomZoomButtonsController.Visibility.ALWAYS);
-
-        osmMapController = osmMapView.getController();
-        osmMapController.setZoom(12.5);
-
-        GeoPoint defaultPoint = new GeoPoint(6.9271, 79.8612);
-        osmMapController.setCenter(defaultPoint);
-    }
-
-    private void toggleMapEngine() {
-        isGoogleMapActive = !isGoogleMapActive;
-
-        if (isGoogleMapActive) {
-            if (googleMapViewContainer != null) googleMapViewContainer.setVisibility(View.VISIBLE);
-            if (osmMapView != null) osmMapView.setVisibility(View.GONE);
-            tvMapTitle.setText("Google Maps API");
-            btnSwitchEngine.setText("OSM Tile");
-            Toast.makeText(this, "Active Engine: Google Maps API", Toast.LENGTH_SHORT).show();
-            if (googleMap != null && !cachedStationList.isEmpty()) {
-                plotGoogleMapStations(cachedStationList);
-            }
-        } else {
-            if (googleMapViewContainer != null) googleMapViewContainer.setVisibility(View.GONE);
-            if (osmMapView != null) {
-                osmMapView.setVisibility(View.VISIBLE);
-                osmMapView.invalidate();
-            }
-            tvMapTitle.setText("OpenStreetMap Layer");
-            btnSwitchEngine.setText("Google Map");
-            Toast.makeText(this, "Active Engine: OpenStreetMap Layer", Toast.LENGTH_SHORT).show();
-            if (!cachedStationList.isEmpty()) {
-                plotOsmStations(cachedStationList);
-            }
-        }
-    }
-
     private void loadStationMarkers() {
         // 1. Load from local SQLite cache first (offline resilience)
         List<SolarStation> cached = dbHelper.getCachedStations();
         if (!cached.isEmpty()) {
             cachedStationList = cached;
+            updateCountBadge(cachedStationList.size());
             plotGoogleMapStations(cachedStationList);
-            plotOsmStations(cachedStationList);
         }
 
         // 2. Fetch live station coordinates from API
@@ -237,9 +170,9 @@ public class StationsMapActivity extends AppCompatActivity implements OnMapReady
             public void onResponse(Call<List<SolarStation>> call, Response<List<SolarStation>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     cachedStationList = response.body();
+                    updateCountBadge(cachedStationList.size());
                     dbHelper.cacheStations(cachedStationList);
                     plotGoogleMapStations(cachedStationList);
-                    plotOsmStations(cachedStationList);
                 }
             }
 
@@ -248,6 +181,12 @@ public class StationsMapActivity extends AppCompatActivity implements OnMapReady
                 Toast.makeText(StationsMapActivity.this, "Displaying offline cached solar stations.", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void updateCountBadge(int count) {
+        if (tvMapStationCountBadge != null) {
+            tvMapStationCountBadge.setText(count + " Active Hubs");
+        }
     }
 
     private void plotGoogleMapStations(List<SolarStation> stations) {
@@ -262,7 +201,7 @@ public class StationsMapActivity extends AppCompatActivity implements OnMapReady
                 firstPos = pos;
             }
 
-            com.google.android.gms.maps.model.Marker marker = googleMap.addMarker(new MarkerOptions()
+            Marker marker = googleMap.addMarker(new MarkerOptions()
                     .position(pos)
                     .title(s.getName())
                     .snippet(s.getAvailableBatterySlots() + " of " + s.getTotalBatterySlots() + " slots free | " + s.getCapacityKwh() + " kW/h")
@@ -279,45 +218,17 @@ public class StationsMapActivity extends AppCompatActivity implements OnMapReady
         }
     }
 
-    private void plotOsmStations(List<SolarStation> stations) {
-        if (osmMapView == null || stations.isEmpty()) return;
-
-        osmMapView.getOverlays().clear();
-        GeoPoint firstPos = null;
-
-        for (SolarStation s : stations) {
-            GeoPoint pos = new GeoPoint(s.getLatitude(), s.getLongitude());
-            if (firstPos == null) {
-                firstPos = pos;
-            }
-
-            Marker marker = new Marker(osmMapView);
-            marker.setPosition(pos);
-            marker.setTitle(s.getName());
-            marker.setSnippet(s.getAddress() + "\n" + s.getAvailableBatterySlots() + "/" + s.getTotalBatterySlots() + " slots free");
-            marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
-
-            marker.setOnMarkerClickListener((m, v) -> {
-                showStationDetails(s);
-                return true;
-            });
-
-            osmMapView.getOverlays().add(marker);
-        }
-
-        if (firstPos != null) {
-            osmMapController.setCenter(firstPos);
-            osmMapView.invalidate();
-            showStationDetails(stations.get(0));
-        }
-    }
-
     private void showStationDetails(SolarStation station) {
         currentSelectedStation = station;
         tvMapStationName.setText(station.getName());
         tvMapStationAddress.setText(station.getAddress());
         tvMapCapacity.setText("Capacity: " + station.getCapacityKwh() + " kW/h");
         tvMapBatterySlots.setText(station.getAvailableBatterySlots() + " of " + station.getTotalBatterySlots() + " slots free");
+        
+        if (tvMapHubStatusPill != null) {
+            tvMapHubStatusPill.setText(station.isActive() ? "Active Hub" : "Offline Node");
+        }
+        
         cardStationDetails.setVisibility(View.VISIBLE);
     }
 
@@ -325,17 +236,5 @@ public class StationsMapActivity extends AppCompatActivity implements OnMapReady
     public void onBackPressed() {
         super.onBackPressed();
         overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        if (osmMapView != null) osmMapView.onResume();
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-        if (osmMapView != null) osmMapView.onPause();
     }
 }
