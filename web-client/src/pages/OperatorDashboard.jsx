@@ -69,6 +69,8 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
 
   const [cancellingReservation, setCancellingReservation] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
+  const [cancelError, setCancelError] = useState('');
+  const [cancelSuccess, setCancelSuccess] = useState('');
   const [approvalMsg, setApprovalMsg] = useState('');
 
   // 7-day schedule window helpers for datetime-local picker
