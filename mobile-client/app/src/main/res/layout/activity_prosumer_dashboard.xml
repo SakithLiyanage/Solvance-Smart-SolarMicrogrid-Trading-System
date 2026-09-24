@@ -168,15 +168,30 @@
                         android:layout_centerVertical="true"
                         android:gravity="center_vertical">
 
-                        <ImageButton
-                            android:id="@+id/btnSyncLive"
-                            android:layout_width="38dp"
-                            android:layout_height="38dp"
-                            android:src="@drawable/ic_bell"
-                            android:background="@drawable/bg_circle_icon_button"
-                            android:contentDescription="Notifications and Live Sync"
-                            android:padding="8dp"
-                            android:layout_marginEnd="6dp" />
+                        <FrameLayout
+                            android:id="@+id/layoutNotifBellContainer"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="6dp">
+
+                            <ImageButton
+                                android:id="@+id/btnSyncLive"
+                                android:layout_width="38dp"
+                                android:layout_height="38dp"
+                                android:src="@drawable/ic_bell"
+                                android:background="@drawable/bg_circle_icon_button"
+                                android:contentDescription="Notifications and Live Sync"
+                                android:padding="8dp" />
+
+                            <View
+                                android:id="@+id/viewNotifBadge"
+                                android:layout_width="9dp"
+                                android:layout_height="9dp"
+                                android:layout_gravity="top|end"
+                                android:layout_marginTop="3dp"
+                                android:layout_marginEnd="3dp"
+                                android:background="@drawable/bg_status_live" />
+                        </FrameLayout>
 
                         <ImageButton
                             android:id="@+id/btnThemeToggle"
@@ -1243,7 +1258,7 @@
                 android:layout_marginTop="3dp" />
         </LinearLayout>
 
-        <!-- 2. Trade (Book Energy Slot) -->
+        <!-- 2. Book Slot (Book Energy Slot) -->
         <LinearLayout
             android:id="@+id/navTabTrade"
             android:layout_width="0dp"
@@ -1259,12 +1274,12 @@
                 android:layout_width="22dp"
                 android:layout_height="22dp"
                 android:src="@drawable/ic_nav_trade"
-                android:contentDescription="Trade" />
+                android:contentDescription="Book Slot" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Trade"
+                android:text="Book Slot"
                 android:textColor="@color/text_secondary"
                 android:textSize="11sp"
                 android:textStyle="bold"
@@ -1277,7 +1292,7 @@
                 android:layout_marginTop="3dp" />
         </LinearLayout>
 
-        <!-- 3. Swap (Stations & Map) -->
+        <!-- 3. Hubs (Stations & Map) -->
         <LinearLayout
             android:id="@+id/navTabSwap"
             android:layout_width="0dp"
@@ -1293,12 +1308,12 @@
                 android:layout_width="22dp"
                 android:layout_height="22dp"
                 android:src="@drawable/ic_nav_swap"
-                android:contentDescription="Swap" />
+                android:contentDescription="Hubs" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Swap"
+                android:text="Hubs"
                 android:textColor="@color/text_secondary"
                 android:textSize="11sp"
                 android:textStyle="bold"
@@ -1311,7 +1326,7 @@
                 android:layout_marginTop="3dp" />
         </LinearLayout>
 
-        <!-- 4. Vault (Solar Profile & Specs) -->
+        <!-- 4. Profile (Solar Profile & Specs) -->
         <LinearLayout
             android:id="@+id/navTabVault"
             android:layout_width="0dp"
@@ -1326,13 +1341,13 @@
             <ImageView
                 android:layout_width="22dp"
                 android:layout_height="22dp"
-                android:src="@drawable/ic_nav_vault"
-                android:contentDescription="Vault" />
+                android:src="@drawable/ic_nav_profile"
+                android:contentDescription="Profile" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Vault"
+                android:text="Profile"
                 android:textColor="@color/text_secondary"
                 android:textSize="11sp"
                 android:textStyle="bold"

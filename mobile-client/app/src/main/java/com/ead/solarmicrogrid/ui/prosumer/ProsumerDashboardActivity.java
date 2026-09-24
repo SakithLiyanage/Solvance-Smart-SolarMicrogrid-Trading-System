@@ -31,6 +31,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -42,6 +43,7 @@ import com.ead.solarmicrogrid.data.models.EnergyReservation;
 import com.ead.solarmicrogrid.data.models.User;
 import com.ead.solarmicrogrid.data.remote.ApiClient;
 import com.ead.solarmicrogrid.ui.auth.LoginActivity;
+import com.ead.solarmicrogrid.util.NotificationPreferenceManager;
 import com.ead.solarmicrogrid.util.ThemeManager;
 
 import java.util.ArrayList;
@@ -62,6 +64,7 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
     private LinearLayout btnBookSlot, btnOpenMaps, btnActivePass, btnGridPolicy;
     private View navTabGrid, navTabTrade, navTabSwap, navTabVault;
     private ImageButton btnSyncLive, btnThemeToggle;
+    private View viewNotifBadge;
     private View btnEditProfile, btnDeactivateAccount, btnLogout;
 
     // Filter Chips
@@ -105,6 +108,7 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         refreshLiveData();
+        updateNotifBadge();
     }
 
     private void initViews() {
@@ -130,6 +134,8 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
 
         btnThemeToggle = findViewById(R.id.btnThemeToggle);
         btnSyncLive = findViewById(R.id.btnSyncLive);
+        viewNotifBadge = findViewById(R.id.viewNotifBadge);
+        updateNotifBadge();
         btnEditProfile = findViewById(R.id.btnEditProfile);
         btnDeactivateAccount = findViewById(R.id.btnDeactivateAccount);
         btnLogout = findViewById(R.id.btnLogout);
@@ -175,7 +181,7 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
 
         swipeRefresh.setOnRefreshListener(this::refreshLiveData);
 
-        btnSyncLive.setOnClickListener(v -> refreshLiveData());
+        btnSyncLive.setOnClickListener(v -> showNotificationsBottomSheet());
 
         if (btnEditProfile != null) {
             btnEditProfile.setOnClickListener(v -> showEditProfileDialog());
@@ -282,13 +288,17 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
     }
 
     private void showGridPolicyDialog() {
-        new AlertDialog.Builder(this)
-                .setTitle("Solar Microgrid Rules & Tariff")
-                .setMessage("1. 7-Day Scheduling Window:\nBook battery drop-off or vehicle charging slots up to 7 days in advance.\n\n"
-                        + "2. 12-Hour Cancellation Rule:\nCancellations and modifications strictly require at least 12 hours notice prior to appointment time.\n\n"
-                        + "3. Verification Pass:\nShow your generated QR pass to the Station Grid Operator upon arrival to unlock the assigned battery slot.")
-                .setPositiveButton("Got It", null)
-                .show();
+        com.google.android.material.bottomsheet.BottomSheetDialog sheetDialog = 
+                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        View sheetView = getLayoutInflater().inflate(R.layout.bottom_sheet_grid_policy, null);
+        sheetDialog.setContentView(sheetView);
+
+        View btnClose = sheetView.findViewById(R.id.btnClosePolicySheet);
+        if (btnClose != null) {
+            btnClose.setOnClickListener(v -> sheetDialog.dismiss());
+        }
+
+        sheetDialog.show();
     }
 
     private void setFilter(String filter) {
@@ -357,6 +367,7 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
 
                     // Cache locally in SQLite
                     dbHelper.cacheReservations(allReservations);
+                    updateNotifBadge();
                 }
             }
 
@@ -674,6 +685,299 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
                 finish();
             });
         }
+
+        sheetDialog.show();
+    }
+
+    private void updateNotifBadge() {
+        if (viewNotifBadge != null) {
+            boolean hasUnread = NotificationPreferenceManager.hasUnreadBadge(this);
+            viewNotifBadge.setVisibility(hasUnread ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    private void showNotificationsBottomSheet() {
+        com.google.android.material.bottomsheet.BottomSheetDialog sheetDialog = 
+                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        View sheetView = getLayoutInflater().inflate(R.layout.bottom_sheet_notifications, null);
+        sheetDialog.setContentView(sheetView);
+
+        // Header and Mode Switcher Tabs
+        View tabAlertsList = sheetView.findViewById(R.id.tabAlertsList);
+        View tabPreferences = sheetView.findViewById(R.id.tabPreferences);
+        ImageView ivTabAlertsIcon = sheetView.findViewById(R.id.ivTabAlertsIcon);
+        TextView tvTabAlertsLabel = sheetView.findViewById(R.id.tvTabAlertsLabel);
+        ImageView ivTabPrefsIcon = sheetView.findViewById(R.id.ivTabPrefsIcon);
+        TextView tvTabPrefsLabel = sheetView.findViewById(R.id.tvTabPrefsLabel);
+        LinearLayout layoutAlertsSection = sheetView.findViewById(R.id.layoutAlertsSection);
+        LinearLayout layoutPreferencesSection = sheetView.findViewById(R.id.layoutPreferencesSection);
+        LinearLayout layoutEmptyNotifState = sheetView.findViewById(R.id.layoutEmptyNotifState);
+
+        // Mode tab switching
+        if (tabAlertsList != null && tabPreferences != null) {
+            tabAlertsList.setOnClickListener(v -> {
+                tabAlertsList.setBackgroundResource(R.drawable.bg_pill_chip_active);
+                if (tvTabAlertsLabel != null) tvTabAlertsLabel.setTextColor(ContextCompat.getColor(this, R.color.accent));
+                if (ivTabAlertsIcon != null) ivTabAlertsIcon.setColorFilter(ContextCompat.getColor(this, R.color.accent));
+
+                tabPreferences.setBackgroundResource(android.R.color.transparent);
+                if (tvTabPrefsLabel != null) tvTabPrefsLabel.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
+                if (ivTabPrefsIcon != null) ivTabPrefsIcon.setColorFilter(ContextCompat.getColor(this, R.color.text_secondary));
+
+                layoutAlertsSection.setVisibility(View.VISIBLE);
+                layoutPreferencesSection.setVisibility(View.GONE);
+            });
+
+            tabPreferences.setOnClickListener(v -> {
+                tabPreferences.setBackgroundResource(R.drawable.bg_pill_chip_active);
+                if (tvTabPrefsLabel != null) tvTabPrefsLabel.setTextColor(ContextCompat.getColor(this, R.color.accent));
+                if (ivTabPrefsIcon != null) ivTabPrefsIcon.setColorFilter(ContextCompat.getColor(this, R.color.accent));
+
+                tabAlertsList.setBackgroundResource(android.R.color.transparent);
+                if (tvTabAlertsLabel != null) tvTabAlertsLabel.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
+                if (ivTabAlertsIcon != null) ivTabAlertsIcon.setColorFilter(ContextCompat.getColor(this, R.color.text_secondary));
+
+                layoutAlertsSection.setVisibility(View.GONE);
+                layoutPreferencesSection.setVisibility(View.VISIBLE);
+            });
+        }
+
+        // Alert Items
+        View cardNotifPass = sheetView.findViewById(R.id.cardNotifPass);
+        TextView tvNotifPassTitle = sheetView.findViewById(R.id.tvNotifPassTitle);
+        TextView tvNotifPassBody = sheetView.findViewById(R.id.tvNotifPassBody);
+        TextView tvNotifPassTime = sheetView.findViewById(R.id.tvNotifPassTime);
+        View btnDismissPass = sheetView.findViewById(R.id.btnDismissPass);
+
+        View cardNotifSurge = sheetView.findViewById(R.id.cardNotifSurge);
+        View btnDismissSurge = sheetView.findViewById(R.id.btnDismissSurge);
+
+        View cardNotifBattery = sheetView.findViewById(R.id.cardNotifBattery);
+        View btnDismissBattery = sheetView.findViewById(R.id.btnDismissBattery);
+
+        View cardNotifTelemetry = sheetView.findViewById(R.id.cardNotifTelemetry);
+        View btnDismissTelemetry = sheetView.findViewById(R.id.btnDismissTelemetry);
+
+        View btnRestoreAlerts = sheetView.findViewById(R.id.btnRestoreAlerts);
+
+        // Helper to evaluate visible alerts count and show/hide empty state
+        Runnable refreshAlertVisibility = () -> {
+            boolean showPass = NotificationPreferenceManager.isTradePassEnabled(this) 
+                    && !NotificationPreferenceManager.isDismissed(this, "trade_pass");
+            boolean showSurge = NotificationPreferenceManager.isSurgeEnabled(this) 
+                    && !NotificationPreferenceManager.isDismissed(this, "surge");
+            boolean showBattery = NotificationPreferenceManager.isBatteryHubEnabled(this) 
+                    && !NotificationPreferenceManager.isDismissed(this, "battery_hub");
+            boolean showTelemetry = NotificationPreferenceManager.isTelemetryEnabled(this) 
+                    && !NotificationPreferenceManager.isDismissed(this, "telemetry");
+
+            if (cardNotifPass != null) cardNotifPass.setVisibility(showPass ? View.VISIBLE : View.GONE);
+            if (cardNotifSurge != null) cardNotifSurge.setVisibility(showSurge ? View.VISIBLE : View.GONE);
+            if (cardNotifBattery != null) cardNotifBattery.setVisibility(showBattery ? View.VISIBLE : View.GONE);
+            if (cardNotifTelemetry != null) cardNotifTelemetry.setVisibility(showTelemetry ? View.VISIBLE : View.GONE);
+
+            boolean hasVisibleAlerts = showPass || showSurge || showBattery || showTelemetry;
+            if (layoutEmptyNotifState != null) {
+                layoutEmptyNotifState.setVisibility(hasVisibleAlerts ? View.GONE : View.VISIBLE);
+            }
+
+            int activeCount = (showPass ? 1 : 0) + (showSurge ? 1 : 0) + (showBattery ? 1 : 0) + (showTelemetry ? 1 : 0);
+            if (tvTabAlertsLabel != null) {
+                tvTabAlertsLabel.setText("Alerts (" + activeCount + ")");
+            }
+            updateNotifBadge();
+        };
+
+        // Dynamic Trade Pass Alert content
+        EnergyReservation activeRes = null;
+        for (EnergyReservation r : allReservations) {
+            String st = r.getStatus() != null ? r.getStatus() : "";
+            if ("Approved".equalsIgnoreCase(st) || "Pending".equalsIgnoreCase(st)) {
+                activeRes = r;
+                break;
+            }
+        }
+
+        if (activeRes != null) {
+            final EnergyReservation passRes = activeRes;
+            String st = passRes.getStatus() != null ? passRes.getStatus() : "Active";
+            if (tvNotifPassTitle != null) {
+                tvNotifPassTitle.setText("Trade Pass " + st + " (" + passRes.getReservationNumber() + ")");
+            }
+            if (tvNotifPassTime != null) {
+                tvNotifPassTime.setText("Ready");
+            }
+            if (tvNotifPassBody != null) {
+                String station = passRes.getStationName() != null ? passRes.getStationName() : "Microgrid Hub";
+                tvNotifPassBody.setText(String.format(Locale.US, "Your %.1f kWh %s trade pass at %s is ready for operator verification.", 
+                        passRes.getEnergyAmountKwh(), 
+                        passRes.getTradeType() != null ? passRes.getTradeType() : "Trade", 
+                        station));
+            }
+            if (cardNotifPass != null) {
+                cardNotifPass.setOnClickListener(v -> {
+                    sheetDialog.dismiss();
+                    openActivePass();
+                });
+            }
+        } else {
+            if (tvNotifPassTitle != null) {
+                tvNotifPassTitle.setText("Grid Trade Hub Ready");
+            }
+            if (tvNotifPassTime != null) {
+                tvNotifPassTime.setText("Idle");
+            }
+            if (tvNotifPassBody != null) {
+                tvNotifPassBody.setText("No active trade pass currently queued. Schedule a solar export or battery swap slot to start trading.");
+            }
+            if (cardNotifPass != null) {
+                cardNotifPass.setOnClickListener(v -> {
+                    sheetDialog.dismiss();
+                    openBookSlot();
+                });
+            }
+        }
+
+        // Individual Dismiss Actions
+        if (btnDismissPass != null) {
+            btnDismissPass.setOnClickListener(v -> {
+                NotificationPreferenceManager.dismissNotification(this, "trade_pass");
+                refreshAlertVisibility.run();
+                Toast.makeText(this, "Trade pass notice dismissed.", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        if (btnDismissSurge != null) {
+            btnDismissSurge.setOnClickListener(v -> {
+                NotificationPreferenceManager.dismissNotification(this, "surge");
+                refreshAlertVisibility.run();
+                Toast.makeText(this, "Tariff surge notice dismissed.", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        if (btnDismissBattery != null) {
+            btnDismissBattery.setOnClickListener(v -> {
+                NotificationPreferenceManager.dismissNotification(this, "battery_hub");
+                refreshAlertVisibility.run();
+                Toast.makeText(this, "Storage hub notice dismissed.", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        if (btnDismissTelemetry != null) {
+            btnDismissTelemetry.setOnClickListener(v -> {
+                NotificationPreferenceManager.dismissNotification(this, "telemetry");
+                refreshAlertVisibility.run();
+                Toast.makeText(this, "Telemetry notice dismissed.", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        // Surge Alert Card -> opens Booking screen
+        if (cardNotifSurge != null) {
+            cardNotifSurge.setOnClickListener(v -> {
+                sheetDialog.dismiss();
+                openBookSlot();
+            });
+        }
+
+        // Battery Storage Hub Capacity -> opens Map
+        if (cardNotifBattery != null) {
+            cardNotifBattery.setOnClickListener(v -> {
+                sheetDialog.dismiss();
+                startActivity(new Intent(ProsumerDashboardActivity.this, StationsMapActivity.class));
+                overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+            });
+        }
+
+        // Telemetry Synchronized -> Triggers live metrics sync
+        if (cardNotifTelemetry != null) {
+            cardNotifTelemetry.setOnClickListener(v -> {
+                sheetDialog.dismiss();
+                refreshLiveData();
+                Toast.makeText(ProsumerDashboardActivity.this, "Grid telemetry synchronized.", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        // Restore alerts button
+        if (btnRestoreAlerts != null) {
+            btnRestoreAlerts.setOnClickListener(v -> {
+                NotificationPreferenceManager.resetAllNotifications(this);
+                refreshAlertVisibility.run();
+                Toast.makeText(this, "All grid alerts restored.", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        // Mark all read button
+        View btnMarkRead = sheetView.findViewById(R.id.btnMarkRead);
+        if (btnMarkRead != null) {
+            btnMarkRead.setOnClickListener(v -> {
+                NotificationPreferenceManager.setAllRead(this, true);
+                updateNotifBadge();
+                sheetDialog.dismiss();
+                Toast.makeText(ProsumerDashboardActivity.this, "All notifications marked as read.", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        // =====================================================================
+        // TAB 2: PREFERENCES CONTROLS
+        // =====================================================================
+        SwitchCompat switchPrefPass = sheetView.findViewById(R.id.switchPrefPass);
+        SwitchCompat switchPrefSurge = sheetView.findViewById(R.id.switchPrefSurge);
+        SwitchCompat switchPrefBattery = sheetView.findViewById(R.id.switchPrefBattery);
+        SwitchCompat switchPrefTelemetry = sheetView.findViewById(R.id.switchPrefTelemetry);
+        View btnResetPreferences = sheetView.findViewById(R.id.btnResetPreferences);
+
+        if (switchPrefPass != null) {
+            switchPrefPass.setChecked(NotificationPreferenceManager.isTradePassEnabled(this));
+            switchPrefPass.setOnCheckedChangeListener((b, isChecked) -> {
+                NotificationPreferenceManager.setTradePassEnabled(this, isChecked);
+                refreshAlertVisibility.run();
+            });
+        }
+
+        if (switchPrefSurge != null) {
+            switchPrefSurge.setChecked(NotificationPreferenceManager.isSurgeEnabled(this));
+            switchPrefSurge.setOnCheckedChangeListener((b, isChecked) -> {
+                NotificationPreferenceManager.setSurgeEnabled(this, isChecked);
+                refreshAlertVisibility.run();
+            });
+        }
+
+        if (switchPrefBattery != null) {
+            switchPrefBattery.setChecked(NotificationPreferenceManager.isBatteryHubEnabled(this));
+            switchPrefBattery.setOnCheckedChangeListener((b, isChecked) -> {
+                NotificationPreferenceManager.setBatteryHubEnabled(this, isChecked);
+                refreshAlertVisibility.run();
+            });
+        }
+
+        if (switchPrefTelemetry != null) {
+            switchPrefTelemetry.setChecked(NotificationPreferenceManager.isTelemetryEnabled(this));
+            switchPrefTelemetry.setOnCheckedChangeListener((b, isChecked) -> {
+                NotificationPreferenceManager.setTelemetryEnabled(this, isChecked);
+                refreshAlertVisibility.run();
+            });
+        }
+
+        if (btnResetPreferences != null) {
+            btnResetPreferences.setOnClickListener(v -> {
+                NotificationPreferenceManager.resetAllNotifications(this);
+                if (switchPrefPass != null) switchPrefPass.setChecked(true);
+                if (switchPrefSurge != null) switchPrefSurge.setChecked(true);
+                if (switchPrefBattery != null) switchPrefBattery.setChecked(true);
+                if (switchPrefTelemetry != null) switchPrefTelemetry.setChecked(true);
+                refreshAlertVisibility.run();
+                Toast.makeText(this, "Notification preferences reset to defaults.", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        // Close button
+        View btnClose = sheetView.findViewById(R.id.btnCloseNotifSheet);
+        if (btnClose != null) {
+            btnClose.setOnClickListener(v -> sheetDialog.dismiss());
+        }
+
+        // Initial alert evaluation
+        refreshAlertVisibility.run();
 
         sheetDialog.show();
     }

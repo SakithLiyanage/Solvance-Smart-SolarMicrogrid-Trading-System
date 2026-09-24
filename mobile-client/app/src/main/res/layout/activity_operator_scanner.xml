@@ -11,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:cardCornerRadius="0dp"
-        app:cardElevation="6dp"
+        app:cardElevation="4dp"
         app:cardBackgroundColor="@color/surface_card"
         app:strokeColor="@color/card_border"
         app:strokeWidth="1dp">
@@ -20,74 +20,50 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingHorizontal="16dp"
-            android:paddingVertical="12dp">
+            android:paddingVertical="10dp">
 
+            <!-- Left: Brand Logo + Header Title & Status Pill -->
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:layout_alignParentStart="true"
                 android:layout_toStartOf="@+id/layoutTopActions"
-                android:layout_marginEnd="10dp">
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="8dp">
 
                 <ImageView
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
-                    android:src="@drawable/app_brand_mark"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/solvance_icon"
                     android:scaleType="fitCenter"
-                    android:layout_marginEnd="10dp" />
+                    android:layout_marginEnd="10dp"
+                    android:contentDescription="Solvance Brand Logo" />
 
-                <LinearLayout
-                    android:layout_width="0dp"
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:text="Grid Operator"
+                    android:textColor="@color/text_primary"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:layout_marginEnd="8dp" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Grid Operator Console"
-                        android:textColor="@color/accent"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tvOperatorNic"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="OPERATOR001"
-                        android:textColor="@color/text_primary"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:singleLine="true"
-                        android:ellipsize="end"
-                        android:layout_marginTop="1dp" />
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginTop="2dp">
-
-                        <View
-                            android:layout_width="6dp"
-                            android:layout_height="6dp"
-                            android:background="@drawable/bg_status_live"
-                            android:layout_marginEnd="6dp" />
-
-                        <TextView
-                            android:id="@+id/tvOperatorStatusSub"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Station Terminal Active"
-                            android:textColor="@color/accent"
-                            android:textSize="11sp" />
-                    </LinearLayout>
-                </LinearLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="✓ Active"
+                    android:textColor="#065F46"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:singleLine="true"
+                    android:background="@drawable/bg_pill_mint"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="3dp" />
             </LinearLayout>
 
+            <!-- Right: Action Buttons (Nearby Hubs Map, Theme Toggle, Logout) -->
             <LinearLayout
                 android:id="@+id/layoutTopActions"
                 android:layout_width="wrap_content"
@@ -101,11 +77,12 @@
                     android:id="@+id/btnOperatorMap"
                     android:layout_width="38dp"
                     android:layout_height="38dp"
-                    android:src="@drawable/ic_map_pin"
-                    app:tint="@color/accent"
-                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_navigation"
+                    app:tint="@color/text_secondary"
+                    android:background="@drawable/bg_circle_icon_button"
                     android:contentDescription="Nearby Solar Stations Map"
-                    android:padding="8dp" />
+                    android:padding="9dp"
+                    android:layout_marginEnd="6dp" />
 
                 <ImageButton
                     android:id="@+id/btnThemeToggle"
@@ -113,19 +90,10 @@
                     android:layout_height="38dp"
                     android:src="@drawable/ic_theme_toggle"
                     app:tint="@color/text_secondary"
-                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:background="@drawable/bg_circle_icon_button"
                     android:contentDescription="Toggle Light/Dark Theme"
-                    android:padding="8dp" />
-
-                <ImageButton
-                    android:id="@+id/btnOperatorRefresh"
-                    android:layout_width="38dp"
-                    android:layout_height="38dp"
-                    android:src="@drawable/ic_refresh"
-                    app:tint="@color/text_secondary"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Refresh Data"
-                    android:padding="8dp" />
+                    android:padding="8dp"
+                    android:layout_marginEnd="6dp" />
 
                 <ImageButton
                     android:id="@+id/btnOperatorLogout"
@@ -133,11 +101,63 @@
                     android:layout_height="38dp"
                     android:src="@drawable/ic_logout"
                     app:tint="@color/text_secondary"
-                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:background="@drawable/bg_circle_icon_button"
                     android:contentDescription="Logout"
                     android:padding="8dp" />
             </LinearLayout>
         </RelativeLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Operator Identity Sub-Bar -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="14dp"
+        android:layout_marginTop="8dp"
+        app:cardCornerRadius="12dp"
+        app:cardBackgroundColor="@color/surface_card"
+        app:strokeColor="@color/card_border"
+        app:strokeWidth="1dp"
+        app:cardElevation="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="8dp"
+            android:gravity="center_vertical">
+
+            <View
+                android:layout_width="7dp"
+                android:layout_height="7dp"
+                android:background="@drawable/bg_status_live"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/tvOperatorNic"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Nuwan Perera (OPERATOR001)"
+                android:textColor="@color/text_primary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:singleLine="true"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/tvOperatorStatusSub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Terminal Active"
+                android:textColor="@color/accent"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:background="@drawable/bg_pill_mint"
+                android:paddingHorizontal="7dp"
+                android:paddingVertical="2dp" />
+        </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
     <!-- KPI Summary Strip -->
@@ -1137,46 +1157,6 @@
 
             <View
                 android:id="@+id/dotNavStorage"
-                android:layout_width="5dp"
-                android:layout_height="5dp"
-                android:background="@drawable/bg_pill_mint"
-                android:backgroundTint="#059669"
-                android:visibility="invisible"
-                android:layout_marginTop="3dp" />
-        </LinearLayout>
-
-        <!-- Tab 4: Map / Stations -->
-        <LinearLayout
-            android:id="@+id/navTabMap"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center_horizontal"
-            android:paddingTop="8dp"
-            android:clickable="true"
-            android:focusable="true">
-
-            <ImageView
-                android:id="@+id/ivNavMap"
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:src="@drawable/ic_navigation"
-                app:tint="@color/text_secondary"
-                android:contentDescription="Map" />
-
-            <TextView
-                android:id="@+id/tvNavMap"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Map"
-                android:textColor="@color/text_secondary"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:layout_marginTop="3dp" />
-
-            <View
-                android:id="@+id/dotNavMap"
                 android:layout_width="5dp"
                 android:layout_height="5dp"
                 android:background="@drawable/bg_pill_mint"

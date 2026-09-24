@@ -10,70 +10,106 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:paddingStart="18dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="18dp"
+        android:paddingBottom="24dp">
 
-        <!-- Top Indicator -->
-        <LinearLayout
-            android:layout_width="wrap_content"
+        <!-- ============================================================= -->
+        <!-- 1. TOP APP BAR WITH BACK BUTTON & SCHEDULING BADGE            -->
+        <!-- ============================================================= -->
+        <RelativeLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="@drawable/bg_live_pill"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="12dp"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="5dp">
+            android:layout_marginBottom="14dp">
 
-            <View
-                android:layout_width="8dp"
-                android:layout_height="8dp"
-                android:background="@drawable/bg_status_live"
-                android:layout_marginEnd="8dp" />
+            <!-- Back Button -->
+            <ImageButton
+                android:id="@+id/btnBack"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_arrow_left"
+                app:tint="@color/text_primary"
+                android:background="@drawable/bg_circle_icon_button"
+                android:contentDescription="Go Back"
+                android:padding="8dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true" />
+
+            <!-- Scheduling Policy Badge -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_live_pill"
+                android:paddingStart="10dp"
+                android:paddingTop="5dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="5dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true">
+
+                <View
+                    android:layout_width="7dp"
+                    android:layout_height="7dp"
+                    android:background="@drawable/bg_status_live"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="7-Day Window"
+                    android:textColor="@color/accent"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </RelativeLayout>
+
+        <!-- Screen Title & Subtitle -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="16dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="7-DAY SCHEDULING WINDOW"
-                android:textColor="@color/accent"
-                android:textSize="10sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.08" />
+                android:text="Book Power Trading Slot"
+                android:textColor="@color/text_primary"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Reserve battery swapping or solar grid charging. Instant encrypted verification pass."
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:layout_marginTop="3dp" />
         </LinearLayout>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Book Power Trading Slot"
-            android:textColor="@color/text_primary"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Reserve battery swapping or solar grid charging. Secure digital pass issued instantly."
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="20dp" />
-
-        <!-- Form Card -->
+        <!-- ============================================================= -->
+        <!-- 2. MAIN BOOKING FORM CARD                                     -->
+        <!-- ============================================================= -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="22dp"
+            app:cardCornerRadius="20dp"
             app:cardElevation="6dp"
             app:cardBackgroundColor="@color/surface_card"
             app:strokeColor="@color/card_border"
             app:strokeWidth="1dp"
-            android:layout_marginBottom="20dp">
+            android:layout_marginBottom="18dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="22dp">
+                android:padding="20dp">
 
+                <!-- 1. Station Hub Picker -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -84,14 +120,32 @@
                     android:letterSpacing="0.06"
                     android:layout_marginBottom="8dp" />
 
-                <Spinner
-                    android:id="@+id/spStations"
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
+                    android:layout_height="52dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:background="@drawable/bg_search_input"
-                    android:paddingHorizontal="14dp"
-                    android:layout_marginBottom="18dp" />
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:layout_marginBottom="18dp">
 
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_map_pin"
+                        app:tint="@color/primary"
+                        android:layout_marginEnd="10dp"
+                        android:contentDescription="Station Hub" />
+
+                    <Spinner
+                        android:id="@+id/spStations"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@android:color/transparent" />
+                </LinearLayout>
+
+                <!-- 2. Energy Trade Type Selection -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -107,6 +161,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
+                    android:background="@drawable/bg_bottom_nav"
+                    android:padding="6dp"
                     android:layout_marginBottom="18dp">
 
                     <RadioButton
@@ -116,11 +172,14 @@
                         android:layout_weight="1"
                         android:text="Drop-Off (Sell)"
                         android:textColor="@color/text_primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
                         android:checked="true"
                         android:buttonTint="@color/primary"
                         android:drawableStart="@drawable/ic_zap"
                         android:drawableTint="@color/primary"
-                        android:drawablePadding="6dp" />
+                        android:drawablePadding="6dp"
+                        android:padding="8dp" />
 
                     <RadioButton
                         android:id="@+id/rbCharging"
@@ -129,12 +188,16 @@
                         android:layout_weight="1"
                         android:text="Charging (Buy)"
                         android:textColor="@color/text_primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
                         android:buttonTint="@color/accent"
                         android:drawableStart="@drawable/ic_battery_charging"
                         android:drawableTint="@color/accent"
-                        android:drawablePadding="6dp" />
+                        android:drawablePadding="6dp"
+                        android:padding="8dp" />
                 </RadioGroup>
 
+                <!-- 3. Energy Amount Input -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -167,6 +230,7 @@
                         android:layout_height="wrap_content"
                         android:textColor="@color/text_primary"
                         android:textSize="15sp"
+                        android:textStyle="bold"
                         android:padding="16dp"
                         android:inputType="numberDecimal"
                         android:text="15.0" />
@@ -190,7 +254,7 @@
                         android:textStyle="bold"
                         android:gravity="center"
                         android:background="@drawable/bg_pill_chip"
-                        android:paddingVertical="6dp"
+                        android:paddingVertical="7dp"
                         android:layout_marginEnd="4dp"
                         android:clickable="true"
                         android:focusable="true" />
@@ -206,7 +270,7 @@
                         android:textStyle="bold"
                         android:gravity="center"
                         android:background="@drawable/bg_pill_chip_active"
-                        android:paddingVertical="6dp"
+                        android:paddingVertical="7dp"
                         android:layout_marginHorizontal="2dp"
                         android:clickable="true"
                         android:focusable="true" />
@@ -222,7 +286,7 @@
                         android:textStyle="bold"
                         android:gravity="center"
                         android:background="@drawable/bg_pill_chip"
-                        android:paddingVertical="6dp"
+                        android:paddingVertical="7dp"
                         android:layout_marginHorizontal="2dp"
                         android:clickable="true"
                         android:focusable="true" />
@@ -238,12 +302,13 @@
                         android:textStyle="bold"
                         android:gravity="center"
                         android:background="@drawable/bg_pill_chip"
-                        android:paddingVertical="6dp"
+                        android:paddingVertical="7dp"
                         android:layout_marginStart="4dp"
                         android:clickable="true"
                         android:focusable="true" />
                 </LinearLayout>
 
+                <!-- 4. Appointment Schedule -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -254,7 +319,7 @@
                     android:letterSpacing="0.06"
                     android:layout_marginBottom="8dp" />
 
-                <!-- Scheduled Date / Time Selectors -->
+                <!-- Date / Time Selectors -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -275,6 +340,7 @@
                         app:iconGravity="textStart"
                         android:textAllCaps="false"
                         android:textColor="@color/primary"
+                        android:textStyle="bold"
                         app:cornerRadius="14dp"
                         app:strokeColor="@color/primary"
                         app:strokeWidth="1.2dp" />
@@ -293,24 +359,40 @@
                         app:iconGravity="textStart"
                         android:textAllCaps="false"
                         android:textColor="@color/accent"
+                        android:textStyle="bold"
                         app:cornerRadius="14dp"
                         app:strokeColor="@color/accent"
                         app:strokeWidth="1.2dp" />
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/tvSelectedDateTime"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Scheduled: Tap Date &amp; Time above"
-                    android:textColor="@color/text_primary"
-                    android:textSize="13sp"
-                    android:background="@drawable/bg_pill_chip"
-                    android:gravity="center"
-                    android:textStyle="bold"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_execution_white_card"
                     android:padding="12dp"
-                    android:layout_marginBottom="22dp" />
+                    android:layout_marginBottom="20dp">
 
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_calendar"
+                        app:tint="@color/accent"
+                        android:layout_marginEnd="10dp"
+                        android:contentDescription="Scheduled Time" />
+
+                    <TextView
+                        android:id="@+id/tvSelectedDateTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Scheduled: Tap Date &amp; Time above"
+                        android:textColor="@color/text_primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- 5. Submit Button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnConfirmBooking"
                     android:layout_width="match_parent"

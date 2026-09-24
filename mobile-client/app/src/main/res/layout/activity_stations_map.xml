@@ -5,31 +5,24 @@
     android:layout_height="match_parent"
     android:background="@color/background_dark">
 
-    <!-- Google Maps Official SupportMapFragment Container -->
+    <!-- Official Google Maps SupportMapFragment -->
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/googleMapFragment"
         android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- OpenStreetMap Secondary/Offline Tile Layer -->
-    <org.osmdroid.views.MapView
-        android:id="@+id/osmMapView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="gone" />
-
-    <!-- Top floating bar -->
+    <!-- Top Floating Header Bar -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
         android:layout_margin="14dp"
         app:cardCornerRadius="20dp"
-        app:cardElevation="6dp"
+        app:cardElevation="8dp"
         app:cardBackgroundColor="@color/surface_card"
         app:strokeColor="@color/card_border"
-        app:strokeWidth="1dp">
+        app:strokeWidth="1.2dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -38,59 +31,80 @@
             android:padding="12dp"
             android:gravity="center_vertical">
 
-            <View
-                android:layout_width="8dp"
-                android:layout_height="8dp"
-                android:background="@drawable/bg_status_live"
-                android:layout_marginEnd="8dp" />
-
-            <TextView
-                android:id="@+id/tvMapTitle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Google Maps API"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
+            <!-- Back Button -->
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSwitchEngine"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="OSM Tile"
-                app:icon="@drawable/ic_zap"
+                android:id="@+id/btnCloseMap"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                app:icon="@drawable/ic_arrow_left"
                 app:iconTint="@color/text_primary"
-                app:iconSize="14dp"
-                android:textAllCaps="false"
-                android:textSize="11sp"
-                android:textStyle="bold"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="18dp"
                 android:backgroundTint="@color/surface_card"
-                android:textColor="@color/text_primary"
                 app:strokeColor="@color/card_border"
                 app:strokeWidth="1dp"
                 app:cornerRadius="12dp"
-                android:layout_marginEnd="6dp" />
+                android:layout_marginEnd="10dp" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnCloseMap"
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvMapTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Solar Microgrid Nodes"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="2dp">
+
+                    <View
+                        android:layout_width="6dp"
+                        android:layout_height="6dp"
+                        android:background="@drawable/bg_status_live"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Live GPS Geolocation"
+                        android:textColor="@color/accent"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Station Count Badge -->
+            <TextView
+                android:id="@+id/tvMapStationCountBadge"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="Back"
-                app:icon="@drawable/ic_arrow_left"
-                app:iconTint="@color/background_dark"
-                app:iconGravity="textStart"
-                app:iconSize="15dp"
-                android:textAllCaps="false"
+                android:layout_height="wrap_content"
+                android:text="6 Active Hubs"
+                android:textColor="#0369A1"
                 android:textSize="11sp"
                 android:textStyle="bold"
-                android:backgroundTint="@color/primary"
-                android:textColor="@color/background_dark"
-                app:cornerRadius="12dp" />
+                android:background="@drawable/bg_pill_blue"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Bottom station details card -->
+    <!-- Bottom Station Details Card -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardStationDetails"
         android:layout_width="match_parent"
@@ -98,26 +112,46 @@
         android:layout_alignParentBottom="true"
         android:layout_margin="16dp"
         app:cardCornerRadius="22dp"
-        app:cardElevation="8dp"
+        app:cardElevation="10dp"
         app:cardBackgroundColor="@color/surface_card"
-        app:strokeColor="@color/primary"
-        app:strokeWidth="1.5dp"
+        app:strokeColor="@color/card_border"
+        app:strokeWidth="1.2dp"
         android:visibility="gone">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:padding="18dp">
 
-            <TextView
-                android:id="@+id/tvMapStationName"
-                android:layout_width="wrap_content"
+            <RelativeLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Colombo Central Solar Hub"
-                android:textColor="@color/text_primary"
-                android:textSize="17sp"
-                android:textStyle="bold" />
+                android:layout_marginBottom="6dp">
+
+                <TextView
+                    android:id="@+id/tvMapStationName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Colombo Central Solar Hub"
+                    android:textColor="@color/text_primary"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:layout_alignParentStart="true"
+                    android:layout_toStartOf="@+id/tvMapHubStatusPill"
+                    android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:id="@+id/tvMapHubStatusPill"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Active Hub"
+                    android:textColor="#065F46"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/bg_pill_mint"
+                    android:layout_alignParentEnd="true" />
+            </RelativeLayout>
 
             <TextView
                 android:id="@+id/tvMapStationAddress"
@@ -126,7 +160,6 @@
                 android:text="No. 45, Galle Road, Colombo"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp"
-                android:layout_marginTop="2dp"
                 android:layout_marginBottom="12dp" />
 
             <View
@@ -147,11 +180,11 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Capacity: 500 kWh"
-                    android:textColor="@color/primary"
-                    android:textSize="13sp"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp"
                     android:textStyle="bold"
                     android:drawableStart="@drawable/ic_zap"
-                    android:drawableTint="@color/primary"
+                    app:drawableTint="@color/accent"
                     android:drawablePadding="6dp"
                     android:gravity="center_vertical" />
 
@@ -160,11 +193,11 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="14/20 Battery Slots Free"
-                    android:textColor="@color/accent"
-                    android:textSize="13sp"
+                    android:textColor="#059669"
+                    android:textSize="12sp"
                     android:textStyle="bold"
                     android:drawableStart="@drawable/ic_battery_charging"
-                    android:drawableTint="@color/accent"
+                    app:drawableTint="#059669"
                     android:drawablePadding="6dp"
                     android:gravity="center_vertical" />
             </LinearLayout>
@@ -174,7 +207,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:layout_marginTop="14dp"
-                android:text="Turn-by-Turn Navigation"
+                android:text="Start Navigation in Google Maps"
                 app:icon="@drawable/ic_navigation"
                 app:iconTint="@color/background_dark"
                 app:iconGravity="textStart"
