@@ -261,80 +261,7 @@
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 
-    <!-- Segmented Navigation Bar -->
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="14dp"
-        android:layout_marginVertical="6dp"
-        app:cardCornerRadius="14dp"
-        app:cardElevation="2dp"
-        app:cardBackgroundColor="@color/surface_card"
-        app:strokeColor="@color/card_border"
-        app:strokeWidth="1dp">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="44dp"
-            android:orientation="horizontal"
-            android:padding="3dp">
-
-            <!-- Tab 1: Scanner -->
-            <TextView
-                android:id="@+id/btnTabScanner"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:text="QR Scanner"
-                android:textColor="@color/background_dark"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:background="@drawable/bg_tab_selected"
-                android:drawableStart="@drawable/ic_qr_code"
-                android:drawableTint="@color/background_dark"
-                android:drawablePadding="6dp"
-                android:paddingHorizontal="8dp"
-                android:clickable="true"
-                android:focusable="true" />
-
-            <!-- Tab 2: Queue -->
-            <TextView
-                android:id="@+id/btnTabQueue"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:text="Live Queue"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                android:gravity="center"
-                android:background="@drawable/bg_tab_unselected"
-                android:drawableStart="@drawable/ic_clock"
-                android:drawableTint="@color/text_secondary"
-                android:drawablePadding="6dp"
-                android:paddingHorizontal="8dp"
-                android:clickable="true"
-                android:focusable="true" />
-
-            <!-- Tab 3: Storage -->
-            <TextView
-                android:id="@+id/btnTabStorage"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:text="Storage Hub"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                android:gravity="center"
-                android:background="@drawable/bg_tab_unselected"
-                android:drawableStart="@drawable/ic_battery_charging"
-                android:drawableTint="@color/text_secondary"
-                android:drawablePadding="6dp"
-                android:paddingHorizontal="8dp"
-                android:clickable="true"
-                android:focusable="true" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
 
     <!-- Global Progress Bar for Operations -->
     <ProgressBar
@@ -1086,4 +1013,178 @@
             </LinearLayout>
         </ScrollView>
     </FrameLayout>
+
+    <!-- Bottom Navigation Bar (Matching Prosumer Quick Action Hub) -->
+    <LinearLayout
+        android:id="@+id/layoutBottomNav"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:orientation="horizontal"
+        android:background="@drawable/bg_bottom_nav"
+        android:elevation="12dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="4dp">
+
+        <!-- Tab 1: Scanner (Active Tab) -->
+        <LinearLayout
+            android:id="@+id/navTabScanner"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="8dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/ivNavScanner"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_qr_code"
+                app:tint="#059669"
+                android:contentDescription="Scanner" />
+
+            <TextView
+                android:id="@+id/tvNavScanner"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Scanner"
+                android:textColor="#059669"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:layout_marginTop="3dp" />
+
+            <!-- Active Indicator Dot -->
+            <View
+                android:id="@+id/dotNavScanner"
+                android:layout_width="5dp"
+                android:layout_height="5dp"
+                android:background="@drawable/bg_pill_mint"
+                android:backgroundTint="#059669"
+                android:layout_marginTop="3dp" />
+        </LinearLayout>
+
+        <!-- Tab 2: Queue -->
+        <LinearLayout
+            android:id="@+id/navTabQueue"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="8dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/ivNavQueue"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_clock"
+                app:tint="@color/text_secondary"
+                android:contentDescription="Queue" />
+
+            <TextView
+                android:id="@+id/tvNavQueue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Queue"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:layout_marginTop="3dp" />
+
+            <View
+                android:id="@+id/dotNavQueue"
+                android:layout_width="5dp"
+                android:layout_height="5dp"
+                android:background="@drawable/bg_pill_mint"
+                android:backgroundTint="#059669"
+                android:visibility="invisible"
+                android:layout_marginTop="3dp" />
+        </LinearLayout>
+
+        <!-- Tab 3: Storage -->
+        <LinearLayout
+            android:id="@+id/navTabStorage"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="8dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/ivNavStorage"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_battery_charging"
+                app:tint="@color/text_secondary"
+                android:contentDescription="Storage" />
+
+            <TextView
+                android:id="@+id/tvNavStorage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Storage"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:layout_marginTop="3dp" />
+
+            <View
+                android:id="@+id/dotNavStorage"
+                android:layout_width="5dp"
+                android:layout_height="5dp"
+                android:background="@drawable/bg_pill_mint"
+                android:backgroundTint="#059669"
+                android:visibility="invisible"
+                android:layout_marginTop="3dp" />
+        </LinearLayout>
+
+        <!-- Tab 4: Map / Stations -->
+        <LinearLayout
+            android:id="@+id/navTabMap"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="8dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/ivNavMap"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_navigation"
+                app:tint="@color/text_secondary"
+                android:contentDescription="Map" />
+
+            <TextView
+                android:id="@+id/tvNavMap"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Map"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:layout_marginTop="3dp" />
+
+            <View
+                android:id="@+id/dotNavMap"
+                android:layout_width="5dp"
+                android:layout_height="5dp"
+                android:background="@drawable/bg_pill_mint"
+                android:backgroundTint="#059669"
+                android:visibility="invisible"
+                android:layout_marginTop="3dp" />
+        </LinearLayout>
+
+    </LinearLayout>
+
 </LinearLayout>

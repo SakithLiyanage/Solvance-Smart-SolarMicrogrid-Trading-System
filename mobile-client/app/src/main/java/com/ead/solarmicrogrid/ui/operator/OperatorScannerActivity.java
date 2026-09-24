@@ -28,6 +28,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -95,8 +96,11 @@ public class OperatorScannerActivity extends AppCompatActivity {
     private ImageButton btnOperatorRefresh, btnOperatorLogout, btnThemeToggle, btnOperatorMap;
     private TextView tvKpiQueueCount, tvKpiVerifiedCount, tvKpiBatterySlots;
 
-    // Segmented Navigation Tabs
-    private TextView btnTabScanner, btnTabQueue, btnTabStorage;
+    // Bottom Navigation Bar Quick Action Hub
+    private View navTabScanner, navTabQueue, navTabStorage, navTabMap;
+    private ImageView ivNavScanner, ivNavQueue, ivNavStorage, ivNavMap;
+    private TextView tvNavScanner, tvNavQueue, tvNavStorage, tvNavMap;
+    private View dotNavScanner, dotNavQueue, dotNavStorage, dotNavMap;
     private View layoutSectionScanner, layoutSectionQueue, layoutSectionStorage;
     private ProgressBar progressBarOperator;
 
@@ -154,6 +158,8 @@ public class OperatorScannerActivity extends AppCompatActivity {
         int startTab = getIntent().getIntExtra("tab", TAB_SCANNER);
         if (startTab != TAB_SCANNER) {
             switchTab(startTab);
+        } else {
+            updateBottomNav(TAB_SCANNER);
         }
     }
 
@@ -179,10 +185,26 @@ public class OperatorScannerActivity extends AppCompatActivity {
         tvKpiVerifiedCount = findViewById(R.id.tvKpiVerifiedCount);
         tvKpiBatterySlots = findViewById(R.id.tvKpiBatterySlots);
 
-        // Tabs
-        btnTabScanner = findViewById(R.id.btnTabScanner);
-        btnTabQueue = findViewById(R.id.btnTabQueue);
-        btnTabStorage = findViewById(R.id.btnTabStorage);
+        // Bottom Navigation Bar Quick Action Hub
+        navTabScanner = findViewById(R.id.navTabScanner);
+        navTabQueue = findViewById(R.id.navTabQueue);
+        navTabStorage = findViewById(R.id.navTabStorage);
+        navTabMap = findViewById(R.id.navTabMap);
+
+        ivNavScanner = findViewById(R.id.ivNavScanner);
+        ivNavQueue = findViewById(R.id.ivNavQueue);
+        ivNavStorage = findViewById(R.id.ivNavStorage);
+        ivNavMap = findViewById(R.id.ivNavMap);
+
+        tvNavScanner = findViewById(R.id.tvNavScanner);
+        tvNavQueue = findViewById(R.id.tvNavQueue);
+        tvNavStorage = findViewById(R.id.tvNavStorage);
+        tvNavMap = findViewById(R.id.tvNavMap);
+
+        dotNavScanner = findViewById(R.id.dotNavScanner);
+        dotNavQueue = findViewById(R.id.dotNavQueue);
+        dotNavStorage = findViewById(R.id.dotNavStorage);
+        dotNavMap = findViewById(R.id.dotNavMap);
 
         // Sections
         layoutSectionScanner = findViewById(R.id.layoutSectionScanner);
@@ -253,18 +275,18 @@ public class OperatorScannerActivity extends AppCompatActivity {
     }
 
     private void setupTabs() {
-        btnTabScanner.setOnClickListener(v -> switchTab(TAB_SCANNER));
-        btnTabQueue.setOnClickListener(v -> switchTab(TAB_QUEUE));
-        btnTabStorage.setOnClickListener(v -> switchTab(TAB_STORAGE));
+        if (navTabScanner != null) navTabScanner.setOnClickListener(v -> switchTab(TAB_SCANNER));
+        if (navTabQueue != null) navTabQueue.setOnClickListener(v -> switchTab(TAB_QUEUE));
+        if (navTabStorage != null) navTabStorage.setOnClickListener(v -> switchTab(TAB_STORAGE));
+        if (navTabMap != null) navTabMap.setOnClickListener(v -> {
+            startActivity(new Intent(OperatorScannerActivity.this, com.ead.solarmicrogrid.ui.prosumer.StationsMapActivity.class));
+            overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+        });
     }
 
     private void switchTab(int targetTab) {
         activeTab = targetTab;
-
-        // Update Tab visual styles
-        updateTabButton(btnTabScanner, targetTab == TAB_SCANNER, R.drawable.ic_qr_code);
-        updateTabButton(btnTabQueue, targetTab == TAB_QUEUE, R.drawable.ic_clock);
-        updateTabButton(btnTabStorage, targetTab == TAB_STORAGE, R.drawable.ic_battery_charging);
+        updateBottomNav(targetTab);
 
         // Section visibility & camera lifecycle
         if (targetTab == TAB_SCANNER) {
@@ -293,18 +315,32 @@ public class OperatorScannerActivity extends AppCompatActivity {
         }
     }
 
-    private void updateTabButton(TextView tabView, boolean isSelected, int iconRes) {
-        if (isSelected) {
-            tabView.setBackgroundResource(R.drawable.bg_tab_selected);
-            tabView.setTextColor(ContextCompat.getColor(this, R.color.background_dark));
-            tabView.setCompoundDrawablesWithIntrinsicBounds(iconRes, 0, 0, 0);
-            tabView.getCompoundDrawables()[0].setTint(ContextCompat.getColor(this, R.color.background_dark));
-        } else {
-            tabView.setBackgroundResource(R.drawable.bg_tab_unselected);
-            tabView.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
-            tabView.setCompoundDrawablesWithIntrinsicBounds(iconRes, 0, 0, 0);
-            tabView.getCompoundDrawables()[0].setTint(ContextCompat.getColor(this, R.color.text_secondary));
-        }
+    private void updateBottomNav(int targetTab) {
+        int activeColor = ContextCompat.getColor(this, R.color.accent);
+        int inactiveColor = ContextCompat.getColor(this, R.color.text_secondary);
+
+        // Tab 1: Scanner
+        boolean isScanner = (targetTab == TAB_SCANNER);
+        if (ivNavScanner != null) ivNavScanner.setColorFilter(isScanner ? activeColor : inactiveColor);
+        if (tvNavScanner != null) tvNavScanner.setTextColor(isScanner ? activeColor : inactiveColor);
+        if (dotNavScanner != null) dotNavScanner.setVisibility(isScanner ? View.VISIBLE : View.INVISIBLE);
+
+        // Tab 2: Queue
+        boolean isQueue = (targetTab == TAB_QUEUE);
+        if (ivNavQueue != null) ivNavQueue.setColorFilter(isQueue ? activeColor : inactiveColor);
+        if (tvNavQueue != null) tvNavQueue.setTextColor(isQueue ? activeColor : inactiveColor);
+        if (dotNavQueue != null) dotNavQueue.setVisibility(isQueue ? View.VISIBLE : View.INVISIBLE);
+
+        // Tab 3: Storage
+        boolean isStorage = (targetTab == TAB_STORAGE);
+        if (ivNavStorage != null) ivNavStorage.setColorFilter(isStorage ? activeColor : inactiveColor);
+        if (tvNavStorage != null) tvNavStorage.setTextColor(isStorage ? activeColor : inactiveColor);
+        if (dotNavStorage != null) dotNavStorage.setVisibility(isStorage ? View.VISIBLE : View.INVISIBLE);
+
+        // Tab 4: Map
+        if (ivNavMap != null) ivNavMap.setColorFilter(inactiveColor);
+        if (tvNavMap != null) tvNavMap.setTextColor(inactiveColor);
+        if (dotNavMap != null) dotNavMap.setVisibility(View.INVISIBLE);
     }
 
     private void setupQueueRecyclerView() {
