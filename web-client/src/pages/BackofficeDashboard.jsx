@@ -42,9 +42,11 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [statsRes, pendingRes] = await Promise.all([
+      const [statsRes, pendingRes, stationsRes, reservationsRes] = await Promise.all([
         api.get('/reservations/dashboard-stats'),
-        api.get('/users/pending-prosumers')
+        api.get('/users/pending-prosumers'),
+        api.get('/stations'),
+        api.get('/reservations').catch(() => ({ data: [] }))
       ]);
       setStats({
         activeStationsCount: statsRes.data.totalStationsCount || 0,
@@ -54,6 +56,26 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
         pendingBookingsCount: statsRes.data.pendingBookingsCount || 0
       });
       setPendingProsumers(pendingRes.data || []);
+
+      const stList = stationsRes.data || [];
+      const resList = reservationsRes.data || [];
+      const totalCapacity = stList.reduce((acc, s) => acc + (s.capacityKwh || 0), 0);
+      const totalSlots = stList.reduce((acc, s) => acc + (s.totalBatterySlots || 0), 0);
+      const freeSlots = stList.reduce((acc, s) => acc + (s.availableBatterySlots || 0), 0);
+      const activeTradesCount = resList.filter(r => r.status === 'Approved' || r.status === 'Pending').length;
+      const completedKwh = resList
+        .filter(r => r.status === 'Completed')
+        .reduce((acc, r) => acc + (r.energyAmountKwh || 0), 0);
+
+      const socPercent = totalSlots > 0 ? Math.round(((totalSlots - freeSlots) / totalSlots) * 100) : 0;
+      const carbonSavedKg = Math.round(completedKwh > 0 ? completedKwh * 0.7 : (totalCapacity > 0 ? totalCapacity * 1.1 : 1840));
+
+      setTelemetry({
+        solarOutputKw: totalCapacity || 1650,
+        batteryStoragePercent: socPercent || 65,
+        activeGridTrades: activeTradesCount,
+        carbonOffsetKg: carbonSavedKg
+      });
     } catch (err) {
       console.error('Failed to load dashboard data', err);
     } finally {
@@ -63,24 +85,20 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
 
   useEffect(() => {
     loadDashboardData();
-    const interval = setInterval(() => {
-      setTelemetry(prev => ({
-        ...prev,
-        solarOutputKw: +(prev.solarOutputKw + (Math.random() * 4 - 2)).toFixed(1),
-        batteryStoragePercent: Math.min(100, Math.max(60, +(prev.batteryStoragePercent + (Math.random() * 0.4 - 0.2)).toFixed(1)))
-      }));
-    }, 4000);
-    return () => clearInterval(interval);
   }, []);
+
+  const [actionError, setActionError] = useState('');
 
   const handleQuickApprove = async (nic) => {
     try {
+      setActionError('');
       await api.put(`/users/${nic}/status`, { status: 'Active' });
       setActionSuccess(`Prosumer ${nic} approved and activated.`);
       setTimeout(() => setActionSuccess(''), 3000);
       loadDashboardData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to approve prosumer.');
+      setActionError(err.response?.data?.message || 'Failed to approve prosumer.');
+      setTimeout(() => setActionError(''), 4000);
     }
   };
 
@@ -95,7 +113,7 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 mb-4 backdrop-blur-md">
               <ShieldCheck className="h-4 w-4 text-amber-400" />
-              <span>FAT Service Architecture Engine</span>
+              <span>Enterprise Grid Brokerage Engine</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-display font-black text-white tracking-tight leading-tight">
               Microgrid Command &amp; Energy Brokerage
@@ -136,12 +154,11 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
       <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 backdrop-blur-xl p-6 shadow-sm dark:shadow-xl transition-colors duration-300">
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200 dark:border-slate-800/80">
           <div className="flex items-center gap-3">
-            <div className="h-3 w-3 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-ping" />
+            <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
             <h3 className="font-display font-bold text-base text-slate-900 dark:text-white tracking-wide">
               Live Microgrid Generation &amp; Storage Telemetry
             </h3>
           </div>
-          <span className="text-xs font-mono text-slate-500 dark:text-slate-400">STATUS: OPTIMAL HARVEST</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -292,11 +309,17 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
         </div>
       </div>
 
-      {/* Success Notification Alert */}
+      {/* Success / Error Notification Alerts */}
       {actionSuccess && (
         <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-sm font-semibold flex items-center gap-3 animate-in fade-in">
           <CheckCircle2 className="h-5 w-5 text-emerald-500 dark:text-emerald-400 shrink-0" />
           <span>{actionSuccess}</span>
+        </div>
+      )}
+      {actionError && (
+        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-800 dark:text-rose-300 text-sm font-semibold flex items-center gap-3 animate-in fade-in">
+          <AlertCircle className="h-5 w-5 text-rose-500 dark:text-rose-400 shrink-0" />
+          <span>{actionError}</span>
         </div>
       )}
 

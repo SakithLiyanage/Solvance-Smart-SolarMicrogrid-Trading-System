@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 export default function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-2xl' }) {
@@ -14,22 +15,33 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = 'ma
     };
   }, [isOpen]);
 
+  // Close on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen && onClose) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 dark:bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 select-none">
-      {/* Click outside backdrop to close */}
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 select-none w-screen min-h-screen">
+      {/* Click outside backdrop overlay */}
       <div 
-        className="fixed inset-0" 
+        className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm" 
         onClick={onClose} 
         aria-hidden="true" 
       />
 
-      <div className={`relative bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-3xl shadow-2xl dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95)] border border-slate-200 dark:border-slate-800 w-full ${maxWidth} max-h-[90vh] flex flex-col overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200 z-10`}>
+      <div className={`relative bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full ${maxWidth} max-h-[90vh] flex flex-col overflow-hidden my-auto z-10 transform transition-all animate-in fade-in zoom-in-95 duration-200`}>
         {/* Top Accent Gradient Border Line */}
-        <div className="h-1 w-full shrink-0 bg-gradient-to-r from-amber-500 via-amber-300 to-emerald-400" />
+        <div className="h-1.5 w-full shrink-0 bg-gradient-to-r from-amber-500 via-amber-300 to-emerald-400" />
 
-        {/* Header (Sticky / Shrink-0) */}
+        {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950/70 shrink-0">
           <h3 className="font-display font-bold text-base sm:text-lg text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
             {title}
@@ -48,7 +60,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = 'ma
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
-

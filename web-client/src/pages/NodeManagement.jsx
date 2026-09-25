@@ -28,7 +28,7 @@ import {
   Plus, Cpu, MapPin, Battery, Calendar, AlertCircle, 
   CheckCircle2, ShieldAlert, Edit3, Power, RefreshCw, 
   Clock, Navigation, ShieldCheck, ExternalLink, Eye, Map,
-  BatteryCharging, Layers
+  BatteryCharging, Layers, Info
 } from 'lucide-react';
 import api from '../api/client';
 import Modal from '../components/Modal';
@@ -257,11 +257,6 @@ export default function NodeManagement({ theme }) {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
-              Infrastructure Grid
-            </span>
-          </div>
           <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
             Solar Microgrid Hub Nodes
           </h1>
@@ -317,15 +312,15 @@ export default function NodeManagement({ theme }) {
         </div>
       </div>
 
-      {/* Enterprise Deactivation Rule Safeguard Notice */}
-      <div className="p-4 rounded-2xl bg-amber-500/5 dark:bg-slate-900/60 border border-amber-500/30 backdrop-blur-md flex items-start gap-3.5 transition-colors duration-300">
-        <ShieldAlert className="h-5 w-5 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
-        <div className="text-xs">
-          <span className="font-bold text-amber-700 dark:text-amber-300 block mb-0.5">FAT-Service Integrity Constraint:</span>
-          <span className="text-slate-600 dark:text-slate-300">
-            A solar microgrid node CANNOT be deactivated if active or pending energy reservations are scheduled against it. Deactivation requests are strictly evaluated on the central Web API.
-          </span>
+      {/* Notice Banner */}
+      <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.03] dark:bg-slate-900/60 backdrop-blur-md p-3.5 sm:p-4 flex items-center gap-3 transition-colors duration-300">
+        <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+          <Info className="h-4 w-4 text-amber-600 dark:text-amber-400" />
         </div>
+        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+          <strong className="font-semibold text-slate-900 dark:text-white mr-1.5">Notice:</strong>
+          Solar hub stations with active or scheduled energy reservations cannot be deactivated until all bookings are completed or cancelled.
+        </p>
       </div>
 
       {/* Notifications */}
