@@ -209,10 +209,6 @@ export default function StaffManagement({ theme, currentUser }) {
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 mb-3">
-              <ShieldCheck className="h-4 w-4" />
-              <span>Enterprise User Management &bull; SE4040 Specification</span>
-            </div>
             <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
               Staff &amp; Operator Administration
             </h1>

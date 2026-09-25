@@ -57,92 +57,73 @@ export default function Navbar({ user, activeTab, setActiveTab, onLogout, theme,
             </div>
           </div>
 
-          {/* 2. Center: Navigation Tabs */}
-          <nav className="hidden md:flex items-center gap-1 bg-slate-100/90 dark:bg-slate-900/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shrink-0">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                activeTab === 'overview'
-                  ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
-              }`}
-            >
-              <LayoutDashboard className="h-3.5 w-3.5" />
-              <span>Overview</span>
-            </button>
+          {/* 2. Center: Navigation Tabs (Backoffice only) */}
+          {isBackoffice && (
+            <nav className="hidden md:flex items-center gap-1 bg-slate-100/90 dark:bg-slate-900/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shrink-0">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                  activeTab === 'overview'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
+                }`}
+              >
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                <span>Overview</span>
+              </button>
 
-            {isBackoffice && (
-              <>
-                <button
-                  onClick={() => setActiveTab('prosumers')}
-                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                    activeTab === 'prosumers'
-                      ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <Users className="h-3.5 w-3.5" />
-                  <span>Prosumers</span>
-                </button>
+              <button
+                onClick={() => setActiveTab('prosumers')}
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                  activeTab === 'prosumers'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
+                }`}
+              >
+                <Users className="h-3.5 w-3.5" />
+                <span>Prosumers</span>
+              </button>
 
-                <button
-                  onClick={() => setActiveTab('nodes')}
-                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                    activeTab === 'nodes'
-                      ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <Cpu className="h-3.5 w-3.5" />
-                  <span>Solar Nodes</span>
-                </button>
+              <button
+                onClick={() => setActiveTab('nodes')}
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                  activeTab === 'nodes'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
+                }`}
+              >
+                <Cpu className="h-3.5 w-3.5" />
+                <span>Solar Nodes</span>
+              </button>
 
-                <button
-                  onClick={() => setActiveTab('staff')}
-                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                    activeTab === 'staff'
-                      ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <Radio className="h-3.5 w-3.5" />
-                  <span>Staff &amp; Operators</span>
-                </button>
-              </>
-            )}
+              <button
+                onClick={() => setActiveTab('staff')}
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                  activeTab === 'staff'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
+                }`}
+              >
+                <Radio className="h-3.5 w-3.5" />
+                <span>Staff &amp; Operators</span>
+              </button>
 
-            <button
-              onClick={() => setActiveTab('bookings')}
-              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                activeTab === 'bookings'
-                  ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
-              }`}
-            >
-              {isBackoffice ? (
-                <>
-                  <CalendarClock className="h-3.5 w-3.5" />
-                  <span>Bookings</span>
-                </>
-              ) : (
-                <>
-                  <Radio className="h-3.5 w-3.5" />
-                  <span>QR Console</span>
-                </>
-              )}
-            </button>
-          </nav>
+              <button
+                onClick={() => setActiveTab('bookings')}
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                  activeTab === 'bookings'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
+                }`}
+              >
+                <CalendarClock className="h-3.5 w-3.5" />
+                <span>Bookings</span>
+              </button>
+            </nav>
+          )}
 
-          {/* 3. Right: Status, Theme Toggle, User Profile & Always-Visible Sign Out */}
+          {/* 3. Right: Theme Toggle, User Profile & Always-Visible Sign Out */}
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-            {/* Live Grid Status */}
-            <div className="hidden 2xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span className="tracking-wide uppercase font-mono text-[10px]">Online</span>
-            </div>
 
             {/* Theme Toggle (Light / Dark Mode) */}
             <button
