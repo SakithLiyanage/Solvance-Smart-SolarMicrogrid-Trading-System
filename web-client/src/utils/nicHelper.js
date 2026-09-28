@@ -12,6 +12,51 @@
  * @param {string} nicStr - The NIC string to validate.
  * @returns {object} Analysis result with isValid, format, birthYear, gender, dayOfYear, error.
  */
+/**
+ * Resolves calendar date (month and day) from Sri Lankan NIC day-of-year representation.
+ * In Sri Lankan DRP standard, 366 days are mapped with February having 29 days.
+ */
+export function getDateOfBirthFromDayOfYear(year, dayOfYear) {
+  const monthDays = [
+    { month: 'January', days: 31 },
+    { month: 'February', days: 29 },
+    { month: 'March', days: 31 },
+    { month: 'April', days: 30 },
+    { month: 'May', days: 31 },
+    { month: 'June', days: 30 },
+    { month: 'July', days: 31 },
+    { month: 'August', days: 31 },
+    { month: 'September', days: 30 },
+    { month: 'October', days: 31 },
+    { month: 'November', days: 30 },
+    { month: 'December', days: 31 }
+  ];
+
+  let remaining = dayOfYear;
+  let birthMonth = 'January';
+  let birthDay = dayOfYear;
+
+  for (const m of monthDays) {
+    if (remaining <= m.days) {
+      birthMonth = m.month;
+      birthDay = remaining;
+      break;
+    }
+    remaining -= m.days;
+  }
+
+  const padDay = String(birthDay).padStart(2, '0');
+  const monthIndex = monthDays.findIndex((m) => m.month === birthMonth) + 1;
+  const padMonth = String(monthIndex).padStart(2, '0');
+
+  return {
+    birthMonth,
+    birthDay,
+    formattedDate: `${birthMonth} ${birthDay}, ${year}`,
+    isoDate: `${year}-${padMonth}-${padDay}`
+  };
+}
+
 export function parseSriLankanNic(nicStr) {
   if (!nicStr || typeof nicStr !== 'string') {
     return { isValid: false, error: 'NIC cannot be empty' };
@@ -28,6 +73,7 @@ export function parseSriLankanNic(nicStr) {
     const yearDigits = parseInt(clean.substring(0, 2), 10);
     const birthYear = 1900 + yearDigits;
     const dayDigits = parseInt(clean.substring(2, 5), 10);
+    const serial = clean.substring(5, 9);
     const suffix = clean.substring(9, 10);
 
     let gender = 'Male';
@@ -39,24 +85,41 @@ export function parseSriLankanNic(nicStr) {
     }
 
     if (dayOfYear < 1 || dayOfYear > 366) {
-      return { isValid: false, error: 'Invalid day of year encoded in NIC (Out of bounds).' };
+      return { isValid: false, error: 'Invalid day of year encoded in NIC (Out of bounds 1-366).' };
     }
+
+    const dob = getDateOfBirthFromDayOfYear(birthYear, dayOfYear);
 
     return {
       isValid: true,
       nic: clean,
       format: 'Old Format (9+1)',
+      formatType: 'OLD',
       birthYear,
       gender,
       dayOfYear,
+      dob,
       suffix: suffix === 'V' ? 'Voter Eligible' : 'Non-Voter',
-      estimatedAge: new Date().getFullYear() - birthYear
+      isVoter: suffix === 'V',
+      estimatedAge: new Date().getFullYear() - birthYear,
+      segments: {
+        part1: clean.substring(0, 2),
+        part1Label: `Year: 19${clean.substring(0, 2)}`,
+        part2: clean.substring(2, 5),
+        part2Label: `${gender} (${dayOfYear})`,
+        part3: serial,
+        part3Label: `Serial: ${serial}`,
+        part4: suffix,
+        part4Label: suffix === 'V' ? 'Electoral (V)' : 'Non-Electoral (X)'
+      }
     };
   }
 
   if (newRegex.test(clean)) {
     const birthYear = parseInt(clean.substring(0, 4), 10);
     const dayDigits = parseInt(clean.substring(4, 7), 10);
+    const serial = clean.substring(7, 11);
+    const checkDigit = clean.substring(11, 12);
 
     const currentYear = new Date().getFullYear();
     if (birthYear < 1900 || birthYear > currentYear) {
@@ -72,24 +135,39 @@ export function parseSriLankanNic(nicStr) {
     }
 
     if (dayOfYear < 1 || dayOfYear > 366) {
-      return { isValid: false, error: 'Invalid day of year encoded in NIC (Out of bounds).' };
+      return { isValid: false, error: 'Invalid day of year encoded in NIC (Out of bounds 1-366).' };
     }
+
+    const dob = getDateOfBirthFromDayOfYear(birthYear, dayOfYear);
 
     return {
       isValid: true,
       nic: clean,
       format: 'New Format (12 Digits)',
+      formatType: 'NEW',
       birthYear,
       gender,
       dayOfYear,
+      dob,
       suffix: 'National Digital Identity',
-      estimatedAge: currentYear - birthYear
+      isVoter: true,
+      estimatedAge: currentYear - birthYear,
+      segments: {
+        part1: clean.substring(0, 4),
+        part1Label: `Century: ${clean.substring(0, 4)}`,
+        part2: clean.substring(4, 7),
+        part2Label: `${gender} (${dayOfYear})`,
+        part3: serial,
+        part3Label: `Serial: ${serial}`,
+        part4: checkDigit,
+        part4Label: `Checksum: ${checkDigit}`
+      }
     };
   }
 
   return {
     isValid: false,
-    error: 'Must be 9 digits with V/X (e.g. 981234567V) or 12 numeric digits (e.g. 200012345678).'
+    error: 'Must be 9 digits + V/X (e.g. 981234567V) or 12 numeric digits (e.g. 200012345678).'
   };
 }
 
