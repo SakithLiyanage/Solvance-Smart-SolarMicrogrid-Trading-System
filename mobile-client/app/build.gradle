@@ -43,10 +43,7 @@ dependencies {
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
     implementation 'com.squareup.okhttp3:logging-interceptor:4.11.0'
 
-    // Maps: OpenStreetMap (OSM) - 100% Free, No API Key or Billing Required
-    implementation 'org.osmdroid:osmdroid-android:6.1.18'
-
-    // Google Maps & Location Services (Optional Turn-by-Turn fallback)
+    // Official Google Maps & Play Services Geolocation
     implementation 'com.google.android.gms:play-services-maps:18.2.0'
     implementation 'com.google.android.gms:play-services-location:21.1.0'
 

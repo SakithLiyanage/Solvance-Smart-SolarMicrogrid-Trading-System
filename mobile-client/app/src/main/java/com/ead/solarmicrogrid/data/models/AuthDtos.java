@@ -56,10 +56,6 @@ public class AuthDtos {
         public String email;
         @SerializedName("phone")
         public String phone;
-        @SerializedName("password")
-        public String password;
-
-        public RegisterRequest(String nic, String fullName, String email, String phone, String password) {
         @SerializedName("address")
         public String address;
         @SerializedName("solarCapacityKw")
@@ -80,7 +76,6 @@ public class AuthDtos {
             this.fullName = fullName;
             this.email = email;
             this.phone = phone;
-            this.password = password;
             this.address = address;
             this.solarCapacityKw = solarCapacityKw;
             this.inverterSerial = inverterSerial;
@@ -183,16 +178,26 @@ public class AuthDtos {
         public String phone;
         @SerializedName("address")
         public String address;
+        @SerializedName("solarCapacityKw")
+        public double solarCapacityKw;
+        @SerializedName("inverterSerial")
+        public String inverterSerial;
 
-        public UpdateProfileRequest(String fullName, String email, String phone, String address) {
+        public UpdateProfileRequest(String fullName, String email, String phone, String address, double solarCapacityKw, String inverterSerial) {
             this.fullName = fullName;
             this.email = email;
             this.phone = phone;
             this.address = address;
+            this.solarCapacityKw = solarCapacityKw;
+            this.inverterSerial = inverterSerial;
+        }
+
+        public UpdateProfileRequest(String fullName, String email, String phone, String address) {
+            this(fullName, email, phone, address, 15.0, "INV-SL-2026-DEFAULT");
         }
 
         public UpdateProfileRequest(String fullName, String email, String phone) {
-            this(fullName, email, phone, "");
+            this(fullName, email, phone, "", 15.0, "INV-SL-2026-DEFAULT");
         }
     }
 

@@ -113,7 +113,7 @@ $opLogin = @{ usernameOrNic = "OPERATOR001"; password = "Operator@123" } | Conve
 $opAuth = Invoke-RestMethod -Uri "$baseUrl/auth/login" -Method Post -Body $opLogin -ContentType "application/json"
 $opToken = $opAuth.token
 
-$verifyBody = @{ qrCodeToken = $qrToken } | ConvertTo-Json
+$verifyBody = @{ qrCodeToken = $qrToken; stationId = $stationId } | ConvertTo-Json
 $verifyRes = Invoke-RestMethod -Uri "$baseUrl/reservations/verify-qr" -Method Post -Body $verifyBody -ContentType "application/json" -Headers @{ Authorization = "Bearer $opToken" }
 Write-Host " PASS (Status: $($verifyRes.reservation.status) | Job Completed)" -ForegroundColor Green
 

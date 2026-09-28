@@ -1,6 +1,6 @@
 // ============================================================================
 // File: Dtos.cs
-// Project: Smart Solar Microgrid Trading System
+// Project: Solvance — Smart Solar Microgrid Trading System
 // Author: Enterprise Application Development Team
 // Description: Data Transfer Objects (DTOs) for API request validation and response mapping.
 // ============================================================================
@@ -26,10 +26,10 @@ namespace SolarMicrogridApi.Models
         public string Nic { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
-        public string Role { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
         public double SolarCapacityKw { get; set; } = 0.0;
         public string InverterSerial { get; set; } = string.Empty;
     }
@@ -69,6 +69,7 @@ namespace SolarMicrogridApi.Models
         public string? NicBackDocumentBase64 { get; set; }
 
         public string? UtilityBillBase64 { get; set; }
+
         [Required]
         [MinLength(6)]
         public string Password { get; set; } = string.Empty;
@@ -91,6 +92,7 @@ namespace SolarMicrogridApi.Models
         public string Phone { get; set; } = string.Empty;
 
         public string Address { get; set; } = string.Empty;
+
         [Required]
         public string Password { get; set; } = string.Empty;
 
@@ -198,6 +200,7 @@ namespace SolarMicrogridApi.Models
         public int ActiveProsumersCount { get; set; }
         public int PendingProsumersCount { get; set; }
     }
+
     public class StationTelemetryDto
     {
         public string StationId { get; set; } = string.Empty;

@@ -1,0 +1,787 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_ticket_pass_card"
+    android:paddingStart="20dp"
+    android:paddingTop="12dp"
+    android:paddingEnd="20dp"
+    android:paddingBottom="24dp">
+
+    <!-- BottomSheet Drag Handle -->
+    <View
+        android:layout_width="44dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@drawable/bg_pill_chip"
+        android:layout_marginBottom="14dp" />
+
+    <!-- Notifications Header -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_alignParentStart="true"
+            android:layout_toStartOf="@+id/layoutHeaderActions">
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_bell"
+                app:tint="@color/primary"
+                android:background="@drawable/bg_pill_amber"
+                android:padding="5dp"
+                android:layout_marginEnd="10dp"
+                android:contentDescription="Notifications" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvNotifHeaderTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Grid Alerts &amp; Activity"
+                    android:textColor="@color/text_primary"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvNotifSubTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Real-time transaction &amp; tariff notices"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Header Actions: Preferences Toggle & Mark All Read -->
+        <LinearLayout
+            android:id="@+id/layoutHeaderActions"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true">
+
+            <TextView
+                android:id="@+id/btnMarkRead"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Mark read"
+                android:textColor="@color/accent"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:padding="6dp"
+                android:clickable="true"
+                android:focusable="true" />
+        </LinearLayout>
+    </RelativeLayout>
+
+    <!-- Notification Mode Switcher Tabs (Alerts Feed vs Preferences) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:orientation="horizontal"
+        android:background="@drawable/bg_bottom_nav"
+        android:padding="3dp"
+        android:layout_marginBottom="14dp">
+
+        <!-- Tab 1: Alerts Feed -->
+        <LinearLayout
+            android:id="@+id/tabAlertsList"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/bg_pill_chip_active"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/ivTabAlertsIcon"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_bell"
+                app:tint="@color/accent"
+                android:layout_marginEnd="6dp"
+                android:contentDescription="Alerts" />
+
+            <TextView
+                android:id="@+id/tvTabAlertsLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Alerts Feed"
+                android:textColor="@color/accent"
+                android:textStyle="bold"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Tab 2: Preferences & Rules -->
+        <LinearLayout
+            android:id="@+id/tabPreferences"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@android:color/transparent"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/ivTabPrefsIcon"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_settings"
+                app:tint="@color/text_secondary"
+                android:layout_marginEnd="6dp"
+                android:contentDescription="Preferences" />
+
+            <TextView
+                android:id="@+id/tvTabPrefsLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Preferences &amp; Rules"
+                android:textColor="@color/text_secondary"
+                android:textStyle="bold"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Scrollable Notification Body -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxHeight="420dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- ============================================================= -->
+            <!-- TAB 1: ALERTS FEED SECTION                                    -->
+            <!-- ============================================================= -->
+            <LinearLayout
+                android:id="@+id/layoutAlertsSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- 1. Live Trade Pass Notification -->
+                <RelativeLayout
+                    android:id="@+id/cardNotifPass"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_execution_white_card"
+                    android:padding="13dp"
+                    android:layout_marginBottom="9dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:id="@+id/ivNotifPassIcon"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:src="@drawable/ic_zap"
+                        app:tint="@color/accent"
+                        android:background="@drawable/bg_pill_mint"
+                        android:padding="8dp"
+                        android:layout_marginEnd="12dp"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:contentDescription="Pass Status" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_toEndOf="@+id/ivNotifPassIcon"
+                        android:layout_toStartOf="@+id/btnDismissPass"
+                        android:orientation="vertical">
+
+                        <RelativeLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content">
+
+                            <TextView
+                                android:id="@+id/tvNotifPassTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Trade Pass Scheduled"
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:layout_alignParentStart="true" />
+
+                            <TextView
+                                android:id="@+id/tvNotifPassTime"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Ready"
+                                android:textColor="@color/text_muted"
+                                android:textSize="10sp"
+                                android:layout_alignParentEnd="true"
+                                android:layout_marginEnd="4dp" />
+                        </RelativeLayout>
+
+                        <TextView
+                            android:id="@+id/tvNotifPassBody"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Your 50 kWh trade pass is ready for operator verification at Colombo Central Hub."
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp"
+                            android:layout_marginTop="2dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Tap to view QR Pass →"
+                            android:textColor="@color/accent"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:layout_marginTop="5dp" />
+                    </LinearLayout>
+
+                    <ImageButton
+                        android:id="@+id/btnDismissPass"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_x"
+                        app:tint="@color/text_muted"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:layout_alignParentEnd="true"
+                        android:layout_alignParentTop="true"
+                        android:padding="6dp"
+                        android:contentDescription="Dismiss" />
+                </RelativeLayout>
+
+                <!-- 2. Dynamic Tariff Surge Alert -->
+                <RelativeLayout
+                    android:id="@+id/cardNotifSurge"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_execution_white_card"
+                    android:padding="13dp"
+                    android:layout_marginBottom="9dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:id="@+id/ivSurgeIcon"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:src="@drawable/ic_trending_up"
+                        app:tint="#92400E"
+                        android:background="@drawable/bg_pill_amber"
+                        android:padding="8dp"
+                        android:layout_marginEnd="12dp"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:contentDescription="Surge Alert" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_toEndOf="@+id/ivSurgeIcon"
+                        android:layout_toStartOf="@+id/btnDismissSurge"
+                        android:orientation="vertical">
+
+                        <RelativeLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="High Buyback Rate Active"
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:layout_alignParentStart="true" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="10m ago"
+                                android:textColor="@color/text_muted"
+                                android:textSize="10sp"
+                                android:layout_alignParentEnd="true"
+                                android:layout_marginEnd="4dp" />
+                        </RelativeLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Microgrid feed-in rate surged to $0.22/kWh due to peak grid demand. Sell excess solar now."
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp"
+                            android:layout_marginTop="2dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Book Energy Slot Now →"
+                            android:textColor="#B45309"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:layout_marginTop="5dp" />
+                    </LinearLayout>
+
+                    <ImageButton
+                        android:id="@+id/btnDismissSurge"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_x"
+                        app:tint="@color/text_muted"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:layout_alignParentEnd="true"
+                        android:layout_alignParentTop="true"
+                        android:padding="6dp"
+                        android:contentDescription="Dismiss" />
+                </RelativeLayout>
+
+                <!-- 3. Battery Storage Hub Availability Alert -->
+                <RelativeLayout
+                    android:id="@+id/cardNotifBattery"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_execution_white_card"
+                    android:padding="13dp"
+                    android:layout_marginBottom="9dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:id="@+id/ivBatteryIcon"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:src="@drawable/ic_battery_charging"
+                        app:tint="#0369A1"
+                        android:background="@drawable/bg_pill_blue"
+                        android:padding="8dp"
+                        android:layout_marginEnd="12dp"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:contentDescription="Battery Slots" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_toEndOf="@+id/ivBatteryIcon"
+                        android:layout_toStartOf="@+id/btnDismissBattery"
+                        android:orientation="vertical">
+
+                        <RelativeLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Storage Hub Capacity"
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:layout_alignParentStart="true" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="1h ago"
+                                android:textColor="@color/text_muted"
+                                android:textSize="10sp"
+                                android:layout_alignParentEnd="true"
+                                android:layout_marginEnd="4dp" />
+                        </RelativeLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="14 battery swap slots currently open at Colombo Central and Kandy Hills hubs."
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp"
+                            android:layout_marginTop="2dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Find Nearby Stations on Map →"
+                            android:textColor="#0284C7"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:layout_marginTop="5dp" />
+                    </LinearLayout>
+
+                    <ImageButton
+                        android:id="@+id/btnDismissBattery"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_x"
+                        app:tint="@color/text_muted"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:layout_alignParentEnd="true"
+                        android:layout_alignParentTop="true"
+                        android:padding="6dp"
+                        android:contentDescription="Dismiss" />
+                </RelativeLayout>
+
+                <!-- 4. Telemetry Sync Notice -->
+                <RelativeLayout
+                    android:id="@+id/cardNotifTelemetry"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_execution_white_card"
+                    android:padding="13dp"
+                    android:layout_marginBottom="6dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:id="@+id/ivTelemetryIcon"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:src="@drawable/ic_refresh"
+                        app:tint="@color/accent"
+                        android:background="@drawable/bg_pill_mint"
+                        android:padding="8dp"
+                        android:layout_marginEnd="12dp"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:contentDescription="Telemetry Sync" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_toEndOf="@+id/ivTelemetryIcon"
+                        android:layout_toStartOf="@+id/btnDismissTelemetry"
+                        android:orientation="vertical">
+
+                        <RelativeLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Telemetry Synchronized"
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:layout_alignParentStart="true" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Live"
+                                android:textColor="#059669"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:layout_alignParentEnd="true"
+                                android:layout_marginEnd="4dp" />
+                        </RelativeLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Your 5 kWp inverter generation, total kWh traded, and 180 kg CO₂ savings are live."
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+
+                    <ImageButton
+                        android:id="@+id/btnDismissTelemetry"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_x"
+                        app:tint="@color/text_muted"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:layout_alignParentEnd="true"
+                        android:layout_alignParentTop="true"
+                        android:padding="6dp"
+                        android:contentDescription="Dismiss" />
+                </RelativeLayout>
+
+                <!-- Empty Alerts State (Shown when all notifications dismissed/disabled) -->
+                <LinearLayout
+                    android:id="@+id/layoutEmptyNotifState"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:visibility="gone"
+                    android:paddingTop="24dp"
+                    android:paddingBottom="24dp">
+
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:src="@drawable/ic_check_circle"
+                        app:tint="@color/accent"
+                        android:layout_marginBottom="10dp"
+                        android:contentDescription="All Caught Up" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="All Caught Up!"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="No active grid notices or pending trade pass alerts."
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center" />
+
+                    <TextView
+                        android:id="@+id/btnRestoreAlerts"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Restore Dismissed Alerts"
+                        android:textColor="@color/accent"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:padding="10dp"
+                        android:layout_marginTop="8dp"
+                        android:clickable="true"
+                        android:focusable="true" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- ============================================================= -->
+            <!-- TAB 2: PREFERENCES & RULES SECTION                            -->
+            <!-- ============================================================= -->
+            <LinearLayout
+                android:id="@+id/layoutPreferencesSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Notification Channels"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="10dp" />
+
+                <!-- Pref 1: Trade Pass & QR Scans -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_execution_white_card"
+                    android:padding="13dp"
+                    android:layout_marginBottom="8dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Trade Pass &amp; QR Status"
+                            android:textColor="@color/text_primary"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Alerts when passes are scheduled or ready for operator scan."
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchPrefPass"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true" />
+                </LinearLayout>
+
+                <!-- Pref 2: Peak Tariff Surges -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_execution_white_card"
+                    android:padding="13dp"
+                    android:layout_marginBottom="8dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Dynamic Tariff Surge Alerts"
+                            android:textColor="@color/text_primary"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Notify when feed-in rate surges above $0.20/kWh."
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchPrefSurge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true" />
+                </LinearLayout>
+
+                <!-- Pref 3: Battery Hub Availability -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_execution_white_card"
+                    android:padding="13dp"
+                    android:layout_marginBottom="8dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Storage Hub Availability"
+                            android:textColor="@color/text_primary"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Notices for open battery swap bays at nearby stations."
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchPrefBattery"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true" />
+                </LinearLayout>
+
+                <!-- Pref 4: Telemetry Sync -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_execution_white_card"
+                    android:padding="13dp"
+                    android:layout_marginBottom="12dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Inverter &amp; Telemetry Sync"
+                            android:textColor="@color/text_primary"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Confirmations for live solar generation telemetry."
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchPrefTelemetry"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true" />
+                </LinearLayout>
+
+                <!-- Reset Preferences Button -->
+                <TextView
+                    android:id="@+id/btnResetPreferences"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="Reset All Preferences to Defaults"
+                    android:textColor="@color/accent"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:padding="10dp"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Close Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnCloseNotifSheet"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="14dp"
+        android:text="Close Notifications"
+        app:icon="@drawable/ic_check_circle"
+        app:iconTint="@color/background_dark"
+        app:iconGravity="textStart"
+        app:iconSize="16dp"
+        android:backgroundTint="@color/accent"
+        android:textColor="@color/background_dark"
+        android:textStyle="bold"
+        android:textAllCaps="false"
+        app:cornerRadius="14dp" />
+
+</LinearLayout>

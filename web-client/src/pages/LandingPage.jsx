@@ -11,9 +11,9 @@
 // ============================================================================
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Zap, Sun, Moon, ArrowRight, ShieldCheck, Cpu, 
-  MapPin, BatteryCharging, QrCode, Activity, Sparkles, 
+import {
+  Zap, Sun, Moon, ArrowRight, ShieldCheck, Cpu,
+  MapPin, BatteryCharging, QrCode, Activity, Sparkles,
   Layers, CheckCircle2, ChevronRight, ExternalLink, Globe,
   Users, BarChart3, Smartphone, Clock, Shield, ArrowUpRight,
   ChevronDown, Flame, Leaf, Gauge
@@ -25,45 +25,38 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
   const [loadingStations, setLoadingStations] = useState(true);
   const [selectedStationFilter, setSelectedStationFilter] = useState('All');
   const [showMobileModal, setShowMobileModal] = useState(false);
-  const [liveSimWattage, setLiveSimWattage] = useState(1480.6);
+  const [reservations, setReservations] = useState([]);
 
   const isDark = theme === 'dark';
 
   useEffect(() => {
     const loadPublicStations = async () => {
       try {
-        const res = await api.get('/stations');
-        if (res.data && res.data.length > 0) {
-          setStations(res.data);
-        } else {
-          // Fallback sample regional stations if database is being seeded
-          setStations([
-            { id: '1', stationCode: 'HUB-CMB-01', name: 'Colombo Central Solar Hub', address: 'No. 45, Galle Road, Colombo 03', capacityKwh: 500, availableBatterySlots: 14, totalBatterySlots: 20, status: 'Active' },
-            { id: '2', stationCode: 'HUB-KND-01', name: 'Kandy Hills Microgrid Station', address: 'Peradeniya Road, Kandy', capacityKwh: 350, availableBatterySlots: 9, totalBatterySlots: 15, status: 'Active' },
-            { id: '3', stationCode: 'HUB-GAL-01', name: 'Galle Coastal Solar Grid', address: 'Fort Promenade, Galle', capacityKwh: 400, availableBatterySlots: 12, totalBatterySlots: 18, status: 'Active' },
-            { id: '4', stationCode: 'HUB-NEG-01', name: 'Negombo Lagoon Infeed Node', address: 'Main Street, Negombo', capacityKwh: 300, availableBatterySlots: 8, totalBatterySlots: 12, status: 'Active' }
-          ]);
+        const [stationsRes, reservationsRes] = await Promise.all([
+          api.get('/stations'),
+          api.get('/reservations').catch(() => ({ data: [] }))
+        ]);
+        if (stationsRes.data && stationsRes.data.length > 0) {
+          setStations(stationsRes.data);
+        }
+        if (reservationsRes.data && Array.isArray(reservationsRes.data)) {
+          setReservations(reservationsRes.data);
         }
       } catch (err) {
-        setStations([
-          { id: '1', stationCode: 'HUB-CMB-01', name: 'Colombo Central Solar Hub', address: 'No. 45, Galle Road, Colombo 03', capacityKwh: 500, availableBatterySlots: 14, totalBatterySlots: 20, status: 'Active' },
-          { id: '2', stationCode: 'HUB-KND-01', name: 'Kandy Hills Microgrid Station', address: 'Peradeniya Road, Kandy', capacityKwh: 350, availableBatterySlots: 9, totalBatterySlots: 15, status: 'Active' },
-          { id: '3', stationCode: 'HUB-GAL-01', name: 'Galle Coastal Solar Grid', address: 'Fort Promenade, Galle', capacityKwh: 400, availableBatterySlots: 12, totalBatterySlots: 18, status: 'Active' }
-        ]);
+        console.error('Failed to load stations data', err);
       } finally {
         setLoadingStations(false);
       }
     };
     loadPublicStations();
-
-    const interval = setInterval(() => {
-      setLiveSimWattage(prev => +(prev + (Math.random() * 6 - 3)).toFixed(1));
-    }, 3000);
-    return () => clearInterval(interval);
   }, []);
 
   const totalPvCapacity = stations.reduce((acc, s) => acc + (s.capacityKwh || 0), 0);
   const totalFreeSlots = stations.reduce((acc, s) => acc + (s.availableBatterySlots || 0), 0);
+  const totalCompletedKwh = reservations
+    .filter(r => r.status === 'Completed')
+    .reduce((acc, r) => acc + (r.energyAmountKwh || 0), 0);
+  const estimatedCo2Offset = +((totalCompletedKwh > 0 ? totalCompletedKwh * 0.0007 : totalPvCapacity * 0.008) || 12.4).toFixed(1);
 
   const scrollToSection = (id) => {
     const el = document.getElementById(id);
@@ -84,10 +77,10 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
           {/* Brand Logo */}
           <div className="flex items-center gap-3 select-none">
             <div className="relative flex items-center justify-center">
-              <img 
-                src={isDark ? "/solvance_mark_dark_trans.png" : "/solvance_mark_light_trans.png"} 
-                alt="Solvance Logo" 
-                className="h-10 w-auto object-contain drop-shadow-sm" 
+              <img
+                src={isDark ? "/solvance_mark_dark_trans.png" : "/solvance_mark_light_trans.png"}
+                alt="Solvance Logo"
+                className="h-10 w-auto object-contain drop-shadow-sm"
               />
             </div>
             <div>
@@ -195,7 +188,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
         <div className="mt-16 w-full max-w-5xl rounded-3xl border border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/80 backdrop-blur-2xl p-6 sm:p-8 shadow-xl text-left relative overflow-hidden">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800/80">
             <div className="flex items-center gap-3">
-              <div className="h-3 w-3 rounded-full bg-emerald-500 animate-ping" />
+              <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
               <div>
                 <h3 className="font-display font-bold text-base text-slate-900 dark:text-white">
                   Live Microgrid Power Flow &amp; Regional Harvest
@@ -203,23 +196,18 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
                 <p className="text-xs text-slate-500 dark:text-slate-400">Aggregated real-time solar generation across Sri Lanka nodes</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-mono font-bold">
-                ● 100% GRID STABILITY
-              </span>
-            </div>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
               <div className="flex items-center gap-2 text-xs font-semibold text-amber-600 dark:text-amber-400 mb-1">
                 <Sun className="h-4 w-4" />
-                <span>Live Solar Generation</span>
+                <span>Live Grid Capacity</span>
               </div>
               <div className="text-2xl font-display font-black text-slate-900 dark:text-white mt-1 font-mono">
-                {liveSimWattage} <span className="text-xs text-slate-500 font-sans">kW</span>
+                {totalPvCapacity.toLocaleString() || '1,650'} <span className="text-xs text-slate-500 font-sans">kW</span>
               </div>
-              <p className="text-[11px] text-slate-500 mt-1">Real-time PV feed-in</p>
+              <p className="text-[11px] text-slate-500 mt-1">Installed station capacity</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
@@ -228,7 +216,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
                 <span>Available Slots</span>
               </div>
               <div className="text-2xl font-display font-black text-slate-900 dark:text-white mt-1 font-mono">
-                {totalFreeSlots || 34} <span className="text-xs text-slate-500 font-sans">Slots Free</span>
+                {totalFreeSlots} <span className="text-xs text-slate-500 font-sans">Slots Free</span>
               </div>
               <p className="text-[11px] text-slate-500 mt-1">Ready for drop-off booking</p>
             </div>
@@ -250,7 +238,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
                 <span>CO₂ Offset</span>
               </div>
               <div className="text-2xl font-display font-black text-slate-900 dark:text-white mt-1 font-mono">
-                14.2 <span className="text-xs text-slate-500 font-sans">Tons</span>
+                {estimatedCo2Offset} <span className="text-xs text-slate-500 font-sans">Tons</span>
               </div>
               <p className="text-[11px] text-slate-500 mt-1">Clean energy generated</p>
             </div>
@@ -397,8 +385,8 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
                           <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{freeSlots} / {totalSlots} Available</span>
                         </div>
                         <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-amber-500 to-emerald-400 rounded-full transition-all duration-500" 
+                          <div
+                            className="h-full bg-gradient-to-r from-amber-500 to-emerald-400 rounded-full transition-all duration-500"
                             style={{ width: `${Math.max(10, usedPct)}%` }}
                           />
                         </div>
@@ -477,7 +465,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
                 </li>
                 <li className="flex items-center gap-2.5">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span>FAT service architecture enforcing strict 12h rule lifecycle</span>
+                  <span>Enterprise rules engine enforcing strict 12h schedule lifecycle</span>
                 </li>
               </ul>
             </div>
@@ -536,10 +524,10 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
       <footer className="mt-auto border-t border-slate-200 dark:border-slate-800/80 py-10 px-4 sm:px-6 lg:px-8 bg-white/60 dark:bg-slate-950/60 transition-colors">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <img 
-              src={isDark ? "/solvance_mark_dark_trans.png" : "/solvance_mark_light_trans.png"} 
-              alt="Solvance" 
-              className="h-8 w-auto object-contain" 
+            <img
+              src={isDark ? "/solvance_mark_dark_trans.png" : "/solvance_mark_light_trans.png"}
+              alt="Solvance"
+              className="h-8 w-auto object-contain"
             />
             <div>
               <p className="font-display font-black text-sm text-slate-900 dark:text-white">SOLVANCE</p>
@@ -547,9 +535,9 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
             </div>
           </div>
 
-          {/* Academic Attribution Badge */}
+          {/* System Attribution */}
           <div className="text-center md:text-right text-xs text-slate-500 dark:text-slate-400 space-y-1">
-            <p className="font-mono text-[11px]">SE4040 Enterprise Application Development &bull; SLIIT</p>
+            <p className="font-medium text-[11px]">Decentralized Clean Energy Trading Network</p>
             <p className="text-[10px] text-slate-400 dark:text-slate-500">
               &copy; {new Date().getFullYear()} Solvance Microgrid System. All rights reserved.
             </p>
@@ -559,9 +547,9 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
             <button onClick={onGoToLogin} className="text-slate-600 dark:text-slate-300 hover:text-amber-500 transition cursor-pointer">
               Console Login
             </button>
-            <a 
-              href="https://github.com/SakithLiyanage/Solvance-Smart-SolarMicrogrid-Trading-System" 
-              target="_blank" 
+            <a
+              href="https://github.com/SakithLiyanage/Solvance-Smart-SolarMicrogrid-Trading-System"
+              target="_blank"
               rel="noopener noreferrer"
               className="text-slate-600 dark:text-slate-300 hover:text-amber-500 transition flex items-center gap-1"
             >

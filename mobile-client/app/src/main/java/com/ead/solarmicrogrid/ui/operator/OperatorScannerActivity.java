@@ -28,6 +28,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -89,21 +90,22 @@ public class OperatorScannerActivity extends AppCompatActivity {
 
     private int activeTab = TAB_SCANNER;
     private boolean isProcessingScan = false;
-    private boolean isTorchOn = false;
 
     // Header & KPIs
     private TextView tvOperatorNic, tvOperatorStatusSub;
-    private ImageButton btnOperatorRefresh, btnOperatorLogout, btnThemeToggle;
+    private ImageButton btnOperatorMap, btnOperatorLogout, btnThemeToggle;
     private TextView tvKpiQueueCount, tvKpiVerifiedCount, tvKpiBatterySlots;
 
-    // Segmented Navigation Tabs
-    private TextView btnTabScanner, btnTabQueue, btnTabStorage;
+    // Bottom Navigation Bar Quick Action Hub
+    private View navTabScanner, navTabQueue, navTabStorage;
+    private ImageView ivNavScanner, ivNavQueue, ivNavStorage;
+    private TextView tvNavScanner, tvNavQueue, tvNavStorage;
+    private View dotNavScanner, dotNavQueue, dotNavStorage;
     private View layoutSectionScanner, layoutSectionQueue, layoutSectionStorage;
     private ProgressBar progressBarOperator;
 
     // Tab 1: Scanner Views
     private DecoratedBarcodeView barcodeScannerView;
-    private ImageButton btnToggleTorch;
     private MaterialCardView cardCameraPermission;
     private Button btnGrantCamera;
     private EditText etManualQr;
@@ -156,6 +158,8 @@ public class OperatorScannerActivity extends AppCompatActivity {
         int startTab = getIntent().getIntExtra("tab", TAB_SCANNER);
         if (startTab != TAB_SCANNER) {
             switchTab(startTab);
+        } else {
+            updateBottomNav(TAB_SCANNER);
         }
     }
 
@@ -171,7 +175,7 @@ public class OperatorScannerActivity extends AppCompatActivity {
         // Header
         tvOperatorNic = findViewById(R.id.tvOperatorNic);
         tvOperatorStatusSub = findViewById(R.id.tvOperatorStatusSub);
-        btnOperatorRefresh = findViewById(R.id.btnOperatorRefresh);
+        btnOperatorMap = findViewById(R.id.btnOperatorMap);
         btnOperatorLogout = findViewById(R.id.btnOperatorLogout);
         btnThemeToggle = findViewById(R.id.btnThemeToggle);
 
@@ -180,10 +184,22 @@ public class OperatorScannerActivity extends AppCompatActivity {
         tvKpiVerifiedCount = findViewById(R.id.tvKpiVerifiedCount);
         tvKpiBatterySlots = findViewById(R.id.tvKpiBatterySlots);
 
-        // Tabs
-        btnTabScanner = findViewById(R.id.btnTabScanner);
-        btnTabQueue = findViewById(R.id.btnTabQueue);
-        btnTabStorage = findViewById(R.id.btnTabStorage);
+        // Bottom Navigation Bar Quick Action Hub
+        navTabScanner = findViewById(R.id.navTabScanner);
+        navTabQueue = findViewById(R.id.navTabQueue);
+        navTabStorage = findViewById(R.id.navTabStorage);
+
+        ivNavScanner = findViewById(R.id.ivNavScanner);
+        ivNavQueue = findViewById(R.id.ivNavQueue);
+        ivNavStorage = findViewById(R.id.ivNavStorage);
+
+        tvNavScanner = findViewById(R.id.tvNavScanner);
+        tvNavQueue = findViewById(R.id.tvNavQueue);
+        tvNavStorage = findViewById(R.id.tvNavStorage);
+
+        dotNavScanner = findViewById(R.id.dotNavScanner);
+        dotNavQueue = findViewById(R.id.dotNavQueue);
+        dotNavStorage = findViewById(R.id.dotNavStorage);
 
         // Sections
         layoutSectionScanner = findViewById(R.id.layoutSectionScanner);
@@ -193,7 +209,6 @@ public class OperatorScannerActivity extends AppCompatActivity {
 
         // Scanner Section
         barcodeScannerView = findViewById(R.id.barcodeScannerView);
-        btnToggleTorch = findViewById(R.id.btnToggleTorch);
         cardCameraPermission = findViewById(R.id.cardCameraPermission);
         btnGrantCamera = findViewById(R.id.btnGrantCamera);
         etManualQr = findViewById(R.id.etManualQr);
@@ -255,18 +270,14 @@ public class OperatorScannerActivity extends AppCompatActivity {
     }
 
     private void setupTabs() {
-        btnTabScanner.setOnClickListener(v -> switchTab(TAB_SCANNER));
-        btnTabQueue.setOnClickListener(v -> switchTab(TAB_QUEUE));
-        btnTabStorage.setOnClickListener(v -> switchTab(TAB_STORAGE));
+        if (navTabScanner != null) navTabScanner.setOnClickListener(v -> switchTab(TAB_SCANNER));
+        if (navTabQueue != null) navTabQueue.setOnClickListener(v -> switchTab(TAB_QUEUE));
+        if (navTabStorage != null) navTabStorage.setOnClickListener(v -> switchTab(TAB_STORAGE));
     }
 
     private void switchTab(int targetTab) {
         activeTab = targetTab;
-
-        // Update Tab visual styles
-        updateTabButton(btnTabScanner, targetTab == TAB_SCANNER, R.drawable.ic_qr_code);
-        updateTabButton(btnTabQueue, targetTab == TAB_QUEUE, R.drawable.ic_clock);
-        updateTabButton(btnTabStorage, targetTab == TAB_STORAGE, R.drawable.ic_battery_charging);
+        updateBottomNav(targetTab);
 
         // Section visibility & camera lifecycle
         if (targetTab == TAB_SCANNER) {
@@ -295,18 +306,27 @@ public class OperatorScannerActivity extends AppCompatActivity {
         }
     }
 
-    private void updateTabButton(TextView tabView, boolean isSelected, int iconRes) {
-        if (isSelected) {
-            tabView.setBackgroundResource(R.drawable.bg_tab_selected);
-            tabView.setTextColor(ContextCompat.getColor(this, R.color.background_dark));
-            tabView.setCompoundDrawablesWithIntrinsicBounds(iconRes, 0, 0, 0);
-            tabView.getCompoundDrawables()[0].setTint(ContextCompat.getColor(this, R.color.background_dark));
-        } else {
-            tabView.setBackgroundResource(R.drawable.bg_tab_unselected);
-            tabView.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
-            tabView.setCompoundDrawablesWithIntrinsicBounds(iconRes, 0, 0, 0);
-            tabView.getCompoundDrawables()[0].setTint(ContextCompat.getColor(this, R.color.text_secondary));
-        }
+    private void updateBottomNav(int targetTab) {
+        int activeColor = ContextCompat.getColor(this, R.color.accent);
+        int inactiveColor = ContextCompat.getColor(this, R.color.text_secondary);
+
+        // Tab 1: Scanner
+        boolean isScanner = (targetTab == TAB_SCANNER);
+        if (ivNavScanner != null) ivNavScanner.setColorFilter(isScanner ? activeColor : inactiveColor);
+        if (tvNavScanner != null) tvNavScanner.setTextColor(isScanner ? activeColor : inactiveColor);
+        if (dotNavScanner != null) dotNavScanner.setVisibility(isScanner ? View.VISIBLE : View.INVISIBLE);
+
+        // Tab 2: Queue
+        boolean isQueue = (targetTab == TAB_QUEUE);
+        if (ivNavQueue != null) ivNavQueue.setColorFilter(isQueue ? activeColor : inactiveColor);
+        if (tvNavQueue != null) tvNavQueue.setTextColor(isQueue ? activeColor : inactiveColor);
+        if (dotNavQueue != null) dotNavQueue.setVisibility(isQueue ? View.VISIBLE : View.INVISIBLE);
+
+        // Tab 3: Storage
+        boolean isStorage = (targetTab == TAB_STORAGE);
+        if (ivNavStorage != null) ivNavStorage.setColorFilter(isStorage ? activeColor : inactiveColor);
+        if (tvNavStorage != null) tvNavStorage.setTextColor(isStorage ? activeColor : inactiveColor);
+        if (dotNavStorage != null) dotNavStorage.setVisibility(isStorage ? View.VISIBLE : View.INVISIBLE);
     }
 
     private void setupQueueRecyclerView() {
@@ -413,10 +433,13 @@ public class OperatorScannerActivity extends AppCompatActivity {
             btnThemeToggle.setOnClickListener(v -> ThemeManager.toggleTheme(this));
         }
 
-        btnOperatorRefresh.setOnClickListener(v -> {
-            fetchOperatorData();
-            Toast.makeText(this, "Refreshing grid data...", Toast.LENGTH_SHORT).show();
-        });
+        if (btnOperatorMap != null) {
+            btnOperatorMap.setOnClickListener(v -> {
+                Intent intent = new Intent(OperatorScannerActivity.this, com.ead.solarmicrogrid.ui.prosumer.StationsMapActivity.class);
+                startActivity(intent);
+                overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+            });
+        }
 
         btnOperatorLogout.setOnClickListener(v -> {
             dbHelper.clearSession();
@@ -430,17 +453,6 @@ public class OperatorScannerActivity extends AppCompatActivity {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQ);
             });
         }
-
-        btnToggleTorch.setOnClickListener(v -> {
-            isTorchOn = !isTorchOn;
-            if (isTorchOn) {
-                barcodeScannerView.setTorchOn();
-                btnToggleTorch.setColorFilter(ContextCompat.getColor(this, R.color.accent));
-            } else {
-                barcodeScannerView.setTorchOff();
-                btnToggleTorch.setColorFilter(ContextCompat.getColor(this, R.color.primary));
-            }
-        });
 
         btnVerifyManual.setOnClickListener(v -> {
             String token = etManualQr.getText() != null ? etManualQr.getText().toString().trim() : "";
