@@ -167,6 +167,30 @@ namespace SolarMicrogridApi.Controllers
 
             return Ok(new { message = "Solar station reactivated successfully." });
         }
+
+        /// <summary>
+        /// Permanently deletes a solar station (Backoffice only). Blocked if active reservations exist.
+        /// </summary>
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Backoffice")]
+        public async Task<IActionResult> Delete(string id)
+        {
+            // Method: Delete - Deletes solar hub and associated slots, strictly blocking if active reservations exist.
+            try
+            {
+                var success = await _stationService.DeleteStationAsync(id);
+                if (!success)
+                {
+                    return NotFound(new { message = "Station not found." });
+                }
+
+                return Ok(new { message = "Solar station and associated slots deleted successfully." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 
     public class UpdateBatterySlotsDto

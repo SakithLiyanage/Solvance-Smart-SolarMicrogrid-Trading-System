@@ -28,7 +28,7 @@ import {
   Plus, Cpu, MapPin, Battery, Calendar, AlertCircle,
   CheckCircle2, ShieldAlert, Edit3, Power, RefreshCw,
   Clock, Navigation, ShieldCheck, ExternalLink, Eye, Map,
-  BatteryCharging, Layers, Info
+  BatteryCharging, Layers, Info, Trash2
 } from 'lucide-react';
 import api from '../api/client';
 import Modal from '../components/Modal';
@@ -249,6 +249,40 @@ export default function NodeManagement({ theme }) {
     } catch (err) {
       setError(err.response?.data?.message || 'Action failed.');
       setTimeout(() => setError(''), 6000);
+    }
+  };
+
+  const handleDeleteStation = async (station) => {
+    if (!window.confirm(`Permanently delete Solar Station '${station.name}' and all its trading slots? This action cannot be undone.`)) {
+      return;
+    }
+    setError('');
+    setSuccess('');
+    try {
+      await api.delete(`/stations/${station.id}`);
+      setSuccess(`Solar Station '${station.name}' and related slots deleted.`);
+      setTimeout(() => setSuccess(''), 4000);
+      fetchStations();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete station. Make sure no active reservations exist.');
+      setTimeout(() => setError(''), 6000);
+    }
+  };
+
+  const handleDeleteSlot = async (slotId) => {
+    if (!window.confirm('Are you sure you want to permanently delete this trading slot?')) {
+      return;
+    }
+    setSlotError('');
+    setSlotSuccess('');
+    try {
+      await api.delete(`/slots/${slotId}`);
+      setSlotSuccess('Trading slot deleted successfully.');
+      setTimeout(() => setSlotSuccess(''), 4000);
+      if (slotStation) fetchSlots(slotStation.id, slotDateFilter);
+    } catch (err) {
+      setSlotError(err.response?.data?.message || 'Failed to delete slot. Check for linked active reservations.');
+      setTimeout(() => setSlotError(''), 6000);
     }
   };
 
@@ -543,6 +577,13 @@ export default function NodeManagement({ theme }) {
                     <Power className="h-3.5 w-3.5" />
                     <span>{station.isActive ? 'Deactivate' : 'Reactivate'}</span>
                   </button>
+                  <button
+                    onClick={() => handleDeleteStation(station)}
+                    className="inline-flex items-center justify-center gap-1 px-2.5 py-2 bg-slate-100 dark:bg-slate-800/80 hover:bg-red-500/10 text-slate-500 hover:text-red-500 dark:hover:text-red-400 text-xs font-bold rounded-xl transition border border-slate-200 dark:border-slate-750 cursor-pointer"
+                    title="Permanently delete station (blocked if active reservations exist)"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               </div>
             );
@@ -793,6 +834,13 @@ export default function NodeManagement({ theme }) {
                               title="Increment available slot"
                             >
                               +
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSlot(slot.id)}
+                              className="p-1 hover:bg-red-500/10 text-slate-400 hover:text-red-500 rounded transition cursor-pointer ml-1"
+                              title="Delete this trading slot"
+                            >
+                              <Trash2 className="h-3 w-3" />
                             </button>
                           </div>
                         </td>
