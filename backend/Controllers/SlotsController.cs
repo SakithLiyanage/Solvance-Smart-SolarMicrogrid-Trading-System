@@ -72,6 +72,30 @@ namespace SolarMicrogridApi.Controllers
 
             return Ok(new { message = "Slot availability updated successfully." });
         }
+
+        /// <summary>
+        /// Deletes an energy trading time slot (Backoffice or Grid Operator). Blocked if active reservations exist.
+        /// </summary>
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Backoffice,GridOperator")]
+        public async Task<IActionResult> Delete(string id)
+        {
+            // Method: Delete - Deletes trading slot ensuring no active or pending reservations are affected.
+            try
+            {
+                var success = await _slotService.DeleteSlotAsync(id);
+                if (!success)
+                {
+                    return NotFound(new { message = "Slot not found." });
+                }
+
+                return Ok(new { message = "Trading slot deleted successfully." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 
     public class UpdateSlotAvailabilityDto

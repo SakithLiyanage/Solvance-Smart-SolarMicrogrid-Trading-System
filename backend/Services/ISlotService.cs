@@ -15,5 +15,6 @@ namespace SolarMicrogridApi.Services
         Task<EnergySlot?> GetSlotByIdAsync(string id);
         Task<EnergySlot> CreateSlotAsync(EnergySlot slot);
         Task<bool> UpdateSlotAvailabilityAsync(string slotId, int availableSlots, double allocatedKwh);
+        Task<bool> DeleteSlotAsync(string id);
     }
 }
