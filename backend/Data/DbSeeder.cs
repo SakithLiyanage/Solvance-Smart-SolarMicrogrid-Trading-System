@@ -3,7 +3,7 @@
 // Project: Solvance — Smart Solar Microgrid Trading System
 // Author: Enterprise Application Development Team
 // Course: SE4040 - Enterprise Application Development (SLIIT)
-// Description: Seeds initial required mock data for Backoffice, Operators, Stations, and Slots.
+// Description: Seeds initial required administrative, operator, and station records for development and evaluation.
 // References & Citations:
 //   - MongoDB.Driver .NET CRUD (InsertManyAsync, CountDocumentsAsync):
 //     https://www.mongodb.com/docs/drivers/csharp/

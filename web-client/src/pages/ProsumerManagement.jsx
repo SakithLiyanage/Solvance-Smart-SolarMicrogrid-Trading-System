@@ -18,15 +18,13 @@ import {
   Search, Filter, Check, XCircle, RefreshCw, UserCheck, 
   ShieldAlert, CheckCircle2, UserX, Mail, Phone, Hash,
   UserPlus, Edit3, X, Zap, Shield, MapPin, Eye, EyeOff, FileText,
-  Upload, Sparkles, AlertCircle, Award, CheckCircle, ShieldCheck,
+  Upload, AlertCircle, Award, CheckCircle, ShieldCheck,
   CreditCard, Layers, FileCheck, Image, Trash2, Cpu
 } from 'lucide-react';
 import api from '../api/client';
 import { 
   parseSriLankanNic, 
-  calculateKycTrustAssessment, 
-  generateMockNicCardSvg,
-  generateMockNicBackSvg
+  calculateKycTrustAssessment
 } from '../utils/nicHelper';
 import Modal from '../components/Modal';
 
@@ -151,29 +149,6 @@ export default function ProsumerManagement({ theme }) {
     }));
   };
 
-  const handleGenerateMockDoc = () => {
-    const nicInfo = parseSriLankanNic(formData.nic || '200012345678');
-    const mockFront = generateMockNicCardSvg(
-      formData.nic || '200012345678',
-      formData.fullName || 'Sunil Shantha',
-      nicInfo.birthYear || '2000',
-      nicInfo.gender || 'Male',
-      formData.address || 'No. 45, Galle Road, Colombo 03'
-    );
-    const mockBack = generateMockNicBackSvg(
-      formData.nic || '200012345678',
-      formData.fullName || 'Sunil Shantha',
-      nicInfo.birthYear || '2000',
-      formData.address || 'No. 45, Galle Road, Colombo 03'
-    );
-    setFormData((prev) => ({
-      ...prev,
-      nicDocumentBase64: mockFront,
-      nicBackDocumentBase64: mockBack
-    }));
-    notify('Sample NIC preview documents attached.', 'success');
-  };
-
   const handleCreateProsumer = async (e) => {
     e.preventDefault();
     if (!formData.nic || !formData.fullName || !formData.email || !formData.password) {
@@ -189,19 +164,8 @@ export default function ProsumerManagement({ theme }) {
 
     try {
       setSubmitting(true);
-      const frontToSend = formData.nicDocumentBase64 || generateMockNicCardSvg(
-        formData.nic,
-        formData.fullName,
-        nicInfo.birthYear,
-        nicInfo.gender,
-        formData.address
-      );
-      const backToSend = formData.nicBackDocumentBase64 || generateMockNicBackSvg(
-        formData.nic,
-        formData.fullName,
-        nicInfo.birthYear,
-        formData.address
-      );
+      const frontToSend = formData.nicDocumentBase64 || null;
+      const backToSend = formData.nicBackDocumentBase64 || null;
 
       await api.post('/auth/register-prosumer', {
         nic: formData.nic.trim().toUpperCase(),
@@ -474,13 +438,17 @@ export default function ProsumerManagement({ theme }) {
                       </td>
 
                       <td className="py-4 px-6 space-y-1.5 whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 font-bold text-xs shadow-xs whitespace-nowrap">
+                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold text-xs shadow-xs whitespace-nowrap ${
+                          u.solarCapacityKw > 0
+                            ? 'bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300'
+                            : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
+                        }`}>
                           <Zap className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                          <span>{u.solarCapacityKw > 0 ? `${u.solarCapacityKw} kW` : '15.0 kW'} Array</span>
+                          <span>{u.solarCapacityKw > 0 ? `${u.solarCapacityKw} kW Array` : 'Unspecified Array'}</span>
                         </div>
                         <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                           <Cpu className="h-3 w-3 text-slate-400 shrink-0" />
-                          <span className="truncate max-w-[180px]">{u.inverterSerial || 'INV-SL-2026-DEFAULT'}</span>
+                          <span className="truncate max-w-[180px]">{u.inverterSerial || 'Unassigned Inverter'}</span>
                         </div>
                         {u.address && (
                           <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
@@ -527,7 +495,7 @@ export default function ProsumerManagement({ theme }) {
                             ) : (
                               <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 whitespace-nowrap">
                                 <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                                <span>Review Needed</span>
+                                <span>{assessment.statusLabel}</span>
                               </span>
                             )}
                             <div className="flex items-center gap-1 text-[10px] text-slate-400 shrink-0">
@@ -609,19 +577,8 @@ export default function ProsumerManagement({ theme }) {
       >
         {selectedKycUser && (() => {
           const assessment = calculateKycTrustAssessment(selectedKycUser);
-          const frontSvg = selectedKycUser.nicDocumentBase64 || generateMockNicCardSvg(
-            selectedKycUser.nic,
-            selectedKycUser.fullName,
-            assessment.nicInfo.birthYear,
-            assessment.nicInfo.gender,
-            selectedKycUser.address
-          );
-          const backSvg = selectedKycUser.nicBackDocumentBase64 || generateMockNicBackSvg(
-            selectedKycUser.nic,
-            selectedKycUser.fullName,
-            assessment.nicInfo.birthYear,
-            selectedKycUser.address
-          );
+          const frontDoc = selectedKycUser.nicDocumentBase64;
+          const backDoc = selectedKycUser.nicBackDocumentBase64;
           const utilityBill = selectedKycUser.utilityBillBase64;
 
           return (
@@ -820,46 +777,76 @@ export default function ProsumerManagement({ theme }) {
                   )}
                 </div>
 
-                <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 p-3 flex flex-col items-center justify-center min-h-[220px]">
+                <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 p-4 flex flex-col items-center justify-center min-h-[240px]">
                   {kycDocTab === 'front' && (
                     <div className="w-full max-w-lg">
                       <div className="flex items-center justify-between mb-2 text-[11px] text-slate-500">
-                        <span>Sri Lankan NIC — Front Card</span>
-                        <span>{selectedKycUser.nicDocumentBase64 ? 'Uploaded Image' : 'Card Preview'}</span>
+                        <span>Sri Lankan NIC — Front Card Copy</span>
+                        <span className="font-semibold text-slate-400">{frontDoc ? 'Uploaded Document' : 'Not Provided'}</span>
                       </div>
-                      <img
-                        src={frontSvg}
-                        alt={`NIC Front - ${selectedKycUser.nic}`}
-                        className="w-full h-auto object-contain max-h-64 rounded-xl border border-slate-200 dark:border-slate-800 shadow-md"
-                      />
+                      {frontDoc ? (
+                        <img
+                          src={frontDoc}
+                          alt={`NIC Front - ${selectedKycUser.nic}`}
+                          className="w-full h-auto object-contain max-h-72 rounded-xl border border-slate-200 dark:border-slate-800 shadow-md"
+                        />
+                      ) : (
+                        <div className="py-12 px-6 flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40">
+                          <FileText className="h-10 w-10 text-slate-400 mb-2" />
+                          <p className="font-bold text-sm text-slate-700 dark:text-slate-300">No NIC Front Document Attached</p>
+                          <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
+                            The applicant has not uploaded a digital copy of their National Identity Card front.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
 
                   {kycDocTab === 'back' && (
                     <div className="w-full max-w-lg">
                       <div className="flex items-center justify-between mb-2 text-[11px] text-slate-500">
-                        <span>Sri Lankan NIC — Reverse Side</span>
-                        <span>{selectedKycUser.nicBackDocumentBase64 ? 'Uploaded Image' : 'Card Preview'}</span>
+                        <span>Sri Lankan NIC — Reverse Side Copy</span>
+                        <span className="font-semibold text-slate-400">{backDoc ? 'Uploaded Document' : 'Not Provided'}</span>
                       </div>
-                      <img
-                        src={backSvg}
-                        alt={`NIC Back - ${selectedKycUser.nic}`}
-                        className="w-full h-auto object-contain max-h-64 rounded-xl border border-slate-200 dark:border-slate-800 shadow-md"
-                      />
+                      {backDoc ? (
+                        <img
+                          src={backDoc}
+                          alt={`NIC Back - ${selectedKycUser.nic}`}
+                          className="w-full h-auto object-contain max-h-72 rounded-xl border border-slate-200 dark:border-slate-800 shadow-md"
+                        />
+                      ) : (
+                        <div className="py-12 px-6 flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40">
+                          <Layers className="h-10 w-10 text-slate-400 mb-2" />
+                          <p className="font-bold text-sm text-slate-700 dark:text-slate-300">No Reverse Document Attached</p>
+                          <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
+                            The applicant has not uploaded the reverse side copy of their National Identity Card.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  {kycDocTab === 'utility' && utilityBill && (
+                  {kycDocTab === 'utility' && (
                     <div className="w-full max-w-lg">
                       <div className="flex items-center justify-between mb-2 text-[11px] text-slate-500">
                         <span>Electricity Utility Interconnect Proof</span>
-                        <span>Uploaded Document</span>
+                        <span className="font-semibold text-slate-400">{utilityBill ? 'Uploaded Document' : 'Not Provided'}</span>
                       </div>
-                      <img
-                        src={utilityBill}
-                        alt="Utility Bill"
-                        className="w-full h-auto object-contain max-h-72 rounded-xl border border-slate-200 dark:border-slate-800 shadow-md"
-                      />
+                      {utilityBill ? (
+                        <img
+                          src={utilityBill}
+                          alt="Utility Bill"
+                          className="w-full h-auto object-contain max-h-72 rounded-xl border border-slate-200 dark:border-slate-800 shadow-md"
+                        />
+                      ) : (
+                        <div className="py-12 px-6 flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40">
+                          <FileText className="h-10 w-10 text-slate-400 mb-2" />
+                          <p className="font-bold text-sm text-slate-700 dark:text-slate-300">No Utility Bill Attached</p>
+                          <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
+                            Electricity interconnection billing proof was not provided.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1072,14 +1059,7 @@ export default function ProsumerManagement({ theme }) {
                     <ShieldCheck className="h-4 w-4 text-amber-500" />
                     <span>Identity Document Attachments</span>
                   </span>
-                  <button
-                    type="button"
-                    onClick={handleGenerateMockDoc}
-                    className="text-[11px] font-bold text-amber-500 hover:text-amber-400 flex items-center gap-1 cursor-pointer"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    <span>Generate Sample Card Preview</span>
-                  </button>
+                  <span className="text-[11px] text-slate-400 font-medium">Front copy required for verification</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
