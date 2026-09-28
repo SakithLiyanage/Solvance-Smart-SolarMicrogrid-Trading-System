@@ -249,6 +249,12 @@ namespace SolarMicrogridApi.Services
                 throw new KeyNotFoundException("Reservation not found.");
             }
 
+            if (!string.Equals(reservation.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Only pending reservations can be approved. Current status is '{reservation.Status}'.");
+            }
+
             var qrToken = GenerateSecureQrToken(reservation);
             var update = Builders<EnergyReservation>.Update
                 .Set(r => r.Status, "Approved")
@@ -270,15 +276,23 @@ namespace SolarMicrogridApi.Services
                 throw new ArgumentException("QR Code token is required.");
             }
 
-            var filter = Builders<EnergyReservation>.Filter.Or(
-                Builders<EnergyReservation>.Filter.Eq(r => r.QrCodeToken, token),
-                Builders<EnergyReservation>.Filter.Eq(r => r.ReservationNumber, token)
-            );
+            if (!IsWellFormedQrToken(token))
+            {
+                throw new InvalidOperationException("Invalid QR token format/signature.");
+            }
 
-            var reservation = await _context.Reservations.Find(filter).FirstOrDefaultAsync();
+            var reservation = await _context.Reservations
+                .Find(r => r.QrCodeToken == token)
+                .FirstOrDefaultAsync();
+
             if (reservation == null)
             {
                 throw new KeyNotFoundException("Invalid QR Code. No matching reservation record found.");
+            }
+
+            if (!ValidateQrSignature(reservation, token))
+            {
+                throw new InvalidOperationException("Invalid QR token format/signature.");
             }
 
             if (!string.IsNullOrWhiteSpace(dto.StationId) &&
@@ -444,19 +458,26 @@ namespace SolarMicrogridApi.Services
         {
             // Method: GenerateSecureQrToken - Creates tamper-resistant signed string for mobile QR rendering and operator scanning.
             var raw = $"{reservation.ReservationNumber}|{reservation.ProsumerNic}|{reservation.StationId}|{reservation.ScheduledDateTime:yyyyMMddHHmm}|{reservation.EnergyAmountKwh}";
-            var salt = !string.IsNullOrEmpty(_settings.QrSecretSalt) ? _settings.QrSecretSalt : "EnterpriseMicrogridSecretSalt2026";
-            using var sha = SHA256.Create();
-            var hashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(raw + salt));
+            using var hmac = new HMACSHA256(
+    Encoding.UTF8.GetBytes(_qrSigningSecret));
+            var hashBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(raw));
             var sig = Convert.ToHexString(hashBytes)[..12];
             return $"SOLAR-TX:{reservation.ReservationNumber}:{sig}";
         }
 
         private bool ValidateQrSignature(EnergyReservation reservation, string token)
         {
+            if (!IsWellFormedQrToken(token))
+            {
+                return false;
+            }
+
             var expectedToken = GenerateSecureQrToken(reservation);
-            return CryptographicOperations.FixedTimeEquals(
-                Encoding.UTF8.GetBytes(expectedToken),
-                Encoding.UTF8.GetBytes(token));
+            var expectedBytes = Encoding.UTF8.GetBytes(expectedToken);
+            var actualBytes = Encoding.UTF8.GetBytes(token);
+
+            return expectedBytes.Length == actualBytes.Length &&
+                   CryptographicOperations.FixedTimeEquals(expectedBytes, actualBytes);
         }
 
         private static bool IsWellFormedQrToken(string token)
