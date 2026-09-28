@@ -7,6 +7,4 @@
     <string name="title_activity_reservation_detail">Reservation Details</string>
     <string name="title_activity_stations_map">Nearby Solar Hubs</string>
     <string name="title_activity_operator_scanner">Grid Operator Scanner</string>
-    <!-- Google Maps API Key for Google Play Services Maps SDK -->
-    <string name="google_maps_key" translatable="false">AIzaSyDTTA6t9N7vy4z2cjrwqHWXyukakXjAHik</string>
 </resources>
