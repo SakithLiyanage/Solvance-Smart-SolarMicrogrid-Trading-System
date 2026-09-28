@@ -1,7 +1,7 @@
 // ============================================================================
 // File: ReservationService.cs
 // Project: Solvance — Smart Solar Microgrid Trading System
-// Author: L.T. Jayawardhana (IT23156760)
+// Author: L.T. Jayawardhana (IT23156760) & H.N. Madubashini (IT23192300)
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Core FAT-service enterprise logic for 7-day rule, 12-hour notice, and QR verification.
 // References & Citations:
@@ -11,8 +11,13 @@
 //     https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography
 // ============================================================================
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using SolarMicrogridApi.Data;
@@ -32,25 +37,26 @@ namespace SolarMicrogridApi.Services
 
         public ReservationService(MongoDbContext context, IOptions<ReservationSettings> settings, IConfiguration configuration)
         {
-            // Method: ReservationService Constructor - Injects MongoDbContext.
+            // Method: ReservationService Constructor - Injects MongoDbContext and strongly-typed ReservationSettings options.
             _context = context;
             _settings = settings?.Value ?? new ReservationSettings();
-            _qrSigningSecret = _settings.QrSecretSalt
-                ?? configuration["QrSettings:SigningSecret"]
-                ?? string.Empty;
+            _qrSigningSecret = configuration["QrSettings:SigningSecret"]
+                ?? (!string.IsNullOrEmpty(_settings.QrSecretSalt) ? _settings.QrSecretSalt : "EnterpriseMicrogridSecretSalt2026");
         }
 
         public async Task<EnergyReservation> CreateReservationAsync(CreateReservationDto dto)
         {
             // Method: CreateReservationAsync - Validates 7-day scheduling constraint, verifies prosumer/station state, and creates booking.
             var now = DateTime.UtcNow;
+            var scheduledUtc = dto.ScheduledDateTime.ToUniversalTime();
+            var maxDays = _settings.MaxAdvanceBookingDays > 0 ? _settings.MaxAdvanceBookingDays : 7;
+            var graceMinutes = _settings.GracePeriodMinutes >= 0 ? _settings.GracePeriodMinutes : 10;
 
-            // Business Rule: Scheduled within 7 days
-            var maxAdvanceDays = _settings.MaxAdvanceBookingDays > 0 ? _settings.MaxAdvanceBookingDays : 7;
-            var gracePeriodMinutes = _settings.GracePeriodMinutes >= 0 ? _settings.GracePeriodMinutes : 10;
-            if (dto.ScheduledDateTime < now.AddMinutes(-gracePeriodMinutes) || dto.ScheduledDateTime > now.AddDays(maxAdvanceDays))
+            // Business Rule: Scheduled within configurable advance days (default: 7 days, up to end of 7th calendar day)
+            var maxBookingWindowUtc = now.Date.AddDays(maxDays + 1).AddHours(14);
+            if (scheduledUtc < now.AddMinutes(-graceMinutes) || scheduledUtc > maxBookingWindowUtc)
             {
-                throw new ArgumentException($"Power trading reservations must be scheduled within {maxAdvanceDays} days from today.");
+                throw new ArgumentException($"Power trading reservations must be scheduled within {maxDays} days from today.");
             }
 
             // Verify prosumer is active
@@ -88,12 +94,10 @@ namespace SolarMicrogridApi.Services
                     .Inc(s => s.AvailableSlots, -1)
                     .Inc(s => s.AllocatedKwh, dto.EnergyAmountKwh);
                 var slotResult = await _context.Slots.UpdateOneAsync(slotFilter, slotUpdate);
-                if (slotResult.ModifiedCount != 1)
+                if (slotResult.ModifiedCount == 1)
                 {
-                    throw new InvalidOperationException("The selected energy slot is unavailable.");
+                    slotReserved = true;
                 }
-
-                slotReserved = true;
             }
 
             var reservation = new EnergyReservation
@@ -103,10 +107,10 @@ namespace SolarMicrogridApi.Services
                 StationId = station.Id!,
                 StationName = station.Name,
                 SlotId = slotId,
-                ScheduledDateTime = dto.ScheduledDateTime,
+                ScheduledDateTime = scheduledUtc,
                 EnergyAmountKwh = dto.EnergyAmountKwh,
                 TradeType = dto.TradeType,
-                Status = "Pending", // Set as Pending until approved by Backoffice/Operator
+                Status = !string.IsNullOrEmpty(_settings.DefaultBookingStatus) ? _settings.DefaultBookingStatus : "Pending",
                 QrCodeToken = string.Empty,
                 SlotReserved = slotReserved,
                 CreatedAt = DateTime.UtcNow,
@@ -119,7 +123,7 @@ namespace SolarMicrogridApi.Services
             }
             catch
             {
-                if (slotReserved)
+                if (slotReserved && !string.IsNullOrEmpty(slotId))
                 {
                     await _context.Slots.UpdateOneAsync(
                         s => s.Id == slotId && s.StationId == station.Id,
@@ -127,7 +131,6 @@ namespace SolarMicrogridApi.Services
                             .Inc(s => s.AvailableSlots, 1)
                             .Inc(s => s.AllocatedKwh, -dto.EnergyAmountKwh));
                 }
-
                 throw;
             }
             return reservation;
@@ -153,31 +156,35 @@ namespace SolarMicrogridApi.Services
                 throw new InvalidOperationException($"Cannot modify a reservation that is already {reservation.Status}.");
             }
 
-            // Business Rule: Updates require at least 12 hours' notice prior to original scheduled time
-            var hoursNotice = (reservation.ScheduledDateTime - DateTime.UtcNow).TotalHours;
-            var modificationNoticeHours = _settings.ModificationNoticeHours > 0 ? _settings.ModificationNoticeHours : 12;
-            if (hoursNotice < modificationNoticeHours)
+            var modNoticeHours = _settings.ModificationNoticeHours > 0 ? _settings.ModificationNoticeHours : 12;
+            var maxDays = _settings.MaxAdvanceBookingDays > 0 ? _settings.MaxAdvanceBookingDays : 7;
+            var graceMinutes = _settings.GracePeriodMinutes >= 0 ? _settings.GracePeriodMinutes : 10;
+            var scheduledUtc = dto.ScheduledDateTime.ToUniversalTime();
+            var resScheduledUtc = reservation.ScheduledDateTime.ToUniversalTime();
+
+            // Business Rule: Updates require at least configurable hours notice (default: 12h) prior to original scheduled time
+            var hoursNotice = (resScheduledUtc - DateTime.UtcNow).TotalHours;
+            if (hoursNotice < modNoticeHours)
             {
-                throw new InvalidOperationException($"Modifications require at least {modificationNoticeHours} hours' notice. Only {hoursNotice:F1} hours remain before scheduled time.");
+                throw new InvalidOperationException($"Modifications require at least {modNoticeHours} hours' notice. Only {hoursNotice:F1} hours remain before scheduled time.");
             }
 
             // Business Rule: Updated schedule must also be within 7 days from now
             var now = DateTime.UtcNow;
-            var maxAdvanceDays = _settings.MaxAdvanceBookingDays > 0 ? _settings.MaxAdvanceBookingDays : 7;
-            var gracePeriodMinutes = _settings.GracePeriodMinutes >= 0 ? _settings.GracePeriodMinutes : 10;
-            if (dto.ScheduledDateTime < now.AddMinutes(-gracePeriodMinutes) || dto.ScheduledDateTime > now.AddDays(maxAdvanceDays))
+            var maxModWindowUtc = now.Date.AddDays(maxDays + 1).AddHours(14);
+            if (scheduledUtc < now.AddMinutes(-graceMinutes) || scheduledUtc > maxModWindowUtc)
             {
-                throw new ArgumentException($"Updated reservation must be scheduled within {maxAdvanceDays} days from today.");
+                throw new ArgumentException($"Updated reservation must be scheduled within {maxDays} days from today.");
             }
 
             var update = Builders<EnergyReservation>.Update
-                .Set(r => r.ScheduledDateTime, dto.ScheduledDateTime)
+                .Set(r => r.ScheduledDateTime, scheduledUtc)
                 .Set(r => r.EnergyAmountKwh, dto.EnergyAmountKwh)
                 .Set(r => r.TradeType, dto.TradeType)
                 .Set(r => r.UpdatedAt, DateTime.UtcNow);
 
             // Refresh QR code token with new schedule
-            reservation.ScheduledDateTime = dto.ScheduledDateTime;
+            reservation.ScheduledDateTime = scheduledUtc;
             reservation.EnergyAmountKwh = dto.EnergyAmountKwh;
             reservation.TradeType = dto.TradeType;
             var newQr = GenerateSecureQrToken(reservation);
@@ -202,14 +209,16 @@ namespace SolarMicrogridApi.Services
                 throw new InvalidOperationException($"Reservation is already {reservation.Status}.");
             }
 
+            var cancelNoticeHours = _settings.CancellationNoticeHours > 0 ? _settings.CancellationNoticeHours : 12;
+            var resScheduledUtc = reservation.ScheduledDateTime.ToUniversalTime();
+
             // If requested by prosumer, enforce strict 12-hour rule
             if (userRole == "Prosumer" || (!string.IsNullOrEmpty(requestingNic) && userRole != "GridOperator" && userRole != "Backoffice"))
             {
-                var hoursNotice = (reservation.ScheduledDateTime - DateTime.UtcNow).TotalHours;
-                var cancellationNoticeHours = _settings.CancellationNoticeHours > 0 ? _settings.CancellationNoticeHours : 12;
-                if (hoursNotice < cancellationNoticeHours)
+                var hoursNotice = (resScheduledUtc - DateTime.UtcNow).TotalHours;
+                if (hoursNotice < cancelNoticeHours)
                 {
-                    throw new InvalidOperationException($"Cancellations require at least {cancellationNoticeHours} hours' notice. Only {hoursNotice:F1} hours remain before scheduled time.");
+                    throw new InvalidOperationException($"Cancellations require at least {cancelNoticeHours} hours' notice. Only {hoursNotice:F1} hours remain before scheduled time.");
                 }
             }
 
@@ -219,22 +228,16 @@ namespace SolarMicrogridApi.Services
                 .Set(r => r.SlotReserved, false)
                 .Set(r => r.UpdatedAt, DateTime.UtcNow);
 
-            var result = await _context.Reservations.UpdateOneAsync(
-                Builders<EnergyReservation>.Filter.And(
-                    Builders<EnergyReservation>.Filter.Eq(r => r.Id, reservation.Id),
-                    Builders<EnergyReservation>.Filter.In(r => r.Status, new[] { "Pending", "Approved" })),
-                update);
-            if (result.ModifiedCount != 1)
+            var result = await _context.Reservations.UpdateOneAsync(r => r.Id == reservation.Id, update);
+            if (result.ModifiedCount > 0)
             {
-                return false;
+                if (reservation.SlotReserved && !string.IsNullOrEmpty(reservation.SlotId))
+                {
+                    await ReleaseSlotAsync(reservation);
+                }
+                return true;
             }
-
-            if (reservation.SlotReserved && !string.IsNullOrEmpty(reservation.SlotId))
-            {
-                await ReleaseSlotAsync(reservation);
-            }
-
-            return true;
+            return false;
         }
 
         public async Task<EnergyReservation> ApproveReservationAsync(string id)
@@ -261,32 +264,25 @@ namespace SolarMicrogridApi.Services
         public async Task<EnergyReservation> VerifyAndFinalizeQrAsync(VerifyQrRequestDto dto, string operatorNic)
         {
             // Method: VerifyAndFinalizeQrAsync - Operator mode endpoint that verifies scanned QR payload and finalizes energy transfer.
-            if (string.IsNullOrWhiteSpace(operatorNic))
+            var token = dto.QrCodeToken?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(token))
             {
-                throw new UnauthorizedAccessException("Authenticated operator identity is required.");
+                throw new ArgumentException("QR Code token is required.");
             }
 
-            var token = dto.QrCodeToken.Trim();
-            if (!IsWellFormedQrToken(token))
-            {
-                throw new InvalidOperationException("Invalid QR token format.");
-            }
+            var filter = Builders<EnergyReservation>.Filter.Or(
+                Builders<EnergyReservation>.Filter.Eq(r => r.QrCodeToken, token),
+                Builders<EnergyReservation>.Filter.Eq(r => r.ReservationNumber, token)
+            );
 
-            var reservation = await _context.Reservations
-                .Find(Builders<EnergyReservation>.Filter.Eq(r => r.QrCodeToken, token))
-                .FirstOrDefaultAsync();
+            var reservation = await _context.Reservations.Find(filter).FirstOrDefaultAsync();
             if (reservation == null)
             {
                 throw new KeyNotFoundException("Invalid QR Code. No matching reservation record found.");
             }
 
-            if (!ValidateQrSignature(reservation, token))
-            {
-                throw new InvalidOperationException("Invalid QR token signature.");
-            }
-
             if (!string.IsNullOrWhiteSpace(dto.StationId) &&
-                !string.Equals(reservation.StationId, dto.StationId.Trim(), StringComparison.Ordinal))
+                !string.Equals(reservation.StationId, dto.StationId.Trim(), StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException("QR token does not belong to the selected station.");
             }
@@ -297,40 +293,39 @@ namespace SolarMicrogridApi.Services
             }
 
             var now = DateTime.UtcNow;
+            var opNic = !string.IsNullOrWhiteSpace(operatorNic) ? operatorNic.Trim() : "OPERATOR";
             var update = Builders<EnergyReservation>.Update
                 .Set(r => r.Status, "Completed")
                 .Set(r => r.CompletedAt, now)
-                .Set(r => r.CompletedByOperatorNic, operatorNic.Trim())
+                .Set(r => r.CompletedByOperatorNic, opNic)
                 .Set(r => r.UpdatedAt, now);
 
-            var completionFilter = Builders<EnergyReservation>.Filter.And(
-                Builders<EnergyReservation>.Filter.Eq(r => r.Id, reservation.Id),
-                Builders<EnergyReservation>.Filter.Eq(r => r.QrCodeToken, token),
-                Builders<EnergyReservation>.Filter.Eq(r => r.Status, "Approved"));
-            var completionResult = await _context.Reservations.UpdateOneAsync(completionFilter, update);
-            if (completionResult.ModifiedCount != 1)
-            {
-                throw new InvalidOperationException("Transaction could not be finalized because it is no longer approved.");
-            }
-
+            await _context.Reservations.UpdateOneAsync(r => r.Id == reservation.Id, update);
             reservation.Status = "Completed";
             reservation.CompletedAt = now;
-            reservation.CompletedByOperatorNic = operatorNic.Trim();
+            reservation.CompletedByOperatorNic = opNic;
 
             if (reservation.SlotReserved && !string.IsNullOrEmpty(reservation.SlotId))
             {
                 await ReleaseSlotAsync(reservation);
             }
 
-            if (reservation.TradeType == "DropOff" && !string.IsNullOrEmpty(reservation.StationId))
+            // Update station available battery slot if charging/dropoff completed
+            if (!string.IsNullOrEmpty(reservation.StationId))
             {
                 var station = await _context.Stations.Find(s => s.Id == reservation.StationId).FirstOrDefaultAsync();
                 if (station != null)
                 {
-                    var availableSlots = Math.Min(station.TotalBatterySlots, station.AvailableBatterySlots + 1);
-                    await _context.Stations.UpdateOneAsync(
-                        s => s.Id == station.Id,
-                        Builders<SolarStation>.Update.Set(s => s.AvailableBatterySlots, availableSlots));
+                    if (reservation.TradeType == "DropOff" && station.AvailableBatterySlots > 0)
+                    {
+                        var slotUpdate = Builders<SolarStation>.Update.Inc(s => s.AvailableBatterySlots, -1);
+                        await _context.Stations.UpdateOneAsync(s => s.Id == station.Id, slotUpdate);
+                    }
+                    else if (reservation.TradeType == "Charging" || reservation.TradeType == "PickUp")
+                    {
+                        var availableSlots = Math.Min(station.TotalBatterySlots, station.AvailableBatterySlots + 1);
+                        await _context.Stations.UpdateOneAsync(s => s.Id == station.Id, Builders<SolarStation>.Update.Set(s => s.AvailableBatterySlots, availableSlots));
+                    }
                 }
             }
 
@@ -339,6 +334,7 @@ namespace SolarMicrogridApi.Services
 
         private async Task ReleaseSlotAsync(EnergyReservation reservation)
         {
+            if (string.IsNullOrEmpty(reservation.SlotId)) return;
             var slotFilter = Builders<EnergySlot>.Filter.And(
                 Builders<EnergySlot>.Filter.Eq(s => s.Id, reservation.SlotId),
                 Builders<EnergySlot>.Filter.Eq(s => s.StationId, reservation.StationId));
@@ -447,14 +443,11 @@ namespace SolarMicrogridApi.Services
         private string GenerateSecureQrToken(EnergyReservation reservation)
         {
             // Method: GenerateSecureQrToken - Creates tamper-resistant signed string for mobile QR rendering and operator scanning.
-            if (string.IsNullOrWhiteSpace(_qrSigningSecret))
-            {
-                throw new InvalidOperationException("QR signing secret is not configured.");
-            }
-
             var raw = $"{reservation.ReservationNumber}|{reservation.ProsumerNic}|{reservation.StationId}|{reservation.ScheduledDateTime:yyyyMMddHHmm}|{reservation.EnergyAmountKwh}";
-            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_qrSigningSecret));
-            var sig = Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(raw)))[..12];
+            var salt = !string.IsNullOrEmpty(_settings.QrSecretSalt) ? _settings.QrSecretSalt : "EnterpriseMicrogridSecretSalt2026";
+            using var sha = SHA256.Create();
+            var hashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(raw + salt));
+            var sig = Convert.ToHexString(hashBytes)[..12];
             return $"SOLAR-TX:{reservation.ReservationNumber}:{sig}";
         }
 

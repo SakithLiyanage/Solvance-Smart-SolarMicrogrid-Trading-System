@@ -133,7 +133,6 @@ namespace SolarMicrogridApi.Services
                 CapturedAt = DateTime.UtcNow
             };
         }
-
         public async Task<bool> DeactivateStationAsync(string id)
         {
             // Method: DeactivateStationAsync - Deactivates station while strictly blocking if active energy reservations exist.

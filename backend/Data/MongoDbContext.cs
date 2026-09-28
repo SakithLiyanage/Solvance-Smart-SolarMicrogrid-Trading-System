@@ -29,7 +29,7 @@ namespace SolarMicrogridApi.Data
         private readonly MongoDbSettings _settings;
 
         /// <summary>
-        /// Initializes the MongoDB client and accesses the target database with resilient connection settings.
+        /// Initializes the MongoDB client with strongly-typed IOptions settings.
         /// </summary>
         public MongoDbContext(IOptions<MongoDbSettings> options, IConfiguration configuration)
         {
@@ -45,7 +45,7 @@ namespace SolarMicrogridApi.Data
                 : (configuration["MongoDbSettings:DatabaseName"] ?? "SolarMicrogridDb");
 
             IMongoDatabase? targetDb = null;
-            IMongoClient targetClient;
+            IMongoClient? targetClient = null;
 
             try
             {
@@ -87,12 +87,13 @@ namespace SolarMicrogridApi.Data
             }
 
             _client = targetClient!;
-            _database = targetDb!;
+            _database = targetDb;
 
             EnsureIndexesCreated();
         }
 
         public IMongoClient Client => _client;
+
         /// <summary>
         /// Collection 1: "User's detail" per specification.
         /// </summary>

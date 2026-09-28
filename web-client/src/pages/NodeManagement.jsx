@@ -24,11 +24,11 @@
 // ============================================================================
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Plus, Cpu, MapPin, Battery, Calendar, AlertCircle, 
-  CheckCircle2, ShieldAlert, Edit3, Power, RefreshCw, 
+import {
+  Plus, Cpu, MapPin, Battery, Calendar, AlertCircle,
+  CheckCircle2, ShieldAlert, Edit3, Power, RefreshCw,
   Clock, Navigation, ShieldCheck, ExternalLink, Eye, Map,
-  BatteryCharging, Layers
+  BatteryCharging, Layers, Info
 } from 'lucide-react';
 import api from '../api/client';
 import Modal from '../components/Modal';
@@ -257,11 +257,6 @@ export default function NodeManagement({ theme }) {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
-              Infrastructure Grid
-            </span>
-          </div>
           <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
             Solar Microgrid Hub Nodes
           </h1>
@@ -275,11 +270,10 @@ export default function NodeManagement({ theme }) {
           <div className="flex bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-inner">
             <button
               onClick={() => setViewMode('grid')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                viewMode === 'grid'
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${viewMode === 'grid'
                   ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+                }`}
             >
               Grid View
             </button>
@@ -288,11 +282,10 @@ export default function NodeManagement({ theme }) {
                 setViewMode('map');
                 if (!selectedMapStation && stations.length > 0) setSelectedMapStation(stations[0]);
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                viewMode === 'map'
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${viewMode === 'map'
                   ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+                }`}
             >
               <Map className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
               Google Map View
@@ -317,15 +310,15 @@ export default function NodeManagement({ theme }) {
         </div>
       </div>
 
-      {/* Enterprise Deactivation Rule Safeguard Notice */}
-      <div className="p-4 rounded-2xl bg-amber-500/5 dark:bg-slate-900/60 border border-amber-500/30 backdrop-blur-md flex items-start gap-3.5 transition-colors duration-300">
-        <ShieldAlert className="h-5 w-5 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
-        <div className="text-xs">
-          <span className="font-bold text-amber-700 dark:text-amber-300 block mb-0.5">FAT-Service Integrity Constraint:</span>
-          <span className="text-slate-600 dark:text-slate-300">
-            A solar microgrid node CANNOT be deactivated if active or pending energy reservations are scheduled against it. Deactivation requests are strictly evaluated on the central Web API.
-          </span>
+      {/* Notice Banner */}
+      <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.03] dark:bg-slate-900/60 backdrop-blur-md p-3.5 sm:p-4 flex items-center gap-3 transition-colors duration-300">
+        <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+          <Info className="h-4 w-4 text-amber-600 dark:text-amber-400" />
         </div>
+        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+          <strong className="font-semibold text-slate-900 dark:text-white mr-1.5">Notice:</strong>
+          Solar hub stations with active or scheduled energy reservations cannot be deactivated until all bookings are completed or cancelled.
+        </p>
       </div>
 
       {/* Notifications */}
@@ -410,25 +403,23 @@ export default function NodeManagement({ theme }) {
                   <div
                     key={s.id}
                     onClick={() => setSelectedMapStation(s)}
-                    className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-                      isSelected
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer ${isSelected
                         ? 'bg-amber-500/10 border-amber-500/50 shadow-md ring-1 ring-amber-500/30'
                         : 'bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">
                         {s.stationCode}
                       </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        s.isActive ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/15 text-red-600 dark:text-red-400'
-                      }`}>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${s.isActive ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/15 text-red-600 dark:text-red-400'
+                        }`}>
                         {s.isActive ? 'Operational' : 'Inactive'}
                       </span>
                     </div>
                     <h4 className="font-bold text-slate-900 dark:text-white text-sm truncate">{s.name}</h4>
                     <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{s.address}</p>
-                    
+
                     <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300 font-mono">
                       <span>{s.capacityKwh} kW Output</span>
                       <button
@@ -454,11 +445,10 @@ export default function NodeManagement({ theme }) {
             return (
               <div
                 key={station.id}
-                className={`rounded-3xl border transition-all duration-300 overflow-hidden backdrop-blur-xl shadow-sm dark:shadow-xl ${
-                  station.isActive
+                className={`rounded-3xl border transition-all duration-300 overflow-hidden backdrop-blur-xl shadow-sm dark:shadow-xl ${station.isActive
                     ? 'bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800 hover:border-amber-500/40 hover:shadow-lg dark:hover:shadow-2xl dark:hover:shadow-amber-500/5 hover:-translate-y-1'
                     : 'bg-slate-50 dark:bg-slate-950/60 border-red-200 dark:border-red-900/30 opacity-75'
-                }`}
+                  }`}
               >
                 {/* Card Header */}
                 <div className="p-6 border-b border-slate-100 dark:border-slate-800/80">
@@ -467,11 +457,10 @@ export default function NodeManagement({ theme }) {
                       {station.stationCode}
                     </span>
                     <span
-                      className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold ${
-                        station.isActive
+                      className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold ${station.isActive
                           ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
                           : 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30'
-                      }`}
+                        }`}
                     >
                       <span className={`h-1.5 w-1.5 rounded-full ${station.isActive ? 'bg-emerald-500 dark:bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
                       <span>{station.isActive ? 'Operational' : 'Deactivated'}</span>
@@ -508,9 +497,8 @@ export default function NodeManagement({ theme }) {
                     {/* Capacity Bar */}
                     <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          slotPercent > 50 ? 'bg-emerald-500' : slotPercent > 20 ? 'bg-amber-500' : 'bg-red-500'
-                        }`}
+                        className={`h-full rounded-full transition-all duration-500 ${slotPercent > 50 ? 'bg-emerald-500' : slotPercent > 20 ? 'bg-amber-500' : 'bg-red-500'
+                          }`}
                         style={{ width: `${slotPercent}%` }}
                       />
                     </div>
@@ -546,11 +534,10 @@ export default function NodeManagement({ theme }) {
                   </button>
                   <button
                     onClick={() => handleToggleActive(station)}
-                    className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition cursor-pointer ${
-                      station.isActive
+                    className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition cursor-pointer ${station.isActive
                         ? 'bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/30'
                         : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
-                    }`}
+                      }`}
                     title={station.isActive ? 'Deactivation blocked if active reservations exist' : 'Reactivate station'}
                   >
                     <Power className="h-3.5 w-3.5" />
@@ -785,10 +772,9 @@ export default function NodeManagement({ theme }) {
                         <td className="px-3 py-2 text-slate-500">{slot.allocatedKwh} kWh</td>
                         <td className="px-3 py-2 font-bold text-emerald-600 dark:text-emerald-400">{slot.availableSlots}</td>
                         <td className="px-3 py-2">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            slot.status === 'Open' ? 'bg-emerald-500/15 text-emerald-600' :
-                            slot.status === 'Full' ? 'bg-red-500/15 text-red-600' : 'bg-amber-500/15 text-amber-600'
-                          }`}>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${slot.status === 'Open' ? 'bg-emerald-500/15 text-emerald-600' :
+                              slot.status === 'Full' ? 'bg-red-500/15 text-red-600' : 'bg-amber-500/15 text-amber-600'
+                            }`}>
                             {slot.status}
                           </span>
                         </td>

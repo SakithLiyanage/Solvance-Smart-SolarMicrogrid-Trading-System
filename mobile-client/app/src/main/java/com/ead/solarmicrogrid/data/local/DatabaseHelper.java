@@ -181,7 +181,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.delete(TABLE_USER, null, null);
     }
 
-    public void updateUserProfile(String nic, String fullName, String email, String phone, String address) {
+    public void updateUserProfile(String nic, String fullName, String email, String phone, String address, double solarCapacityKw, String inverterSerial) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COL_NAME, fullName);
@@ -190,11 +190,19 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         if (address != null) {
             values.put(COL_ADDRESS, address);
         }
+        values.put(COL_SOLAR_CAPACITY, solarCapacityKw);
+        if (inverterSerial != null) {
+            values.put(COL_INVERTER_SERIAL, inverterSerial);
+        }
         db.update(TABLE_USER, values, COL_NIC + " = ?", new String[]{nic});
     }
 
+    public void updateUserProfile(String nic, String fullName, String email, String phone, String address) {
+        updateUserProfile(nic, fullName, email, phone, address, 15.0, "INV-SL-2026-DEFAULT");
+    }
+
     public void updateUserProfile(String nic, String fullName, String email, String phone) {
-        updateUserProfile(nic, fullName, email, phone, null);
+        updateUserProfile(nic, fullName, email, phone, null, 15.0, "INV-SL-2026-DEFAULT");
     }
 
     // --- CACHED STATIONS OPERATIONS ---

@@ -33,7 +33,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('overview');
   const [publicView, setPublicView] = useState('home'); // 'home' | 'login'
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('solar_theme') || 'dark';
+    return localStorage.getItem('solar_theme') || 'light';
   });
 
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
@@ -185,17 +185,6 @@ export default function App() {
             </span>
             <span>&bull; Smart Solar Microgrid Trading Platform</span>
             <span className="hidden md:inline">&bull; Decentralized Clean Energy Network (2026)</span>
-          </div>
-
-          <div className="flex items-center gap-4 text-[11px] font-mono">
-            <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span>
-              FAT-Service API: Online
-            </span>
-            <span className="flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400">
-              <span className="h-2 w-2 rounded-full bg-cyan-500 dark:bg-cyan-400"></span>
-              MongoDB Atlas: Connected
-            </span>
           </div>
         </div>
       </footer>

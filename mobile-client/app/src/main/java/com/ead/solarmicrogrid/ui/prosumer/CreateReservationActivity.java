@@ -19,6 +19,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -51,6 +52,7 @@ import retrofit2.Response;
 
 public class CreateReservationActivity extends AppCompatActivity {
 
+    private ImageButton btnBack;
     private Spinner spStations;
     private RadioGroup rgTradeType;
     private RadioButton rbDropOff;
@@ -83,6 +85,13 @@ public class CreateReservationActivity extends AppCompatActivity {
     }
 
     private void initViews() {
+        btnBack = findViewById(R.id.btnBack);
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> {
+                finish();
+                overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
+            });
+        }
         spStations = findViewById(R.id.spStations);
         rgTradeType = findViewById(R.id.rgTradeType);
         rbDropOff = findViewById(R.id.rbDropOff);
