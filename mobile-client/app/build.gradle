@@ -2,6 +2,13 @@ plugins {
     id 'com.android.application'
 }
 
+Properties localProps = new Properties()
+File localPropsFile = rootProject.file('local.properties')
+if (localPropsFile.exists()) {
+    localProps.load(new FileInputStream(localPropsFile))
+}
+String mapsApiKey = localProps.getProperty('MAPS_API_KEY', '')
+
 android {
     namespace 'com.ead.solarmicrogrid'
     compileSdk 34
@@ -12,6 +19,8 @@ android {
         targetSdk 34
         versionCode 1
         versionName "1.0.0"
+
+        resValue "string", "google_maps_key", mapsApiKey
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
