@@ -24,13 +24,17 @@ using SolarMicrogridApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var qrSigningSecret = builder.Configuration["QrSettings:SigningSecret"];
+var qrSigningSecret = Environment.GetEnvironmentVariable("QrSettings__SigningSecret")
+    ?? Environment.GetEnvironmentVariable("QR_SIGNING_SECRET")
+    ?? builder.Configuration["QrSettings:SigningSecret"]
+    ?? builder.Configuration["QrSettings__SigningSecret"];
+
 if (string.IsNullOrWhiteSpace(qrSigningSecret) ||
     qrSigningSecret == "CHANGE-ME-USE-A-SECRET-VIA-ENVIRONMENT-VARIABLE")
 {
     throw new InvalidOperationException(
         "QrSettings:SigningSecret must be configured with a non-placeholder secret. " +
-        "Use the QrSettings__SigningSecret environment variable or user secrets.");
+        "Use the QrSettings__SigningSecret environment variable or dotnet user-secrets.");
 }
 
 // Method: ConfigureServices - Registers controllers, MongoDB context, enterprise services, and JWT.
@@ -66,9 +70,12 @@ builder.Services.AddCors(options =>
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>() ?? new JwtSettings();
-var jwtSecret = !string.IsNullOrEmpty(jwtSettings.EffectiveSecret)
-    ? jwtSettings.EffectiveSecret
-    : (builder.Configuration["JwtSettings:SecretKey"] ?? "EnterpriseSolarMicrogridTradingSystemSecretKey2026!#Security");
+var jwtSecret = Environment.GetEnvironmentVariable("JwtSettings__Secret")
+    ?? Environment.GetEnvironmentVariable("JwtSettings__SecretKey")
+    ?? Environment.GetEnvironmentVariable("JWT_SECRET")
+    ?? (!string.IsNullOrEmpty(jwtSettings.EffectiveSecret)
+        ? jwtSettings.EffectiveSecret
+        : (builder.Configuration["JwtSettings:SecretKey"] ?? "EnterpriseSolarMicrogridTradingSystemSecretKey2026!#Security"));
 var key = Encoding.UTF8.GetBytes(jwtSecret);
 
 builder.Services.AddAuthentication(options =>
