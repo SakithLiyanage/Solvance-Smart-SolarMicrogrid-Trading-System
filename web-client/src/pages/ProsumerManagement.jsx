@@ -19,7 +19,7 @@ import {
   ShieldAlert, CheckCircle2, UserX, Mail, Phone, Hash,
   UserPlus, Edit3, X, Zap, Shield, MapPin, Eye, EyeOff, FileText,
   Upload, Sparkles, AlertCircle, Award, CheckCircle, ShieldCheck,
-  CreditCard, Layers, FileCheck, Image, Trash2
+  CreditCard, Layers, FileCheck, Image, Trash2, Cpu
 } from 'lucide-react';
 import api from '../api/client';
 import { 
@@ -473,17 +473,20 @@ export default function ProsumerManagement({ theme }) {
                         </div>
                       </td>
 
-                      <td className="py-4 px-6 space-y-1">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-xs">
-                          <span>⚡ {u.solarCapacityKw > 0 ? `${u.solarCapacityKw} kW` : '15.0 kW'} Array</span>
+                      <td className="py-4 px-6 space-y-1.5">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 font-bold text-xs shadow-xs">
+                          <Zap className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                          <span>{u.solarCapacityKw > 0 ? `${u.solarCapacityKw} kW` : '15.0 kW'} Array</span>
                         </div>
-                        <p className="font-mono text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[180px]">
-                          INV: {u.inverterSerial || 'INV-SL-2026-DEFAULT'}
-                        </p>
+                        <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                          <Cpu className="h-3 w-3 text-slate-400 shrink-0" />
+                          <span className="truncate max-w-[180px]">{u.inverterSerial || 'INV-SL-2026-DEFAULT'}</span>
+                        </div>
                         {u.address && (
-                          <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[180px]">
-                            📍 {u.address}
-                          </p>
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500">
+                            <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
+                            <span className="truncate max-w-[180px]">{u.address}</span>
+                          </div>
                         )}
                       </td>
 
@@ -514,12 +517,20 @@ export default function ProsumerManagement({ theme }) {
                           </span>
 
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                              {assessment.allPassed ? '✓ NIC Valid' : 'Review Needed'}
-                            </span>
+                            {assessment.allPassed ? (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
+                                <span>NIC Verified</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                <AlertCircle className="h-3 w-3 text-amber-500 shrink-0" />
+                                <span>Review Needed</span>
+                              </span>
+                            )}
                             <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                              <span className={`px-1 rounded text-[9px] font-mono ${u.nicDocumentBase64 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`} title="NIC Front Document">Front</span>
-                              <span className={`px-1 rounded text-[9px] font-mono ${u.nicBackDocumentBase64 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`} title="NIC Back Document">Back</span>
+                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono border ${u.nicDocumentBase64 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-bold' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'}`} title="NIC Front Document">Front</span>
+                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono border ${u.nicBackDocumentBase64 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-bold' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'}`} title="NIC Back Document">Back</span>
                             </div>
                           </div>
                         </div>
@@ -732,22 +743,24 @@ export default function ProsumerManagement({ theme }) {
 
                     <div>
                       <span className="text-slate-400 block text-[10px]">Solar Array Capacity</span>
-                      <span className="font-bold text-amber-600 dark:text-amber-400">
-                        ⚡ {selectedKycUser.solarCapacityKw || 15.0} kW
+                      <span className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-0.5">
+                        <Zap className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                        <span>{selectedKycUser.solarCapacityKw || 15.0} kW</span>
                       </span>
                     </div>
 
                     <div>
                       <span className="text-slate-400 block text-[10px]">Inverter Serial</span>
-                      <span className="font-mono text-slate-800 dark:text-slate-200 truncate block">
+                      <span className="font-mono text-slate-800 dark:text-slate-200 truncate block mt-0.5">
                         {selectedKycUser.inverterSerial || 'Default'}
                       </span>
                     </div>
 
                     <div className="col-span-2">
                       <span className="text-slate-400 block text-[10px]">Premises Address</span>
-                      <span className="text-slate-800 dark:text-slate-200">
-                        {selectedKycUser.address || '—'}
+                      <span className="text-slate-800 dark:text-slate-200 flex items-center gap-1.5 mt-0.5">
+                        <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        <span>{selectedKycUser.address || '—'}</span>
                       </span>
                     </div>
                   </div>
@@ -1102,7 +1115,10 @@ export default function ProsumerManagement({ theme }) {
                           className="h-10 w-16 object-contain rounded bg-black"
                         />
                         <div>
-                          <span className="text-emerald-400 font-bold text-[10px] block">✓ Front Ready</span>
+                          <span className="text-emerald-400 font-bold text-[10px] flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3 shrink-0" />
+                            <span>Front Ready</span>
+                          </span>
                           <span className="text-slate-400 text-[9px]">Photo &amp; Name verified</span>
                         </div>
                       </div>
@@ -1143,7 +1159,10 @@ export default function ProsumerManagement({ theme }) {
                           className="h-10 w-16 object-contain rounded bg-black"
                         />
                         <div>
-                          <span className="text-emerald-400 font-bold text-[10px] block">✓ Back Ready</span>
+                          <span className="text-emerald-400 font-bold text-[10px] flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3 shrink-0" />
+                            <span>Back Ready</span>
+                          </span>
                           <span className="text-slate-400 text-[9px]">Address &amp; Barcode verified</span>
                         </div>
                       </div>
@@ -1185,7 +1204,10 @@ export default function ProsumerManagement({ theme }) {
                         className="h-10 w-16 object-contain rounded bg-black"
                       />
                       <div>
-                        <span className="text-cyan-400 font-bold text-[10px] block">✓ Grid Bill Attached</span>
+                        <span className="text-cyan-400 font-bold text-[10px] flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3 shrink-0" />
+                          <span>Grid Bill Attached</span>
+                        </span>
                         <span className="text-slate-400 text-[9px]">Premises utility interconnect</span>
                       </div>
                     </div>
