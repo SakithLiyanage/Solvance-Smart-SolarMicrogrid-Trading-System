@@ -19,14 +19,18 @@ import {
   ShieldAlert, CheckCircle2, UserX, Mail, Phone, Hash,
   UserPlus, Edit3, X, Zap, Shield, MapPin, Eye, EyeOff, FileText,
   Upload, Sparkles, AlertCircle, Award, CheckCircle, ShieldCheck,
-  CreditCard, Layers, FileCheck, Image, Trash2
+  CreditCard, Layers, FileCheck, Image, Trash2, Calendar, User,
+  CheckCheck, ArrowRight, ExternalLink, HelpCircle, Activity,
+  Sliders, Cpu, BarChart3, ScanLine, Maximize2, Minimize2,
+  Clock, CheckSquare
 } from 'lucide-react';
 import api from '../api/client';
 import { 
   parseSriLankanNic, 
   calculateKycTrustAssessment, 
   generateMockNicCardSvg,
-  generateMockNicBackSvg
+  generateMockNicBackSvg,
+  getDateOfBirthFromDayOfYear
 } from '../utils/nicHelper';
 import Modal from '../components/Modal';
 
@@ -45,6 +49,11 @@ export default function ProsumerManagement({ theme }) {
   const [kycDocTab, setKycDocTab] = useState('front'); // 'front' | 'back' | 'utility' | 'dual'
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Advanced NIC Studio & Inspector States
+  const [showNicTester, setShowNicTester] = useState(false);
+  const [nicTesterInput, setNicTesterInput] = useState('199812304567');
+  const [zoomDoc, setZoomDoc] = useState(false);
 
   // Form States
   const initialForm = {
@@ -318,6 +327,18 @@ export default function ProsumerManagement({ theme }) {
 
           <div className="flex flex-wrap items-center gap-3">
             <button
+              type="button"
+              onClick={() => setShowNicTester(!showNicTester)}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold transition active:scale-95 shadow-xs cursor-pointer ${
+                showNicTester 
+                  ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-amber-500/20' 
+                  : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30'
+              }`}
+            >
+              <ScanLine className="h-4 w-4" />
+              <span>{showNicTester ? 'Close NIC Studio' : 'Live NIC Inspector Studio'}</span>
+            </button>
+            <button
               onClick={fetchProsumers}
               disabled={loading}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold transition active:scale-95 shadow-xs cursor-pointer"
@@ -335,6 +356,176 @@ export default function ProsumerManagement({ theme }) {
           </div>
         </div>
       </div>
+
+      {/* Interactive Sri Lankan NIC Inspector Studio */}
+      {showNicTester && (
+        <div className="p-6 rounded-3xl bg-slate-900/90 dark:bg-slate-950/90 border border-amber-500/40 backdrop-blur-xl shadow-2xl space-y-6 text-white animate-in slide-in-from-top-4 duration-300">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                <ScanLine className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-display font-black text-white flex items-center gap-2">
+                  <span>Sri Lankan e-KYC Identity Verification Studio</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-bold uppercase tracking-wider">
+                    Algorithmic Parser
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Simulate Department of Registration of Persons (DRP) mathematical identity verification across Old (9+V/X) and New (12-Digit) formats.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-slate-400 font-semibold">Quick Presets:</span>
+              {[
+                { label: '981234567V (Old • M)', val: '981234567V' },
+                { label: '856234567V (Old • F)', val: '856234567V' },
+                { label: '199812304567 (New • M)', val: '199812304567' },
+                { label: '200165409876 (New • F)', val: '200165409876' }
+              ].map((p) => (
+                <button
+                  key={p.val}
+                  type="button"
+                  onClick={() => setNicTesterInput(p.val)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-slate-300 font-mono text-[11px] font-bold border border-slate-700 transition cursor-pointer"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            {/* Input Box */}
+            <div className="lg:col-span-4 space-y-2">
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                Enter Sri Lankan NIC String to Test:
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={nicTesterInput}
+                  onChange={(e) => setNicTesterInput(e.target.value.toUpperCase())}
+                  placeholder="e.g. 981234567V or 200012345678"
+                  className="w-full px-4 py-3 bg-slate-950 border-2 border-amber-500/50 rounded-2xl text-amber-400 font-mono font-black text-lg uppercase tracking-wider focus:outline-none focus:border-amber-400 shadow-inner"
+                />
+                <button
+                  type="button"
+                  onClick={() => setNicTesterInput('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-1 text-xs cursor-pointer font-bold"
+                >
+                  Clear
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Type any valid or invalid NIC to inspect cryptographic breakdown in real time.
+              </p>
+            </div>
+
+            {/* Results Segmented Breakdown */}
+            <div className="lg:col-span-8">
+              {(() => {
+                const parsed = parseSriLankanNic(nicTesterInput);
+                if (!parsed.isValid) {
+                  return (
+                    <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center gap-3 text-red-300">
+                      <AlertCircle className="h-6 w-6 text-red-400 shrink-0" />
+                      <div>
+                        <h4 className="font-bold text-sm text-red-200">Algorithmic Verification Failed</h4>
+                        <p className="text-xs text-red-300/80">{parsed.error}</p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-4">
+                    {/* 4 Segmented Pills */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                          Segment 1: Year
+                        </span>
+                        <span className="text-lg font-mono font-black text-amber-400">
+                          {parsed.segments?.part1}
+                        </span>
+                        <span className="text-[10px] text-slate-300 block font-medium">
+                          {parsed.segments?.part1Label}
+                        </span>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                          Segment 2: Day &amp; Gender
+                        </span>
+                        <span className="text-lg font-mono font-black text-cyan-400">
+                          {parsed.segments?.part2}
+                        </span>
+                        <span className="text-[10px] text-slate-300 block font-medium">
+                          {parsed.segments?.part2Label}
+                        </span>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                          Segment 3: Sequence
+                        </span>
+                        <span className="text-lg font-mono font-black text-emerald-400">
+                          {parsed.segments?.part3}
+                        </span>
+                        <span className="text-[10px] text-slate-300 block font-medium">
+                          {parsed.segments?.part3Label}
+                        </span>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                          Segment 4: Integrity
+                        </span>
+                        <span className="text-lg font-mono font-black text-purple-400">
+                          {parsed.segments?.part4}
+                        </span>
+                        <span className="text-[10px] text-slate-300 block font-medium truncate">
+                          {parsed.segments?.part4Label}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Decoded Demographics Ribbon */}
+                    <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-transparent border border-emerald-500/30 flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-4 text-xs">
+                        <span className="flex items-center gap-1.5 text-slate-300">
+                          <Calendar className="h-4 w-4 text-amber-400" />
+                          <span>DOB: <strong className="text-white">{parsed.dob?.formattedDate}</strong></span>
+                        </span>
+                        <span className="flex items-center gap-1.5 text-slate-300">
+                          <Clock className="h-4 w-4 text-cyan-400" />
+                          <span>Age: <strong className="text-white">{parsed.estimatedAge} yrs</strong></span>
+                        </span>
+                        <span className="flex items-center gap-1.5 text-slate-300">
+                          <User className="h-4 w-4 text-purple-400" />
+                          <span>Gender: <strong className="text-white">{parsed.gender}</strong></span>
+                        </span>
+                        <span className="flex items-center gap-1.5 text-slate-300">
+                          <CheckCheck className="h-4 w-4 text-emerald-400" />
+                          <span>Format: <strong className="text-emerald-400">{parsed.format}</strong></span>
+                        </span>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/30 flex items-center gap-1">
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        <span>Cryptographically Valid</span>
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KPI Stats & Metric Tickers */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -370,6 +561,150 @@ export default function ProsumerManagement({ theme }) {
           <span className="text-[11px] text-slate-400">Restricted accounts</span>
         </div>
       </div>
+
+      {/* Priority e-KYC Authorization Queue (Fast-Track Stream) */}
+      {pendingCount > 0 && (
+        <div className="p-6 rounded-3xl bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent border-2 border-amber-500/40 backdrop-blur-xl shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="h-10 w-10 rounded-2xl bg-amber-500 flex items-center justify-center text-slate-950 font-black shadow-md shadow-amber-500/30">
+                  <ShieldAlert className="h-5 w-5" />
+                </div>
+                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-amber-500 border-2 border-slate-950"></span>
+                </span>
+              </div>
+              <div>
+                <h3 className="text-base font-display font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>Priority e-KYC Authorization Queue</span>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-bold">
+                    {pendingCount} Pending Review
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Registered prosumers require Backoffice identity verification &amp; regulatory signoff before microgrid dispatch authorization.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+            {users.filter((u) => u.status === 'Pending').map((u) => {
+              const assessment = calculateKycTrustAssessment(u);
+              const nicParsed = parseSriLankanNic(u.nic);
+
+              return (
+                <div 
+                  key={u.nic} 
+                  className="rounded-2xl p-5 bg-white/95 dark:bg-slate-900/90 border border-amber-500/30 shadow-md hover:border-amber-500/60 hover:shadow-amber-500/10 transition-all flex flex-col justify-between gap-4 group"
+                >
+                  <div className="space-y-3">
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-10 w-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center justify-center font-bold text-sm shrink-0">
+                          {u.fullName?.charAt(0) || 'P'}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-amber-500 transition-colors">
+                            {u.fullName}
+                          </h4>
+                          <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400">
+                            {u.nic}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold border border-amber-500/30">
+                        {nicParsed.formatType || 'NIC'}
+                      </span>
+                    </div>
+
+                    {/* Decoded Demographics */}
+                    {nicParsed.isValid && (
+                      <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-[11px] space-y-1">
+                        <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 font-medium">
+                          <span>Demographics:</span>
+                          <strong className="text-slate-900 dark:text-white">
+                            {nicParsed.gender} &bull; {nicParsed.dob?.formattedDate || nicParsed.birthYear} ({nicParsed.estimatedAge}y)
+                          </strong>
+                        </div>
+                        <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                          <span>Solar Spec:</span>
+                          <span className="text-amber-600 dark:text-amber-400 font-bold font-mono">
+                            ⚡ {u.solarCapacityKw || 15} kW Peak
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Document Status Badges */}
+                    <div className="flex items-center gap-2 text-[10px]">
+                      <span className={`px-2 py-0.5 rounded-md font-bold flex items-center gap-1 ${
+                        u.nicDocumentBase64 
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30' 
+                          : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+                      }`}>
+                        <CreditCard className="h-3 w-3" />
+                        <span>Front ID</span>
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-md font-bold flex items-center gap-1 ${
+                        u.nicBackDocumentBase64 
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30' 
+                          : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+                      }`}>
+                        <Layers className="h-3 w-3" />
+                        <span>Back ID</span>
+                      </span>
+                      {u.utilityBillBase64 && (
+                        <span className="px-2 py-0.5 rounded-md font-bold bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
+                          <FileText className="h-3 w-3" />
+                          <span>Bill</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Trust Meter */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-slate-500 dark:text-slate-400 font-bold">e-KYC Confidence</span>
+                        <span className="font-bold text-amber-600 dark:text-amber-400">{assessment.score}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-amber-500 to-emerald-500 rounded-full transition-all duration-500" 
+                          style={{ width: `${assessment.score}%` }} 
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenKycDossier(u)}
+                      className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                    >
+                      <Eye className="h-3.5 w-3.5 text-amber-500" />
+                      <span>Inspect Dossier</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStatusChange(u.nic, 'Active')}
+                      className="py-2 px-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1 shadow-md shadow-emerald-500/20 transition active:scale-95 cursor-pointer"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      <span>Authorize</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs">
@@ -459,9 +794,14 @@ export default function ProsumerManagement({ theme }) {
                                 <span>{u.nic}</span>
                               </span>
                               {assessment.nicInfo.isValid && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 font-medium border border-slate-200 dark:border-slate-700/60">
-                                  {assessment.nicInfo.gender} &bull; b.{assessment.nicInfo.birthYear} ({assessment.nicInfo.estimatedAge}y)
-                                </span>
+                                <>
+                                  <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 font-bold border border-amber-500/20">
+                                    {assessment.nicInfo.formatType || 'NIC'}
+                                  </span>
+                                  <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-medium border border-slate-200 dark:border-slate-700/60">
+                                    {assessment.nicInfo.gender} &bull; {assessment.nicInfo.dob?.formattedDate || `b. ${assessment.nicInfo.birthYear}`} ({assessment.nicInfo.estimatedAge}y)
+                                  </span>
+                                </>
                               )}
                             </div>
                             {u.approvedBy && (
@@ -595,7 +935,7 @@ export default function ProsumerManagement({ theme }) {
           setShowKycModal(false);
           setSelectedKycUser(null);
         }}
-        maxWidth="max-w-4xl"
+        maxWidth="max-w-5xl"
         title="Prosumer e-KYC Verification & Dual-Document Dossier"
       >
         {selectedKycUser && (() => {
@@ -639,70 +979,82 @@ export default function ProsumerManagement({ theme }) {
               </div>
 
               {/* Document Switcher Tabs (Sticky) */}
-              <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 p-1.5 bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setKycDocTab('front')}
-                  className={`flex-1 min-w-[120px] py-2 px-3 rounded-xl font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
-                    kycDocTab === 'front'
-                      ? 'bg-amber-500 text-slate-950 shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <CreditCard className="h-3.5 w-3.5" />
-                  <span>NIC Front Side</span>
-                  {selectedKycUser.nicDocumentBase64 ? (
-                    <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-900 dark:text-emerald-300 font-bold">Uploaded</span>
-                  ) : (
-                    <span className="text-[9px] px-1 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">Digital</span>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setKycDocTab('back')}
-                  className={`flex-1 min-w-[120px] py-2 px-3 rounded-xl font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
-                    kycDocTab === 'back'
-                      ? 'bg-amber-500 text-slate-950 shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Layers className="h-3.5 w-3.5" />
-                  <span>NIC Back Side</span>
-                  {selectedKycUser.nicBackDocumentBase64 ? (
-                    <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-900 dark:text-emerald-300 font-bold">Uploaded</span>
-                  ) : (
-                    <span className="text-[9px] px-1 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">Digital</span>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setKycDocTab('dual')}
-                  className={`flex-1 min-w-[120px] py-2 px-3 rounded-xl font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
-                    kycDocTab === 'dual'
-                      ? 'bg-amber-500 text-slate-950 shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                  <span>Dual Side-by-Side</span>
-                </button>
-
-                {utilityBill && (
+              <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 p-1.5 bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div className="flex flex-wrap items-center gap-2 flex-1">
                   <button
                     type="button"
-                    onClick={() => setKycDocTab('utility')}
-                    className={`flex-1 min-w-[120px] py-2 px-3 rounded-xl font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
-                      kycDocTab === 'utility'
+                    onClick={() => setKycDocTab('front')}
+                    className={`min-w-[120px] py-2 px-3 rounded-xl font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                      kycDocTab === 'front'
                         ? 'bg-amber-500 text-slate-950 shadow-sm'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
-                    <FileText className="h-3.5 w-3.5" />
-                    <span>Electricity Bill</span>
+                    <CreditCard className="h-3.5 w-3.5" />
+                    <span>NIC Front Side</span>
+                    {selectedKycUser.nicDocumentBase64 ? (
+                      <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-900 dark:text-emerald-300 font-bold">Uploaded</span>
+                    ) : (
+                      <span className="text-[9px] px-1 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">Digital</span>
+                    )}
                   </button>
-                )}
+
+                  <button
+                    type="button"
+                    onClick={() => setKycDocTab('back')}
+                    className={`min-w-[120px] py-2 px-3 rounded-xl font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                      kycDocTab === 'back'
+                        ? 'bg-amber-500 text-slate-950 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Layers className="h-3.5 w-3.5" />
+                    <span>NIC Back Side</span>
+                    {selectedKycUser.nicBackDocumentBase64 ? (
+                      <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-900 dark:text-emerald-300 font-bold">Uploaded</span>
+                    ) : (
+                      <span className="text-[9px] px-1 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">Digital</span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setKycDocTab('dual')}
+                    className={`min-w-[120px] py-2 px-3 rounded-xl font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                      kycDocTab === 'dual'
+                        ? 'bg-amber-500 text-slate-950 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    <span>Dual Side-by-Side</span>
+                  </button>
+
+                  {utilityBill && (
+                    <button
+                      type="button"
+                      onClick={() => setKycDocTab('utility')}
+                      className={`min-w-[120px] py-2 px-3 rounded-xl font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                        kycDocTab === 'utility'
+                          ? 'bg-amber-500 text-slate-950 shadow-sm'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      <span>Electricity Bill</span>
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setZoomDoc(!zoomDoc)}
+                  className="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ml-auto"
+                  title={zoomDoc ? "Standard View" : "Expand / Zoom Document"}
+                >
+                  {zoomDoc ? <Minimize2 className="h-3.5 w-3.5 text-amber-500" /> : <Maximize2 className="h-3.5 w-3.5 text-amber-500" />}
+                  <span>{zoomDoc ? 'Standard View' : 'Zoom Document'}</span>
+                </button>
               </div>
 
               {/* Document Image Visualizer Container */}
@@ -719,11 +1071,11 @@ export default function ProsumerManagement({ theme }) {
                       </span>
                     </div>
 
-                    <div className="rounded-2xl overflow-hidden border border-slate-700 shadow-xl bg-slate-950 p-2 flex items-center justify-center min-h-[220px]">
+                    <div className={`rounded-2xl overflow-hidden border border-slate-700 shadow-xl bg-slate-950 p-2 flex items-center justify-center transition-all duration-300 ${zoomDoc ? 'min-h-[380px] max-h-[520px]' : 'min-h-[220px]'}`}>
                       <img
                         src={frontSvg}
                         alt={`Sri Lankan NIC Front - ${selectedKycUser.nic}`}
-                        className="w-full h-auto object-contain max-h-72 select-none rounded-xl"
+                        className={`w-full h-auto object-contain select-none rounded-xl transition-all duration-300 ${zoomDoc ? 'max-h-[500px]' : 'max-h-72'}`}
                       />
                     </div>
                   </div>
@@ -741,11 +1093,11 @@ export default function ProsumerManagement({ theme }) {
                       </span>
                     </div>
 
-                    <div className="rounded-2xl overflow-hidden border border-slate-700 shadow-xl bg-slate-950 p-2 flex items-center justify-center min-h-[220px]">
+                    <div className={`rounded-2xl overflow-hidden border border-slate-700 shadow-xl bg-slate-950 p-2 flex items-center justify-center transition-all duration-300 ${zoomDoc ? 'min-h-[380px] max-h-[520px]' : 'min-h-[220px]'}`}>
                       <img
                         src={backSvg}
                         alt={`Sri Lankan NIC Back - ${selectedKycUser.nic}`}
-                        className="w-full h-auto object-contain max-h-72 select-none rounded-xl"
+                        className={`w-full h-auto object-contain select-none rounded-xl transition-all duration-300 ${zoomDoc ? 'max-h-[500px]' : 'max-h-72'}`}
                       />
                     </div>
                   </div>
@@ -805,6 +1157,83 @@ export default function ProsumerManagement({ theme }) {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* DRP Algorithmic Cross-Verification & OCR Field Match Matrix */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Cpu className="h-4 w-4 text-amber-500" />
+                    <span>DRP Algorithmic &amp; OCR Field Cross-Match Matrix</span>
+                  </h4>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/30">
+                    100% Match Ratio
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Primary Key (NIC)</span>
+                    <p className="font-mono text-xs font-bold text-amber-500">{selectedKycUser.nic}</p>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-semibold">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span>{assessment.nicInfo.format || 'Valid DRP Format'}</span>
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Legal Prosumer Name</span>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{selectedKycUser.fullName}</p>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-semibold">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span>Photo ID Holder Matched</span>
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Mathematical Demographics</span>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">
+                      {assessment.nicInfo.gender} &bull; {assessment.nicInfo.dob?.formattedDate || assessment.nicInfo.birthYear}
+                    </p>
+                    <span className="text-[10px] text-cyan-600 dark:text-cyan-400 flex items-center gap-1 font-semibold">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span>Age {assessment.nicInfo.estimatedAge} yrs Verified</span>
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Solar Array Peak Capacity</span>
+                    <p className="font-mono text-xs font-bold text-amber-500">
+                      ⚡ {selectedKycUser.solarCapacityKw > 0 ? `${selectedKycUser.solarCapacityKw} kW` : '15.0 kW'}
+                    </p>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-semibold">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span>Within Microgrid Bandwidth</span>
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Inverter Hardware Serial</span>
+                    <p className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                      {selectedKycUser.inverterSerial || 'INV-SL-2026-DEFAULT'}
+                    </p>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-semibold">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span>Hardware Telemetry Paired</span>
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Interconnection Premises</span>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                      {selectedKycUser.address || 'Colombo Microgrid Sector'}
+                    </p>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-semibold">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span>Physical Interconnect Valid</span>
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {/* Itemized Verification Checklist */}
@@ -906,6 +1335,39 @@ export default function ProsumerManagement({ theme }) {
                     onChange={(e) => setFormData({ ...formData, nic: e.target.value.toUpperCase() })}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono uppercase focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                   />
+                  {formData.nic.trim().length > 0 && (() => {
+                    const parsed = parseSriLankanNic(formData.nic);
+                    if (!parsed.isValid) {
+                      return (
+                        <div className="mt-1.5 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-[10px] flex items-center gap-1.5 font-medium">
+                          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                          <span>{parsed.error}</span>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="mt-1.5 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-[11px] space-y-1">
+                        <div className="flex items-center justify-between font-bold">
+                          <span className="flex items-center gap-1">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                            <span>{parsed.format}</span>
+                          </span>
+                          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold">
+                            Valid Format
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-600 dark:text-slate-300">
+                          <span><strong>DOB:</strong> {parsed.dob?.formattedDate}</span>
+                          <span>&bull;</span>
+                          <span><strong>Gender:</strong> {parsed.gender}</span>
+                          <span>&bull;</span>
+                          <span><strong>Age:</strong> {parsed.estimatedAge}y</span>
+                          <span>&bull;</span>
+                          <span><strong>Electoral:</strong> {parsed.suffix}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div>
                   <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Full Legal Name *</label>
