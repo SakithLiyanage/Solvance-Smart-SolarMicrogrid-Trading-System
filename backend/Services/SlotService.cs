@@ -73,5 +73,23 @@ namespace SolarMicrogridApi.Services
             var result = await _context.Slots.UpdateOneAsync(s => s.Id == slotId, update);
             return result.ModifiedCount > 0;
         }
+
+        public async Task<bool> DeleteSlotAsync(string id)
+        {
+            // Method: DeleteSlotAsync - Deletes an energy trading slot, blocking if active or pending reservations exist.
+            var activeReservationsCount = await _context.Reservations.CountDocumentsAsync(r =>
+                r.SlotId == id &&
+                (r.Status == "Pending" || r.Status == "Approved") &&
+                r.ScheduledDateTime >= DateTime.UtcNow
+            );
+
+            if (activeReservationsCount > 0)
+            {
+                throw new InvalidOperationException($"Cannot delete slot '{id}'. There are {activeReservationsCount} active or pending energy reservations linked to it.");
+            }
+
+            var result = await _context.Slots.DeleteOneAsync(s => s.Id == id);
+            return result.DeletedCount > 0;
+        }
     }
 }
