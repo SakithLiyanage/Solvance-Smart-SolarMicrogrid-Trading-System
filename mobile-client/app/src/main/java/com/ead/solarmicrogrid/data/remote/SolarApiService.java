@@ -29,6 +29,9 @@ public interface SolarApiService {
     @POST("reservations")
     Call<ResponseBody> createReservation(@Body AuthDtos.CreateReservationRequest request);
 
+    @POST("reservations/{id}/approve")
+    Call<ResponseBody> approveReservation(@Path("id") String id);
+
     @PUT("reservations/{id}")
     Call<ResponseBody> updateReservation(@Path("id") String id, @Body AuthDtos.UpdateReservationRequest request);
 

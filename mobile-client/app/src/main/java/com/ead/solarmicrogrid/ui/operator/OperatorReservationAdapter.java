@@ -22,6 +22,7 @@ import java.util.List;
 public class OperatorReservationAdapter extends RecyclerView.Adapter<OperatorReservationAdapter.ViewHolder> {
 
     public interface OnOperatorActionListener {
+        void onApprove(EnergyReservation reservation);
         void onVerify(EnergyReservation reservation);
         void onCancel(EnergyReservation reservation);
     }
@@ -111,8 +112,16 @@ public class OperatorReservationAdapter extends RecyclerView.Adapter<OperatorRes
             holder.layoutOperatorActions.setVisibility(View.VISIBLE);
             holder.tvOperatorResolvedMsg.setVisibility(View.GONE);
 
+            boolean isPending = "Pending".equalsIgnoreCase(status);
+            holder.btnCardVerify.setText(isPending ? "Approve Reservation" : "Verify & Complete");
+
             holder.btnCardVerify.setOnClickListener(v -> {
-                if (listener != null) listener.onVerify(item);
+                if (listener == null) return;
+                if (isPending) {
+                    listener.onApprove(item);
+                } else {
+                    listener.onVerify(item);
+                }
             });
 
             holder.btnCardCancel.setOnClickListener(v -> {

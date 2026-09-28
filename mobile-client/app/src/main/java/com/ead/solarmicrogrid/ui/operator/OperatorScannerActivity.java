@@ -333,6 +333,11 @@ public class OperatorScannerActivity extends AppCompatActivity {
         rvOperatorQueue.setLayoutManager(new LinearLayoutManager(this));
         queueAdapter = new OperatorReservationAdapter(this, new OperatorReservationAdapter.OnOperatorActionListener() {
             @Override
+            public void onApprove(EnergyReservation reservation) {
+                approveReservationOnServer(reservation);
+            }
+
+            @Override
             public void onVerify(EnergyReservation reservation) {
                 String token = reservation.getQrCodeToken();
                 if (token != null && !token.isEmpty()) {
@@ -364,6 +369,31 @@ public class OperatorScannerActivity extends AppCompatActivity {
 
             @Override
             public void afterTextChanged(Editable s) {}
+        });
+    }
+
+    private void approveReservationOnServer(EnergyReservation reservation) {
+        progressBarOperator.setVisibility(View.VISIBLE);
+        ApiClient.getService(this).approveReservation(reservation.getId()).enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                progressBarOperator.setVisibility(View.GONE);
+                if (response.isSuccessful()) {
+                    Toast.makeText(OperatorScannerActivity.this,
+                            "Reservation approved. QR pass is now available.", Toast.LENGTH_LONG).show();
+                    fetchReservations();
+                } else {
+                    Toast.makeText(OperatorScannerActivity.this,
+                            "Approval failed. The reservation may no longer be pending.", Toast.LENGTH_LONG).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                progressBarOperator.setVisibility(View.GONE);
+                Toast.makeText(OperatorScannerActivity.this,
+                        "Approval connection error: " + t.getMessage(), Toast.LENGTH_LONG).show();
+            }
         });
     }
 
