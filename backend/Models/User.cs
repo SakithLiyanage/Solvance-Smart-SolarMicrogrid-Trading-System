@@ -103,6 +103,12 @@ namespace SolarMicrogridApi.Models
         [BsonElement("lockoutEnd")]
         public DateTime? LockoutEnd { get; set; }
 
+        /// <summary>
+        /// Flag set by administrator forcing user to update credentials upon subsequent login.
+        /// </summary>
+        [BsonElement("mustChangePassword")]
+        public bool MustChangePassword { get; set; } = false;
+
         [BsonElement("createdAt")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

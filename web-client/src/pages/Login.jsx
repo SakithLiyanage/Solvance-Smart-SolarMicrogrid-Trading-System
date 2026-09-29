@@ -16,9 +16,10 @@
 import React, { useState } from 'react';
 import { 
   Shield, Zap, AlertCircle, ArrowRight, Sun, Moon, 
-  Activity, Cpu, Sparkles, Eye, EyeOff, KeyRound
+  Activity, Cpu, Eye, EyeOff, KeyRound, CheckCircle2, XCircle, Lock, Key
 } from 'lucide-react';
 import api from '../api/client';
+import Modal from '../components/Modal';
 
 export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHome }) {
   const [usernameOrNic, setUsernameOrNic] = useState('');
@@ -26,6 +27,22 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Mandatory password change state (when administrator forced reset)
+  const [mustChangePasswordModal, setMustChangePasswordModal] = useState(false);
+  const [pendingAuth, setPendingAuth] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [changeError, setChangeError] = useState('');
+  const [changeLoading, setChangeLoading] = useState(false);
+
+  // Policy validation flags for mandatory password change
+  const isLengthValid = newPassword.length >= 8;
+  const isAlphaNumeric = /[a-zA-Z]/.test(newPassword) && /[0-9]/.test(newPassword);
+  const isMatch = newPassword.length > 0 && newPassword === confirmPassword;
+  const isFormValid = isLengthValid && isAlphaNumeric && isMatch;
 
   const isDark = theme === 'dark';
 
@@ -46,11 +63,22 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
         password: password
       });
 
-      const { token, role, nic, fullName, email, status } = response.data;
+      const { token, role, nic, fullName, email, status, mustChangePassword } = response.data;
 
       // Ensure only web-authorized roles can access the web console
       if (role !== 'Backoffice' && role !== 'GridOperator') {
         setError('Prosumers must access system services via the Native Android Mobile Application.');
+        setLoading(false);
+        return;
+      }
+
+      // If administrator required mandatory password change on sign-in, intercept session
+      if (mustChangePassword) {
+        setPendingAuth({ token, role, nic, fullName, email, status });
+        setNewPassword('');
+        setConfirmPassword('');
+        setChangeError('');
+        setMustChangePasswordModal(true);
         setLoading(false);
         return;
       }
@@ -62,6 +90,38 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
       setError(err.response?.data?.message || 'Login failed. Please verify your credentials.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChangePasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!isFormValid) {
+      setChangeError('Please satisfy all password complexity requirements.');
+      return;
+    }
+
+    setChangeLoading(true);
+    setChangeError('');
+
+    try {
+      await api.post('/auth/change-password', {
+        currentPassword: password,
+        newPassword,
+        confirmPassword
+      }, {
+        headers: { Authorization: `Bearer ${pendingAuth.token}` }
+      });
+
+      // Complete session sign-in with updated credentials
+      const { nic, fullName, email, role, status, token } = pendingAuth;
+      localStorage.setItem('solar_auth_token', token);
+      localStorage.setItem('solar_user_data', JSON.stringify({ nic, fullName, email, role, status }));
+      setMustChangePasswordModal(false);
+      onLoginSuccess({ nic, fullName, email, role, status });
+    } catch (err) {
+      setChangeError(err.response?.data?.message || 'Failed to update password.');
+    } finally {
+      setChangeLoading(false);
     }
   };
 
@@ -233,6 +293,141 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
           </div>
         </div>
       </div>
+
+      {/* Modal: Mandatory First-Sign-In Password Change */}
+      <Modal
+        isOpen={mustChangePasswordModal}
+        onClose={() => setMustChangePasswordModal(false)}
+        title="Mandatory Password Update Required"
+      >
+        <div className="mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 mb-2">
+            <Key className="h-3.5 w-3.5 text-amber-500" />
+            <span>Account: {pendingAuth?.nic} ({pendingAuth?.role})</span>
+          </div>
+          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            Your temporary password was provisioned by a system administrator. Enterprise security policy requires you to establish a personal confidential password before accessing the operational console.
+          </p>
+        </div>
+
+        {changeError && (
+          <div className="mb-4 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 text-xs font-semibold animate-in fade-in">
+            {changeError}
+          </div>
+        )}
+
+        <form onSubmit={handleChangePasswordSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              New Personal Password *
+            </label>
+            <div className="relative">
+              <input
+                type={showNewPassword ? 'text' : 'password'}
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password (min. 8 alphanumeric characters)"
+                className="w-full pl-3 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-amber-500/50"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                title={showNewPassword ? "Hide password" : "Show password"}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+              >
+                {showNewPassword ? (
+                  <EyeOff className="h-3.5 w-3.5 text-amber-500" />
+                ) : (
+                  <Eye className="h-3.5 w-3.5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Confirm New Personal Password *
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter new password to verify"
+                className="w-full pl-3 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-amber-500/50"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                title={showConfirmPassword ? "Hide password" : "Show password"}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="h-3.5 w-3.5 text-amber-500" />
+                ) : (
+                  <Eye className="h-3.5 w-3.5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Validation Criteria */}
+          <div className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1.5">
+            <div className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              Password Complexity Requirements:
+            </div>
+            <div className="flex items-center gap-2 text-[11px]">
+              {isLengthValid ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              )}
+              <span className={isLengthValid ? 'text-emerald-700 dark:text-emerald-400 font-medium' : 'text-slate-500 dark:text-slate-400'}>
+                At least 8 characters
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px]">
+              {isAlphaNumeric ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              )}
+              <span className={isAlphaNumeric ? 'text-emerald-700 dark:text-emerald-400 font-medium' : 'text-slate-500 dark:text-slate-400'}>
+                Contains both letters and numbers
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px]">
+              {isMatch ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              )}
+              <span className={isMatch ? 'text-emerald-700 dark:text-emerald-400 font-medium' : 'text-slate-500 dark:text-slate-400'}>
+                Passwords match
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setMustChangePasswordModal(false)}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={changeLoading || !isFormValid}
+              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md disabled:opacity-50 cursor-pointer"
+            >
+              {changeLoading ? 'Updating Credentials...' : 'Set Password & Enter Console'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
