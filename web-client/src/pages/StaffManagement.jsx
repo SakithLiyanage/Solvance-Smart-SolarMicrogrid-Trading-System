@@ -69,15 +69,6 @@ export default function StaffManagement({ theme, currentUser }) {
     address: ''
   });
 
-  const generateRandomPassword = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
-    let pwd = 'Solvance9#';
-    for (let i = 0; i < 4; i++) {
-      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return pwd;
-  };
-
   const fetchStaff = async () => {
     try {
       setLoading(true);
@@ -211,12 +202,6 @@ export default function StaffManagement({ theme, currentUser }) {
     setShowConfirmPassword(false);
     setRequireNextLoginChange(true);
     setShowResetModal(true);
-  };
-
-  const handleGenerateCompliantPassword = () => {
-    const pwd = generateRandomPassword();
-    setNewPassword(pwd);
-    setConfirmPassword(pwd);
   };
 
   // Password policy validation flags
@@ -793,19 +778,9 @@ export default function StaffManagement({ theme, currentUser }) {
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Initial Account Password *
-              </label>
-              <button
-                type="button"
-                onClick={() => setCreateForm({ ...createForm, password: generateRandomPassword() })}
-                className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
-              >
-                <RefreshCw className="h-3 w-3" />
-                <span>Auto-fill Password</span>
-              </button>
-            </div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Initial Account Password *
+            </label>
             <div className="relative">
               <input
                 type={showCreatePassword ? 'text' : 'password'}
@@ -1008,19 +983,9 @@ export default function StaffManagement({ theme, currentUser }) {
 
         <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                New Password *
-              </label>
-              <button
-                type="button"
-                onClick={handleGenerateCompliantPassword}
-                className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
-              >
-                <RefreshCw className="h-3 w-3" />
-                <span>Auto-fill Compliant Password</span>
-              </button>
-            </div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              New Password *
+            </label>
 
             <div className="relative">
               <input
