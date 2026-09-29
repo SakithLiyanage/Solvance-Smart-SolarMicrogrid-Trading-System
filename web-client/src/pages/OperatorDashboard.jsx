@@ -12,7 +12,7 @@
 //   - Tailwind CSS Complex Operational Terminal Dashboard: https://tailwindcss.com/
 // ============================================================================
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Battery, QrCode, CheckCircle2, AlertCircle, Search, RefreshCw,
   Zap, Clock, ShieldCheck, Filter, Scan, Check, BatteryCharging,
@@ -27,12 +27,29 @@ import api from '../api/client';
 import Modal from '../components/Modal';
 import Toast from '../components/Toast';
 
+// Queue filter pills, in booking lifecycle order
+const STATUS_FILTERS = ['All', 'Pending', 'Approved', 'Completed', 'Cancelled'];
+
+// Compact, locale-aware schedule label, e.g. "Thu, 01 Oct, 19:42"
+const formatSchedule = (iso) =>
+  iso
+    ? new Date(iso).toLocaleString(undefined, {
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    : '—';
+
 export default function OperatorDashboard({ user, theme, activeTab }) {
   const qrSectionRef = useRef(null);
   const qrInputRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const animationFrameRef = useRef(null);
+  const streamRef = useRef(null);
+  const cameraStartingRef = useRef(false);
 
   // Active Terminal Tab: 0 = Scanner, 1 = Queue/Ledger, 2 = Battery Storage, 3 = Unified
   const [operatorTab, setOperatorTab] = useState(0);
@@ -43,10 +60,12 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
   const [availableSlots, setAvailableSlots] = useState(0);
   const [totalSlots, setTotalSlots] = useState(0);
   const [telemetry, setTelemetry] = useState(null);
+  const [slotsDirty, setSlotsDirty] = useState(false); // unsaved slot edits
 
   // Reservations Monitor
   const [reservations, setReservations] = useState([]);
-  const [loadingReservations, setLoadingReservations] = useState(true);
+  const [loadingReservations, setLoadingReservations] = useState(true); // first load only
+  const [isSyncing, setIsSyncing] = useState(false); // any refresh, incl. background
   const [statusFilter, setStatusFilter] = useState('All');
   const [searchNic, setSearchNic] = useState('');
 
@@ -54,6 +73,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const [scannerMode, setScannerMode] = useState('camera'); // 'camera' | 'manual'
+  const [pendingCameraStart, setPendingCameraStart] = useState(false);
 
   // Direct QR Verification & Dispatch State
   const [qrToken, setQrToken] = useState('');
@@ -67,6 +87,8 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
   // Toast System
   const [toast, setToast] = useState({ message: '', type: 'success' });
   const showToast = (message, type = 'success') => setToast({ message, type });
+  // Stable callback so the toast's auto-dismiss timer isn't reset on every re-render
+  const closeToast = useCallback(() => setToast({ message: '', type: 'success' }), []);
 
   // Approval & Digital QR Pass Issuance Modal
   const [approvedPassData, setApprovedPassData] = useState(null);
@@ -84,6 +106,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
   });
   const [createError, setCreateError] = useState('');
   const [createSuccess, setCreateSuccess] = useState('');
+  const [createSubmitting, setCreateSubmitting] = useState(false);
 
   const [editingReservation, setEditingReservation] = useState(null);
   const [editForm, setEditForm] = useState({
@@ -93,11 +116,24 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
   });
   const [editError, setEditError] = useState('');
   const [editSuccess, setEditSuccess] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   const [cancellingReservation, setCancellingReservation] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelError, setCancelError] = useState('');
   const [cancelSuccess, setCancelSuccess] = useState('');
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
+
+  // Row-level approve lock (prevents double approval clicks)
+  const [approvingId, setApprovingId] = useState(null);
+
+  // Latest values for callbacks that outlive a render (camera frame loop, 30s refresh timer)
+  const reservationsRef = useRef([]);
+  const selectedStationIdRef = useRef('');
+  const slotsDirtyRef = useRef(false);
+  useEffect(() => { reservationsRef.current = reservations; }, [reservations]);
+  useEffect(() => { selectedStationIdRef.current = selectedStationId; }, [selectedStationId]);
+  useEffect(() => { slotsDirtyRef.current = slotsDirty; }, [slotsDirty]);
 
   // 7-day schedule window helpers for datetime-local picker
   const toLocalIsoString = (date) => {
@@ -118,39 +154,49 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
     }
   }, [activeTab]);
 
-  // Load Operational Data
+  // Load Operational Data (initial load, 30s auto-refresh and manual sync)
   const loadOperationalData = async () => {
+    setIsSyncing(true);
+    const currentStationId = selectedStationIdRef.current;
     try {
       const stationRes = await api.get('/stations');
       const stationList = stationRes.data || [];
       setStations(stationList);
-      if (stationList.length > 0 && !selectedStationId) {
-        setSelectedStationId(stationList[0].id);
-        setAvailableSlots(stationList[0].availableBatterySlots);
-        setTotalSlots(stationList[0].totalBatterySlots);
+      // Default the terminal to the first active hub on first load
+      const activeStation = currentStationId
+        ? stationList.find((s) => s.id === currentStationId)
+        : stationList.find((s) => s.isActive) || stationList[0];
+      if (!currentStationId && activeStation) {
+        setSelectedStationId(activeStation.id);
+      }
+      // Keep slot counters in step with the server unless the operator has unsaved edits
+      if (activeStation && !slotsDirtyRef.current) {
+        setAvailableSlots(activeStation.availableBatterySlots);
+        setTotalSlots(activeStation.totalBatterySlots);
       }
     } catch (err) {
       console.error('Failed to load solar stations', err);
     }
 
     try {
-      setLoadingReservations(true);
       const resRes = await api.get('/reservations');
       setReservations(resRes.data || []);
     } catch (err) {
       console.error('Failed to load reservations', err);
     } finally {
+      // Only the first load shows the full-table spinner; background refreshes keep the table on screen
       setLoadingReservations(false);
     }
 
-    if (selectedStationId) {
+    if (currentStationId) {
       try {
-        const telemetryRes = await api.get(`/stations/${selectedStationId}/telemetry`);
+        const telemetryRes = await api.get(`/stations/${currentStationId}/telemetry`);
         setTelemetry(telemetryRes.data);
       } catch (err) {
         console.error('Failed to load station telemetry', err);
       }
     }
+    setIsSyncing(false);
   };
 
   useEffect(() => {
@@ -161,11 +207,20 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
 
   const handleStationChange = (id) => {
     setSelectedStationId(id);
+    setSlotsDirty(false);
+    setTelemetry(null);
     const station = stations.find((s) => s.id === id);
     if (station) {
       setAvailableSlots(station.availableBatterySlots);
       setTotalSlots(station.totalBatterySlots);
     }
+  };
+
+  // Clamp operator slot edits to the hub's physical rack count and mark them unsaved
+  const editAvailableSlots = (value) => {
+    const next = Number.isFinite(value) ? value : 0;
+    setAvailableSlots(Math.max(0, Math.min(totalSlots, next)));
+    setSlotsDirty(true);
   };
 
   const handleUpdateSlots = async () => {
@@ -179,6 +234,9 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
         availableSlots: parseInt(availableSlots, 10)
       });
       showToast('Battery slot inventory synchronized with live grid!', 'success');
+      // Clear the unsaved flag before refreshing so the counters take the server values
+      slotsDirtyRef.current = false;
+      setSlotsDirty(false);
       loadOperationalData();
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to update battery slots.', 'error');
@@ -190,6 +248,9 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
   // =========================================================================
 
   const startCameraScanner = async () => {
+    // Ignore repeat clicks while a stream is starting or already running
+    if (streamRef.current || cameraStartingRef.current) return;
+    cameraStartingRef.current = true;
     setCameraError('');
     setQrError('');
     try {
@@ -199,29 +260,37 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
       });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute('playsinline', 'true');
-        await videoRef.current.play();
-        setIsCameraActive(true);
-        scanFrame();
+      // The viewport can unmount while the permission prompt is open; release the camera if so
+      if (!videoRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
       }
+      streamRef.current = stream;
+      videoRef.current.srcObject = stream;
+      videoRef.current.setAttribute('playsinline', 'true');
+      await videoRef.current.play();
+      setIsCameraActive(true);
+      scanFrame();
     } catch (err) {
       console.warn('Camera stream initialisation notice:', err.message);
       setCameraError(err.message || 'Unable to access camera. Please use manual token input.');
-      setIsCameraActive(false);
+      stopCameraScanner();
+    } finally {
+      cameraStartingRef.current = false;
     }
   };
 
   const stopCameraScanner = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject;
-      const tracks = stream.getTracks();
-      tracks.forEach((track) => track.stop());
-      videoRef.current.srcObject = null;
-    }
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
     setIsCameraActive(false);
   };
@@ -245,8 +314,8 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
         const decoded = code.data.trim();
         if (decoded.startsWith('SOLAR-TX:') || decoded.startsWith('RES-')) {
           stopCameraScanner();
-          // Find matching reservation to inspect or directly verify
-          const matched = reservations.find(
+          // Find matching reservation to inspect or directly verify (ref = latest list, not the one at scan start)
+          const matched = reservationsRef.current.find(
             (r) => (r.qrCodeToken && r.qrCodeToken === decoded) || r.reservationNumber === decoded
           );
           if (matched) {
@@ -264,6 +333,24 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
   useEffect(() => {
     return () => stopCameraScanner();
   }, []);
+
+  const isScannerVisible = operatorTab === 0 || operatorTab === 3;
+
+  // Release the camera whenever the scanner viewport is hidden (tab switch or manual mode)
+  useEffect(() => {
+    if (!isScannerVisible || scannerMode !== 'camera') {
+      stopCameraScanner();
+    }
+  }, [isScannerVisible, scannerMode]);
+
+  // Start a scan requested from the queue/pass modals once the scanner viewport has rendered
+  useEffect(() => {
+    if (pendingCameraStart && isScannerVisible && scannerMode === 'camera') {
+      setPendingCameraStart(false);
+      qrSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      startCameraScanner();
+    }
+  }, [pendingCameraStart, isScannerVisible, scannerMode]);
 
   // =========================================================================
   // DIRECT QR VERIFICATION & DISPATCH EXECUTION
@@ -283,7 +370,8 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
     try {
       const payload = {
         qrCodeToken: rawToken,
-        stationId: selectedStationId || undefined
+        // Ref: this can run from the camera loop, whose closure may predate a hub change
+        stationId: selectedStationIdRef.current || undefined
       };
 
       const res = await api.post('/reservations/verify-qr', payload);
@@ -308,6 +396,8 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
   // =========================================================================
 
   const handleApproveReservation = async (res) => {
+    if (approvingId) return;
+    setApprovingId(res.id);
     try {
       const apiRes = await api.post(`/reservations/${res.id}/approve`);
       const updated = apiRes.data?.reservation || apiRes.data || {};
@@ -336,6 +426,18 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
       loadOperationalData();
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to approve reservation.', 'error');
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('QR token payload copied to clipboard!', 'info');
+    } catch {
+      // Clipboard API is unavailable outside secure contexts (e.g. http://<LAN-IP>)
+      showToast('Copy failed. Select the token text and copy it manually.', 'warning');
     }
   };
 
@@ -346,13 +448,11 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
 
   // Switch to Scanner view and trigger optical camera scan for pass
   const handleScanWithCamera = (res) => {
-    setOperatorTab(0);
+    if (!isScannerVisible) setOperatorTab(0);
     setScannerMode('camera');
     setQrToken(res?.qrCodeToken || res?.reservationNumber || '');
-    if (qrSectionRef.current) {
-      qrSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    startCameraScanner();
+    // The camera starts in an effect once the scanner viewport is on screen
+    setPendingCameraStart(true);
     showToast(`Webcam scanner active for #${res?.reservationNumber}. Align prosumer QR pass within reticle.`, 'info');
   };
 
@@ -362,15 +462,19 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
 
   const handleCreateReservation = async (e) => {
     e.preventDefault();
+    if (createSubmitting) return;
     setCreateError('');
     setCreateSuccess('');
+    if (!createForm.stationId) {
+      setCreateError('Please select a solar station hub.');
+      return;
+    }
+    // Stays locked through the success message so a second click can't create a duplicate booking
+    setCreateSubmitting(true);
     try {
-      if (!createForm.stationId) {
-        setCreateError('Please select a solar station hub.');
-        return;
-      }
       const payload = {
         ...createForm,
+        prosumerNic: createForm.prosumerNic.trim(),
         energyAmountKwh: parseFloat(createForm.energyAmountKwh),
         scheduledDateTime: new Date(createForm.scheduledDateTime).toISOString()
       };
@@ -380,10 +484,12 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
       setTimeout(() => {
         setIsCreateModalOpen(false);
         setCreateSuccess('');
+        setCreateSubmitting(false);
       }, 1500);
       loadOperationalData();
     } catch (err) {
       setCreateError(err.response?.data?.message || 'Failed to create reservation.');
+      setCreateSubmitting(false);
     }
   };
 
@@ -398,12 +504,15 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
     });
     setEditError('');
     setEditSuccess('');
+    setEditSubmitting(false);
   };
 
   const handleUpdateReservation = async (e) => {
     e.preventDefault();
+    if (editSubmitting) return;
     setEditError('');
     setEditSuccess('');
+    setEditSubmitting(true);
     try {
       const payload = {
         scheduledDateTime: new Date(editForm.scheduledDateTime).toISOString(),
@@ -416,10 +525,12 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
       setTimeout(() => {
         setEditingReservation(null);
         setEditSuccess('');
+        setEditSubmitting(false);
       }, 1500);
       loadOperationalData();
     } catch (err) {
       setEditError(err.response?.data?.message || 'Failed to modify reservation.');
+      setEditSubmitting(false);
     }
   };
 
@@ -428,12 +539,15 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
     setCancelReason('');
     setCancelError('');
     setCancelSuccess('');
+    setCancelSubmitting(false);
   };
 
   const handleCancelReservation = async (e) => {
     e.preventDefault();
+    if (cancelSubmitting) return;
     setCancelError('');
     setCancelSuccess('');
+    setCancelSubmitting(true);
     try {
       await api.post(`/reservations/${cancellingReservation.id}/cancel`, {
         reason: cancelReason || 'Operator Administrative Cancellation'
@@ -443,42 +557,73 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
       setTimeout(() => {
         setCancellingReservation(null);
         setCancelSuccess('');
+        setCancelSubmitting(false);
       }, 1500);
       loadOperationalData();
     } catch (err) {
       setCancelError(err.response?.data?.message || 'Failed to cancel reservation.');
+      setCancelSubmitting(false);
     }
   };
 
-  // 12-Hour notice calculator helper
+  // 12-Hour notice calculator helper (mirrors the backend modification/cancellation rule)
   const getNoticeState = (scheduledIso) => {
-    if (!scheduledIso) return { isLocked: true, hoursLeft: 0, label: 'N/A' };
+    if (!scheduledIso) return { isLocked: true, isPast: false, hoursLeft: 0, label: 'N/A' };
     const diffMs = new Date(scheduledIso).getTime() - Date.now();
     const hoursLeft = diffMs / (1000 * 3600);
-    if (hoursLeft < 0) return { isLocked: true, hoursLeft, label: 'Past Appointment' };
-    if (hoursLeft < 12) return { isLocked: true, hoursLeft: +hoursLeft.toFixed(1), label: `<12h Notice (${hoursLeft.toFixed(1)}h left)` };
-    return { isLocked: false, hoursLeft: +hoursLeft.toFixed(1), label: `>12h Notice (${hoursLeft.toFixed(1)}h notice)` };
+    if (hoursLeft < 0) return { isLocked: true, isPast: true, hoursLeft, label: 'Time passed' };
+    if (hoursLeft < 12) return { isLocked: true, isPast: false, hoursLeft: +hoursLeft.toFixed(1), label: `Locked <12h · ${hoursLeft.toFixed(1)}h left` };
+    return { isLocked: false, isPast: false, hoursLeft: +hoursLeft.toFixed(1), label: `Editable · ${hoursLeft.toFixed(1)}h left` };
   };
 
-  // Filtered reservations list
+  const isActiveBooking = (r) => r.status === 'Pending' || r.status === 'Approved';
+
+  // Filtered reservations list, in queue order: upcoming active bookings (soonest first),
+  // then overdue active ones, then closed history (newest first)
   const filteredReservations = useMemo(() => {
-    return reservations.filter((r) => {
-      const matchesStatus = statusFilter === 'All' || r.status === statusFilter;
-      const query = searchNic.trim().toLowerCase();
-      const matchesNic =
-        !query ||
-        (r.prosumerNic && r.prosumerNic.toLowerCase().includes(query)) ||
-        (r.reservationNumber && r.reservationNumber.toLowerCase().includes(query)) ||
-        (r.stationName && r.stationName.toLowerCase().includes(query));
-      return matchesStatus && matchesNic;
-    });
+    const query = searchNic.trim().toLowerCase();
+    const now = Date.now();
+    const rank = (r) => {
+      if (!isActiveBooking(r)) return 2;
+      return new Date(r.scheduledDateTime).getTime() >= now ? 0 : 1;
+    };
+    return reservations
+      .filter((r) => {
+        const matchesStatus = statusFilter === 'All' || r.status === statusFilter;
+        const matchesNic =
+          !query ||
+          (r.prosumerNic && r.prosumerNic.toLowerCase().includes(query)) ||
+          (r.reservationNumber && r.reservationNumber.toLowerCase().includes(query)) ||
+          (r.stationName && r.stationName.toLowerCase().includes(query));
+        return matchesStatus && matchesNic;
+      })
+      .sort((a, b) => {
+        const rankA = rank(a);
+        const rankB = rank(b);
+        if (rankA !== rankB) return rankA - rankB;
+        const timeA = new Date(a.scheduledDateTime).getTime();
+        const timeB = new Date(b.scheduledDateTime).getTime();
+        return rankA === 0 ? timeA - timeB : timeB - timeA;
+      });
   }, [reservations, statusFilter, searchNic]);
+
+  // Per-status counts for the filter pills
+  const statusCounts = useMemo(() => {
+    const counts = { All: reservations.length };
+    reservations.forEach((r) => {
+      counts[r.status] = (counts[r.status] || 0) + 1;
+    });
+    return counts;
+  }, [reservations]);
 
   // KPIs
   const kpis = useMemo(() => {
-    const queue = reservations.filter((r) => r.status === 'Pending' || r.status === 'Approved').length;
+    const queue = reservations.filter(isActiveBooking).length;
     const verified = reservations.filter((r) => r.status === 'Completed').length;
-    const totalBatteryCapacity = stations.reduce((sum, s) => sum + (s.availableBatterySlots || 0), 0);
+    // Label says "across active grid hubs", so deactivated hubs don't count
+    const totalBatteryCapacity = stations
+      .filter((s) => s.isActive)
+      .reduce((sum, s) => sum + (s.availableBatterySlots || 0), 0);
     return { queue, verified, totalBatteryCapacity };
   }, [reservations, stations]);
 
@@ -490,7 +635,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
       <Toast
         message={toast.message}
         type={toast.type}
-        onClose={() => setToast({ message: '', type: 'success' })}
+        onClose={closeToast}
       />
 
       {/* Top Header & Operator Profile */}
@@ -499,18 +644,34 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
           <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
             Grid Operator Terminal
           </h1>
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 font-medium flex flex-wrap items-center gap-2">
+          <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 font-medium flex flex-wrap items-center gap-2">
             <span>Logged in as <strong className="text-slate-900 dark:text-white font-semibold">{user?.fullName || 'Grid Operator'}</strong> ({user?.nic || 'OPERATOR001'})</span>
             <span className="text-slate-300 dark:text-slate-600">&bull;</span>
-            <span>Station: <strong className="text-slate-900 dark:text-white font-semibold">{currentStationObj?.name || 'All Hubs'}</strong></span>
-          </p>
+            {/* Operating hub is global context: it drives QR verification, queue highlighting and inventory */}
+            <label className="inline-flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
+              <span>Operating hub:</span>
+              <select
+                value={selectedStationId}
+                onChange={(e) => handleStationChange(e.target.value)}
+                aria-label="Operating hub"
+                className="px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 cursor-pointer"
+              >
+                {stations.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}{s.isActive ? '' : ' (inactive)'}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
 
         <button
           onClick={loadOperationalData}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold transition shadow-xs self-start sm:self-auto cursor-pointer"
         >
-          <RefreshCw className={`h-3.5 w-3.5 text-amber-500 dark:text-amber-400 ${loadingReservations ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-3.5 w-3.5 text-amber-500 dark:text-amber-400 ${isSyncing ? 'animate-spin' : ''}`} />
           <span>Sync Grid State</span>
         </button>
       </div>
@@ -590,7 +751,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
           }`}
         >
           <Battery className="h-4 w-4" />
-          <span>3. Storage Hub Inventory ({availableSlots} Slots)</span>
+          <span>3. Storage Hub Inventory ({currentStationObj?.availableBatterySlots ?? availableSlots} free)</span>
         </button>
         <button
           onClick={() => setOperatorTab(3)}
@@ -616,9 +777,9 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
               operatorTab === 3 ? 'lg:col-span-7' : 'w-full'
             } rounded-3xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/60 backdrop-blur-xl p-6 sm:p-7 shadow-xs dark:shadow-xl space-y-5 transition-all duration-300`}
           >
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3 text-slate-900 dark:text-white font-display font-bold text-lg">
-                <div className="h-10 w-10 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
+                <div className="h-10 w-10 shrink-0 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
                   <Scan className="h-5 w-5" />
                 </div>
                 <div>
@@ -630,7 +791,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
               </div>
 
               {/* Scanner Mode Toggle */}
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950/80 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-1 self-start sm:self-auto shrink-0 whitespace-nowrap bg-slate-100 dark:bg-slate-950/80 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => {
@@ -767,7 +928,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Transaction Token Payload
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     ref={qrInputRef}
                     type="text"
@@ -780,7 +941,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                   <button
                     type="submit"
                     disabled={verifying}
-                    className="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shrink-0 transition shadow-md shadow-cyan-500/20 active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                    className="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shrink-0 transition shadow-md shadow-cyan-500/20 active:scale-95 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     <ShieldCheck className="h-4 w-4" />
                     <span>{verifying ? 'Verifying...' : 'Verify & Finalize'}</span>
@@ -859,7 +1020,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                 >
                   {stations.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.stationCode} &mdash; {s.name} ({s.availableBatterySlots}/{s.totalBatterySlots} Available)
+                      {s.stationCode} &mdash; {s.name} ({s.availableBatterySlots}/{s.totalBatterySlots} Available){s.isActive ? '' : ' (inactive)'}
                     </option>
                   ))}
                 </select>
@@ -884,19 +1045,27 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
 
               {/* Slider & Meter */}
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 space-y-3">
-                <div className="flex justify-between text-xs font-bold">
+                <div className="flex justify-between items-center gap-2 text-xs font-bold">
                   <span className="text-slate-500 dark:text-slate-400">Available Battery Capacity:</span>
-                  <span className="text-amber-600 dark:text-amber-400 font-mono text-sm">
-                    {availableSlots} of {totalSlots} Slots Free
+                  <span className="flex items-center gap-2">
+                    {slotsDirty && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase tracking-wide">
+                        Unsaved
+                      </span>
+                    )}
+                    <span className="text-amber-600 dark:text-amber-400 font-mono text-sm">
+                      {availableSlots} of {totalSlots} Slots Free
+                    </span>
                   </span>
                 </div>
 
                 <input
                   type="range"
                   min="0"
-                  max={totalSlots || 20}
+                  max={totalSlots}
                   value={availableSlots}
-                  onChange={(e) => setAvailableSlots(parseInt(e.target.value, 10))}
+                  onChange={(e) => editAvailableSlots(parseInt(e.target.value, 10))}
+                  aria-label="Available battery slots"
                   className="w-full accent-amber-500 cursor-pointer h-2 bg-slate-200 dark:bg-slate-800 rounded-lg"
                 />
 
@@ -910,7 +1079,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
               <div className="flex items-center gap-2.5 pt-1">
                 <button
                   type="button"
-                  onClick={() => setAvailableSlots(Math.max(0, availableSlots - 1))}
+                  onClick={() => editAvailableSlots(availableSlots - 1)}
                   className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-bold border border-slate-200 dark:border-slate-700 active:scale-95 transition cursor-pointer"
                 >
                   -1 Slot
@@ -921,13 +1090,14 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                   min="0"
                   max={totalSlots}
                   value={availableSlots}
-                  onChange={(e) => setAvailableSlots(parseInt(e.target.value, 10) || 0)}
+                  onChange={(e) => editAvailableSlots(parseInt(e.target.value, 10))}
+                  aria-label="Available battery slots"
                   className="w-20 text-center py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white"
                 />
 
                 <button
                   type="button"
-                  onClick={() => setAvailableSlots(Math.min(totalSlots, availableSlots + 1))}
+                  onClick={() => editAvailableSlots(availableSlots + 1)}
                   className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-bold border border-slate-200 dark:border-slate-700 active:scale-95 transition cursor-pointer"
                 >
                   +1 Slot
@@ -935,7 +1105,9 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
 
                 <button
                   onClick={handleUpdateSlots}
-                  className="ml-auto px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 text-slate-950 text-xs font-bold shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer"
+                  disabled={!slotsDirty}
+                  title={slotsDirty ? 'Save the new slot count to the server' : 'No unsaved changes'}
+                  className="ml-auto px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 text-slate-950 text-xs font-bold shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                 >
                   Sync Storage State
                 </button>
@@ -948,60 +1120,69 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
       {/* SECTION 3: Live Station Queue & Dispatch Ledger */}
       {(operatorTab === 1 || operatorTab === 3) && (
         <div className="rounded-3xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/60 backdrop-blur-xl overflow-hidden shadow-xs dark:shadow-xl transition-colors duration-300">
-          <div className="p-6 border-b border-slate-200 dark:border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-display font-bold text-slate-900 dark:text-white">
-                Live Station Queue &amp; Dispatch Ledger
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Real-time schedule of prosumer energy drop-offs, approvals, and battery draws.
-              </p>
-            </div>
+          <div className="p-6 border-b border-slate-200 dark:border-slate-800/80 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-display font-bold text-slate-900 dark:text-white">
+                  Live Station Queue &amp; Dispatch Ledger
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Upcoming bookings first (soonest at the top), then overdue ones, then history.
+                </p>
+              </div>
 
-            <div className="flex flex-wrap items-center gap-2.5">
               <button
                 onClick={() => {
+                  const defaultHub = stations.find((s) => s.id === selectedStationId && s.isActive) || stations.find((s) => s.isActive);
                   setCreateForm({
                     prosumerNic: '',
-                    stationId: selectedStationId || stations[0]?.id || '',
-                    scheduledDateTime: new Date(Date.now() + 3600000).toISOString().slice(0, 16),
+                    stationId: defaultHub?.id || '',
+                    // datetime-local expects local time; toISOString() would give UTC (hours in the past for UTC+ zones)
+                    scheduledDateTime: toLocalIsoString(new Date(Date.now() + 3600000)),
                     energyAmountKwh: 15,
                     tradeType: 'DropOff'
                   });
                   setCreateError('');
                   setCreateSuccess('');
+                  setCreateSubmitting(false);
                   setIsCreateModalOpen(true);
                 }}
-                className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer"
+                className="self-start sm:self-auto shrink-0 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer"
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>New Booking</span>
               </button>
+            </div>
 
-              <div className="relative">
+            <div className="flex flex-col md:flex-row md:items-center gap-2.5">
+              <div className="relative md:w-64 shrink-0">
                 <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   placeholder="Filter NIC, Res # or Hub"
+                  aria-label="Filter bookings by NIC, reservation number or hub"
                   value={searchNic}
                   onChange={(e) => setSearchNic(e.target.value)}
-                  className="pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 w-48 focus:ring-1 focus:ring-amber-500"
+                  className="pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 w-full focus:ring-1 focus:ring-amber-500"
                 />
               </div>
 
-              {['All', 'Approved', 'Pending', 'Completed', 'Cancelled'].map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setStatusFilter(status)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                    statusFilter === status
-                      ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                      : 'bg-slate-100 dark:bg-slate-950/60 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  {status}
-                </button>
-              ))}
+              <div className="flex flex-wrap items-center gap-2">
+                {STATUS_FILTERS.map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setStatusFilter(status)}
+                    aria-pressed={statusFilter === status}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                      statusFilter === status
+                        ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                        : 'bg-slate-100 dark:bg-slate-950/60 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {status} <span className="opacity-70 font-mono">({statusCounts[status] || 0})</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -1017,59 +1198,66 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800/80 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[11px]">
+                <thead className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800/80 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[11px] whitespace-nowrap">
                   <tr>
-                    <th className="px-6 py-4">Reservation #</th>
-                    <th className="px-6 py-4">Prosumer NIC</th>
-                    <th className="px-6 py-4">Station &amp; Trade Type</th>
-                    <th className="px-6 py-4">Scheduled Window</th>
-                    <th className="px-6 py-4">Lifecycle Status</th>
-                    <th className="px-6 py-4 text-right">Actions</th>
+                    <th className="px-5 py-4">Reservation #</th>
+                    <th className="px-5 py-4">Prosumer NIC</th>
+                    <th className="px-5 py-4">Station &amp; Trade Type</th>
+                    <th className="px-5 py-4">Scheduled Window</th>
+                    <th className="px-5 py-4">Status</th>
+                    <th className="px-5 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-slate-700 dark:text-slate-200">
                   {filteredReservations.map((r) => {
                     const notice = getNoticeState(r.scheduledDateTime);
+                    const isActive = isActiveBooking(r);
                     const isMatchingActiveStation = selectedStationId && r.stationId === selectedStationId;
 
                     return (
                       <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                        <td className="px-6 py-4 font-mono font-bold text-amber-600 dark:text-amber-400">
+                        <td className="px-5 py-4 font-mono font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap">
                           {r.reservationNumber}
                         </td>
-                        <td className="px-6 py-4 font-mono text-slate-600 dark:text-slate-300">
+                        <td className="px-5 py-4 font-mono text-slate-600 dark:text-slate-300 whitespace-nowrap">
                           {r.prosumerNic}
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <td className="px-5 py-4">
+                          {/* min-width lives on the inner div: browsers ignore min-width on table cells */}
+                          <div className="min-w-[180px] font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                             <span>{r.stationName}</span>
                             {!isMatchingActiveStation && (
-                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-500" title="Different Hub Node">
+                              <span className="shrink-0 whitespace-nowrap text-[10px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-500" title="Booking is for a different hub than your operating hub">
                                 Other Hub
                               </span>
                             )}
                           </div>
-                          <div className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5 font-semibold">
+                          <div className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5 font-semibold whitespace-nowrap">
                             {r.energyAmountKwh} kWh &bull; {r.tradeType}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-5 py-4 whitespace-nowrap">
                           <div className="font-mono text-[11px] text-slate-600 dark:text-slate-300">
-                            {new Date(r.scheduledDateTime).toLocaleString()}
+                            {formatSchedule(r.scheduledDateTime)}
                           </div>
-                          <div className="mt-0.5">
-                            <span
-                              className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-semibold ${
-                                notice.isLocked
-                                  ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
-                                  : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
-                              }`}
-                            >
-                              {notice.label}
-                            </span>
-                          </div>
+                          {/* The 12-hour rule only matters while a booking can still change */}
+                          {isActive && (
+                            <div className="mt-1">
+                              <span
+                                className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-semibold border ${
+                                  notice.isPast
+                                    ? 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20'
+                                    : notice.isLocked
+                                    ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
+                                    : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20'
+                                }`}
+                              >
+                                {notice.label}
+                              </span>
+                            </div>
+                          )}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-5 py-4 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
                               r.status === 'Approved'
@@ -1084,16 +1272,17 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                             <span>{r.status}</span>
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                        <td className="px-5 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                             {r.status === 'Pending' && (
                               <button
                                 onClick={() => handleApproveReservation(r)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold text-[11px] transition active:scale-95 cursor-pointer"
-                                title="Approve Reservation & Issue QR Pass"
+                                disabled={notice.isPast || approvingId === r.id}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold text-[11px] transition active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+                                title={notice.isPast ? 'Appointment time has passed. Cancel it instead.' : 'Approve Reservation & Issue QR Pass'}
                               >
                                 <CheckCircle2 className="h-3.5 w-3.5" />
-                                <span>Approve</span>
+                                <span>{approvingId === r.id ? 'Approving…' : 'Approve'}</span>
                               </button>
                             )}
                             {r.status === 'Approved' && (
@@ -1104,7 +1293,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                                   title="Inspect Physical Pass & Verify Details"
                                 >
                                   <ShieldCheck className="h-3.5 w-3.5" />
-                                  <span>Inspect Pass</span>
+                                  <span>Inspect</span>
                                 </button>
                                 <button
                                   onClick={() => handleScanWithCamera(r)}
@@ -1112,16 +1301,18 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                                   title="Scan Prosumer QR Pass with Webcam"
                                 >
                                   <Camera className="h-3.5 w-3.5" />
-                                  <span>Scan with Camera</span>
+                                  <span>Scan</span>
                                 </button>
                               </>
                             )}
-                            {(r.status === 'Pending' || r.status === 'Approved') && (
+                            {isActive && (
                               <>
+                                {/* The backend rejects modifications inside 12 hours for every role */}
                                 <button
                                   onClick={() => handleOpenEdit(r)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[11px] transition active:scale-95 cursor-pointer"
-                                  title="Modify scheduled window or energy"
+                                  disabled={notice.isLocked}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[11px] transition active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+                                  title={notice.isLocked ? 'Modifications close 12 hours before the scheduled time' : 'Modify scheduled window or energy'}
                                 >
                                   <Edit3 className="h-3.5 w-3.5" />
                                   <span>Edit</span>
@@ -1129,7 +1320,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                                 <button
                                   onClick={() => handleOpenCancel(r)}
                                   className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 font-bold text-[11px] transition active:scale-95 cursor-pointer"
-                                  title="Cancel reservation"
+                                  title={notice.isLocked ? "Cancel on the prosumer's behalf (operator override of the 12-hour rule)" : 'Cancel reservation'}
                                 >
                                   <XCircle className="h-3.5 w-3.5" />
                                   <span>Cancel</span>
@@ -1142,7 +1333,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                               </span>
                             )}
                             {r.status === 'Cancelled' && (
-                              <span className="text-slate-400 dark:text-slate-600 font-mono text-[11px]">
+                              <span className="inline-block max-w-[240px] whitespace-normal text-right text-slate-500 dark:text-slate-500 font-mono text-[11px]">
                                 Cancelled: {r.cancellationReason || 'Override'}
                               </span>
                             )}
@@ -1167,18 +1358,34 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
         title="Physical Transaction Pass Inspection"
         maxWidth="max-w-lg"
       >
-        {inspectingPass && (
+        {inspectingPass && (() => {
+          // The backend rejects a pass verified at a different hub, or one that isn't Approved
+          const passHubMatches = !!selectedStationId && inspectingPass.stationId === selectedStationId;
+          const passIsApproved = inspectingPass.status === 'Approved';
+          return (
           <div className="space-y-4 text-xs">
             {/* Station Hub Matching Badge */}
-            {selectedStationId && (inspectingPass.stationId === selectedStationId || inspectingPass.stationName === currentStationObj?.name) ? (
+            {passHubMatches ? (
               <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-semibold flex items-center gap-2">
                 <Check className="h-4 w-4 text-emerald-500 shrink-0" />
                 <span>Station Hub Matched: <strong>{inspectingPass.stationName}</strong></span>
               </div>
             ) : (
-              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 font-semibold flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-                <span>Station Hub Notice: Pass is for <strong>{inspectingPass.stationName}</strong>, terminal set to <strong>{currentStationObj?.name || 'Central'}</strong></span>
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 font-semibold space-y-2.5">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                  <span>
+                    This pass is for <strong>{inspectingPass.stationName}</strong>, but your terminal is operating <strong>{currentStationObj?.name || 'no hub'}</strong>. It can only be finalized at its own hub.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleStationChange(inspectingPass.stationId)}
+                  className="ml-6 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] transition active:scale-95 cursor-pointer"
+                >
+                  <MapPin className="h-3.5 w-3.5" />
+                  <span>Switch terminal to {inspectingPass.stationName}</span>
+                </button>
               </div>
             )}
 
@@ -1208,13 +1415,19 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
               <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-2.5">
                 <span className="text-slate-500 dark:text-slate-400">Scheduled Time:</span>
                 <span className="font-mono text-slate-700 dark:text-slate-300">
-                  {new Date(inspectingPass.scheduledDateTime).toLocaleString()}
+                  {formatSchedule(inspectingPass.scheduledDateTime)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-slate-500 dark:text-slate-400">Prerequisite State:</span>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                    passIsApproved
+                      ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30'
+                      : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                  }`}
+                >
                   {inspectingPass.status}
                 </span>
               </div>
@@ -1254,9 +1467,16 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                 </button>
                 <button
                   type="button"
-                  disabled={verifying}
+                  disabled={verifying || !passHubMatches || !passIsApproved}
                   onClick={() => handleDirectVerifyQr(inspectingPass.qrCodeToken || inspectingPass.reservationNumber)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow-md shadow-cyan-500/20 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                  title={
+                    !passIsApproved
+                      ? `Only Approved passes can be finalized (this one is ${inspectingPass.status})`
+                      : !passHubMatches
+                      ? 'Switch the terminal to the pass hub first'
+                      : 'Verify the pass and complete the energy transfer'
+                  }
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow-md shadow-cyan-500/20 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 cursor-pointer"
                 >
                   <ShieldCheck className="h-4 w-4" />
                   <span>{verifying ? 'Finalizing Transfer...' : 'Finalize Energy Transfer'}</span>
@@ -1264,7 +1484,8 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
               </div>
             </div>
           </div>
-        )}
+          );
+        })()}
       </Modal>
 
       {/* ===================================================================== */}
@@ -1308,7 +1529,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
               </div>
               {approvedPassData.scheduledDateTime && (
                 <p className="text-slate-400 font-mono text-[10px] pt-0.5">
-                  Scheduled: {new Date(approvedPassData.scheduledDateTime).toLocaleString()}
+                  Scheduled: {formatSchedule(approvedPassData.scheduledDateTime)}
                 </p>
               )}
             </div>
@@ -1322,10 +1543,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
               <button
                 type="button"
                 onClick={() => {
-                  if (approvedPassData.qrCodeToken) {
-                    navigator.clipboard.writeText(approvedPassData.qrCodeToken);
-                    showToast('QR token payload copied to clipboard!', 'info');
-                  }
+                  if (approvedPassData.qrCodeToken) copyToClipboard(approvedPassData.qrCodeToken);
                 }}
                 className="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-white font-bold transition flex items-center justify-center gap-1 cursor-pointer"
               >
@@ -1400,9 +1618,10 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
               className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
             >
               <option value="">Select station...</option>
+              {/* Deactivated hubs can't take bookings (the backend rejects them) */}
               {stations.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.address})
+                <option key={s.id} value={s.id} disabled={!s.isActive}>
+                  {s.name} ({s.address}){s.isActive ? '' : ' (inactive)'}
                 </option>
               ))}
             </select>
@@ -1458,9 +1677,10 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer"
+              disabled={createSubmitting}
+              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
             >
-              Submit Booking
+              {createSubmitting ? 'Submitting…' : 'Submit Booking'}
             </button>
           </div>
         </form>
@@ -1538,9 +1758,10 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer"
+              disabled={editSubmitting}
+              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
             >
-              Save Changes
+              {editSubmitting ? 'Saving…' : 'Save Changes'}
             </button>
           </div>
         </form>
@@ -1573,6 +1794,19 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
             Are you sure you want to cancel this reservation? Reserved slot capacity will be released back to the microgrid node.
           </p>
 
+          {/* Operator-assisted cancellation: prosumers are blocked inside 12 hours, operators may override */}
+          {cancellingReservation && getNoticeState(cancellingReservation.scheduledDateTime).isLocked && (
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+              <span>
+                {getNoticeState(cancellingReservation.scheduledDateTime).isPast
+                  ? 'The scheduled time has already passed.'
+                  : 'This booking starts in less than 12 hours, so the prosumer can no longer cancel it themselves.'}{' '}
+                You are cancelling on their behalf as a Grid Operator (override). Please record the reason.
+              </span>
+            </div>
+          )}
+
           <div>
             <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Cancellation Reason</label>
             <textarea
@@ -1595,9 +1829,10 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold shadow-md shadow-red-500/20 transition active:scale-95 cursor-pointer"
+              disabled={cancelSubmitting}
+              className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold shadow-md shadow-red-500/20 transition active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
             >
-              Confirm Cancel
+              {cancelSubmitting ? 'Cancelling…' : 'Confirm Cancel'}
             </button>
           </div>
         </form>
