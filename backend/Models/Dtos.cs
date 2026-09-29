@@ -32,6 +32,19 @@ namespace SolarMicrogridApi.Models
         public string Status { get; set; } = string.Empty;
         public double SolarCapacityKw { get; set; } = 0.0;
         public string InverterSerial { get; set; } = string.Empty;
+        public bool MustChangePassword { get; set; } = false;
+    }
+
+    public class ChangePasswordDto
+    {
+        [Required]
+        public string CurrentPassword { get; set; } = string.Empty;
+
+        [Required]
+        [MinLength(8)]
+        public string NewPassword { get; set; } = string.Empty;
+
+        public string? ConfirmPassword { get; set; }
     }
 
     public class AuthErrorResponseDto

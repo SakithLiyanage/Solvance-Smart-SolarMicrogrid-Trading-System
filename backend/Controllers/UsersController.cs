@@ -245,7 +245,7 @@ namespace SolarMicrogridApi.Controllers
 
             try
             {
-                var success = await _userService.ResetPasswordAsync(nic, dto.NewPassword, requesterRole, requesterNic);
+                var success = await _userService.ResetPasswordAsync(nic, dto.NewPassword, requesterRole, requesterNic, dto.RequirePasswordChange);
                 if (!success)
                 {
                     return NotFound(new { message = $"User with NIC '{nic}' not found." });
@@ -326,5 +326,6 @@ namespace SolarMicrogridApi.Controllers
     {
         public string NewPassword { get; set; } = string.Empty;
         public string ConfirmPassword { get; set; } = string.Empty;
+        public bool RequirePasswordChange { get; set; } = false;
     }
 }
