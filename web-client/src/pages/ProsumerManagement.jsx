@@ -383,11 +383,11 @@ export default function ProsumerManagement({ theme }) {
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800/80 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="py-4 px-6 min-w-[240px] whitespace-nowrap">Prosumer &amp; NIC</th>
-                <th className="py-4 px-6 min-w-[200px] whitespace-nowrap">Solar Installation</th>
-                <th className="py-4 px-6 min-w-[200px] whitespace-nowrap">Contact Details</th>
-                <th className="py-4 px-6 min-w-[230px] whitespace-nowrap">Verification &amp; Status</th>
-                <th className="py-4 px-6 min-w-[270px] text-right whitespace-nowrap">Actions</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Prosumer &amp; NIC</th>
+                <th className="py-3.5 px-3 whitespace-nowrap">Solar Installation</th>
+                <th className="py-3.5 px-3 whitespace-nowrap">Contact Details</th>
+                <th className="py-3.5 px-3 whitespace-nowrap">Verification &amp; Status</th>
+                <th className="py-3.5 px-4 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-slate-700 dark:text-slate-200">
@@ -410,13 +410,13 @@ export default function ProsumerManagement({ theme }) {
 
                   return (
                     <tr key={u.nic} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center font-bold text-amber-600 dark:text-amber-400 shrink-0">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-9 w-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center font-bold text-amber-600 dark:text-amber-400 shrink-0 text-sm">
                             {u.fullName?.charAt(0) || 'P'}
                           </div>
                           <div>
-                            <p className="font-bold text-sm text-slate-900 dark:text-white">{u.fullName}</p>
+                            <p className="font-bold text-sm text-slate-900 dark:text-white leading-tight">{u.fullName}</p>
                             <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                               <span className="font-mono text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 font-bold whitespace-nowrap">
                                 <Hash className="h-3 w-3 text-slate-400 dark:text-slate-500 shrink-0" />
@@ -437,8 +437,8 @@ export default function ProsumerManagement({ theme }) {
                         </div>
                       </td>
 
-                      <td className="py-4 px-6 space-y-1.5 whitespace-nowrap">
-                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold text-xs shadow-xs whitespace-nowrap ${
+                      <td className="py-3 px-3 space-y-1 whitespace-nowrap">
+                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg font-bold text-xs shadow-xs whitespace-nowrap ${
                           u.solarCapacityKw > 0
                             ? 'bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300'
                             : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
@@ -448,17 +448,17 @@ export default function ProsumerManagement({ theme }) {
                         </div>
                         <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                           <Cpu className="h-3 w-3 text-slate-400 shrink-0" />
-                          <span className="truncate max-w-[180px]">{u.inverterSerial || 'Unassigned Inverter'}</span>
+                          <span className="truncate max-w-[150px]">{u.inverterSerial || 'Unassigned Inverter'}</span>
                         </div>
                         {u.address && (
                           <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
                             <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
-                            <span className="truncate max-w-[180px]">{u.address}</span>
+                            <span className="truncate max-w-[150px]">{u.address}</span>
                           </div>
                         )}
                       </td>
 
-                      <td className="py-4 px-6 space-y-1 whitespace-nowrap">
+                      <td className="py-3 px-3 space-y-1 whitespace-nowrap">
                         <p className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 whitespace-nowrap">
                           <Mail className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
                           <span>{u.email}</span>
@@ -469,10 +469,10 @@ export default function ProsumerManagement({ theme }) {
                         </p>
                       </td>
 
-                      <td className="py-4 px-6 whitespace-nowrap">
-                        <div className="space-y-1.5">
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        <div className="space-y-1">
                           <div>
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold whitespace-nowrap ${
                               u.status === 'Active'
                                 ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
                                 : u.status === 'Pending'
@@ -486,7 +486,7 @@ export default function ProsumerManagement({ theme }) {
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-2 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5 whitespace-nowrap">
                             {assessment.allPassed ? (
                               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
@@ -506,11 +506,11 @@ export default function ProsumerManagement({ theme }) {
                         </div>
                       </td>
 
-                      <td className="py-4 px-6 text-right whitespace-nowrap min-w-[270px]">
-                        <div className="inline-flex items-center gap-2 justify-end">
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1.5 justify-end">
                           <button
                             onClick={() => handleOpenKycDossier(u)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold transition active:scale-95 cursor-pointer text-xs border border-slate-200 dark:border-slate-700 shadow-xs whitespace-nowrap shrink-0"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold transition active:scale-95 cursor-pointer text-xs border border-slate-200 dark:border-slate-700 shadow-xs whitespace-nowrap shrink-0"
                             title="Verify NIC and Registration Details"
                           >
                             <ShieldCheck className="h-3.5 w-3.5 text-amber-500 shrink-0" />
@@ -519,7 +519,7 @@ export default function ProsumerManagement({ theme }) {
 
                           <button
                             onClick={() => handleOpenEdit(u)}
-                            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition cursor-pointer shrink-0"
+                            className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition cursor-pointer shrink-0"
                             title="Edit Profile"
                           >
                             <Edit3 className="h-3.5 w-3.5 shrink-0" />
@@ -528,7 +528,7 @@ export default function ProsumerManagement({ theme }) {
                           {u.status === 'Pending' && (
                             <button
                               onClick={() => handleStatusChange(u.nic, 'Active')}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold transition shadow-sm active:scale-95 cursor-pointer whitespace-nowrap shrink-0"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold transition shadow-sm active:scale-95 cursor-pointer whitespace-nowrap shrink-0"
                             >
                               <Check className="h-3.5 w-3.5 shrink-0" />
                               <span>Approve</span>
@@ -538,7 +538,7 @@ export default function ProsumerManagement({ theme }) {
                           {u.status === 'Active' && (
                             <button
                               onClick={() => handleStatusChange(u.nic, 'Deactivated')}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 font-bold transition active:scale-95 cursor-pointer whitespace-nowrap shrink-0"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 font-bold transition active:scale-95 cursor-pointer whitespace-nowrap shrink-0"
                             >
                               <UserX className="h-3.5 w-3.5 shrink-0" />
                               <span>Deactivate</span>
@@ -548,7 +548,7 @@ export default function ProsumerManagement({ theme }) {
                           {u.status === 'Deactivated' && (
                             <button
                               onClick={() => handleStatusChange(u.nic, 'Active')}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold transition active:scale-95 cursor-pointer whitespace-nowrap shrink-0"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold transition active:scale-95 cursor-pointer whitespace-nowrap shrink-0"
                             >
                               <UserCheck className="h-3.5 w-3.5 shrink-0" />
                               <span>Reactivate</span>
