@@ -434,7 +434,7 @@ export default function NodeManagement({ theme }) {
   const upcomingWarning = (station) => {
     const upcoming = upcomingByStation[station.id] || 0;
     return upcoming > 0
-      ? `This hub has ${upcoming} upcoming booking${upcoming === 1 ? '' : 's'}, so the server will block this until ${upcoming === 1 ? 'it is' : 'they are'} completed or cancelled.`
+      ? `This hub has ${upcoming} upcoming reservation${upcoming === 1 ? '' : 's'}, so the server will block this until ${upcoming === 1 ? 'it is' : 'they are'} completed or cancelled.`
       : '';
   };
 
@@ -447,7 +447,7 @@ export default function NodeManagement({ theme }) {
       station,
       action: 'deactivate',
       title: `Deactivate ${station.name}?`,
-      message: 'Prosumers will not be able to book this hub until it is reactivated.',
+      message: 'Prosumers will not be able to reserve energy at this hub until it is reactivated.',
       warning: upcomingWarning(station),
       confirmLabel: 'Deactivate'
     });
@@ -509,7 +509,7 @@ export default function NodeManagement({ theme }) {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
             Solar Hubs
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -572,7 +572,7 @@ export default function NodeManagement({ theme }) {
         </div>
         <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
           <strong className="font-semibold text-slate-900 dark:text-white mr-1.5">Notice:</strong>
-          A hub with upcoming Pending or Approved bookings can't be deactivated or deleted until those bookings are completed or cancelled.
+          A hub with upcoming Pending or Approved reservations can't be deactivated or deleted until those reservations are completed or cancelled.
         </p>
       </div>
 
@@ -600,7 +600,7 @@ export default function NodeManagement({ theme }) {
                   : 'bg-slate-100 dark:bg-slate-900/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'
                 }`}
             >
-              {status} <span className="opacity-70 font-mono">({statusCounts[status]})</span>
+              {status} <span className="opacity-70 tabular-nums">({statusCounts[status]})</span>
             </button>
           ))}
         </div>
@@ -692,7 +692,7 @@ export default function NodeManagement({ theme }) {
 
           {/* Hub selector list */}
           <div className="lg:col-span-4 space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-1">
+            <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 px-1">
               Solar hubs ({filteredStations.length})
             </h3>
             <div className="space-y-3 max-h-[580px] overflow-y-auto pr-1">
@@ -720,7 +720,7 @@ export default function NodeManagement({ theme }) {
                       <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">
                         {s.stationCode}
                       </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusBadge(s.isActive)}`}>
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${statusBadge(s.isActive)}`}>
                         {s.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </div>
@@ -728,7 +728,7 @@ export default function NodeManagement({ theme }) {
                     <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{s.address}</p>
 
                     <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-300">
-                      <span className="font-mono">
+                      <span className="tabular-nums">
                         {s.capacityKwh} kWh &bull; {s.availableBatterySlots}/{s.totalBatterySlots} battery slots free
                       </span>
                       <button
@@ -801,7 +801,7 @@ export default function NodeManagement({ theme }) {
                       <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                         <Cpu className="h-4 w-4 text-amber-500 dark:text-amber-400" /> Capacity:
                       </span>
-                      <span className="font-bold text-slate-900 dark:text-white font-mono">{station.capacityKwh} kWh</span>
+                      <span className="font-bold text-slate-900 dark:text-white tabular-nums">{station.capacityKwh} kWh</span>
                     </div>
 
                     <div>
@@ -809,7 +809,7 @@ export default function NodeManagement({ theme }) {
                         <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                           <Battery className="h-4 w-4 text-emerald-500 dark:text-emerald-400" /> Battery slots:
                         </span>
-                        <span className="font-bold text-slate-900 dark:text-white font-mono">
+                        <span className="font-bold text-slate-900 dark:text-white tabular-nums">
                           {station.availableBatterySlots} / {station.totalBatterySlots} free
                         </span>
                       </div>
@@ -825,7 +825,7 @@ export default function NodeManagement({ theme }) {
                       <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                         <Clock className="h-4 w-4 text-sky-500 dark:text-sky-400" /> Opening hours:
                       </span>
-                      <span className="font-bold text-slate-700 dark:text-slate-300 font-mono">
+                      <span className="font-bold text-slate-700 dark:text-slate-300 tabular-nums">
                         {station.schedule?.openTime && station.schedule?.closeTime
                           ? `${station.schedule.openTime} - ${station.schedule.closeTime}`
                           : 'Not set'}
@@ -834,9 +834,9 @@ export default function NodeManagement({ theme }) {
 
                     <div className="flex justify-between items-center">
                       <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                        <Calendar className="h-4 w-4 text-violet-500 dark:text-violet-400" /> Upcoming bookings:
+                        <Calendar className="h-4 w-4 text-violet-500 dark:text-violet-400" /> Upcoming reservations:
                       </span>
-                      <span className={`font-bold font-mono ${upcoming > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                      <span className={`font-bold tabular-nums ${upcoming > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-700 dark:text-slate-300'}`}>
                         {upcoming}
                       </span>
                     </div>
@@ -867,7 +867,7 @@ export default function NodeManagement({ theme }) {
                             : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
                           }`}
                         title={station.isActive
-                          ? (upcoming > 0 ? `Blocked while ${upcoming} upcoming booking(s) exist` : 'Deactivate this hub')
+                          ? (upcoming > 0 ? `Blocked while ${upcoming} upcoming reservation(s) exist` : 'Deactivate this hub')
                           : 'Reactivate this hub'}
                       >
                         <Power className="h-3.5 w-3.5" />
@@ -877,7 +877,7 @@ export default function NodeManagement({ theme }) {
                         onClick={() => requestDelete(station)}
                         disabled={isBusy}
                         aria-label={`Delete ${station.name}`}
-                        title="Permanently delete this hub (blocked while upcoming bookings exist)"
+                        title="Permanently delete this hub (blocked while upcoming reservations exist)"
                         className="inline-flex items-center justify-center gap-1 px-2.5 py-2 bg-slate-100 dark:bg-slate-800/80 hover:bg-red-500/10 text-slate-500 hover:text-red-500 dark:hover:text-red-400 text-xs font-bold rounded-xl transition border border-slate-200 dark:border-slate-700 cursor-pointer disabled:opacity-50"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -930,7 +930,7 @@ export default function NodeManagement({ theme }) {
                 required
                 value={formData.stationCode}
                 onChange={(e) => setFormData({ ...formData, stationCode: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono uppercase focus:ring-2 focus:ring-amber-500/50"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-amber-500/50"
               />
             </div>
             <div>
@@ -973,7 +973,7 @@ export default function NodeManagement({ theme }) {
                 required
                 value={formData.latitude}
                 onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 font-mono"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 tabular-nums"
               />
             </div>
             <div>
@@ -987,7 +987,7 @@ export default function NodeManagement({ theme }) {
                 required
                 value={formData.longitude}
                 onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 font-mono"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 tabular-nums"
               />
             </div>
           </div>
@@ -1004,7 +1004,7 @@ export default function NodeManagement({ theme }) {
                 required
                 value={formData.capacityKwh}
                 onChange={(e) => setFormData({ ...formData, capacityKwh: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 font-mono"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 tabular-nums"
               />
             </div>
             <div>
@@ -1017,7 +1017,7 @@ export default function NodeManagement({ theme }) {
                 required
                 value={formData.totalBatterySlots}
                 onChange={(e) => setFormData({ ...formData, totalBatterySlots: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 font-mono"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 tabular-nums"
               />
               {editingStation && (
                 <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
@@ -1183,7 +1183,7 @@ export default function NodeManagement({ theme }) {
               <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
-                    <thead className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800 text-slate-500 font-bold uppercase text-[10px] whitespace-nowrap">
+                    <thead className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800 text-slate-500 font-bold text-xs whitespace-nowrap">
                       <tr>
                         <th className="px-3 py-2">Date</th>
                         <th className="px-3 py-2">Time</th>
@@ -1194,7 +1194,7 @@ export default function NodeManagement({ theme }) {
                         <th className="px-3 py-2 text-right">Adjust</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[11px]">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 tabular-nums text-[13px]">
                       {slotPager.pageItems.map((slot) => {
                         const isAdjusting = adjustingSlotId === slot.id;
                         return (
@@ -1205,7 +1205,7 @@ export default function NodeManagement({ theme }) {
                             <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{slot.allocatedKwh} kWh</td>
                             <td className="px-3 py-2 font-bold text-emerald-600 dark:text-emerald-400">{slot.availableSlots}</td>
                             <td className="px-3 py-2">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${slot.status === 'Open'
+                              <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${slot.status === 'Open'
                                   ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
                                   : slot.status === 'Full'
                                     ? 'bg-red-500/15 text-red-700 dark:text-red-300'
@@ -1237,7 +1237,7 @@ export default function NodeManagement({ theme }) {
                                   <button
                                     onClick={() => handleUpdateSlotAvailability(slot, slot.availableSlots - 1)}
                                     disabled={isAdjusting || slot.availableSlots <= 0}
-                                    aria-label="One fewer available booking slot"
+                                    aria-label="One fewer available reservation slot"
                                     className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded font-bold text-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                   >
                                     -
@@ -1245,7 +1245,7 @@ export default function NodeManagement({ theme }) {
                                   <button
                                     onClick={() => handleUpdateSlotAvailability(slot, slot.availableSlots + 1)}
                                     disabled={isAdjusting}
-                                    aria-label="One more available booking slot"
+                                    aria-label="One more available reservation slot"
                                     className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded font-bold text-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                   >
                                     +
@@ -1290,7 +1290,7 @@ export default function NodeManagement({ theme }) {
               </h4>
               {slotStation?.schedule?.openTime && slotStation?.schedule?.closeTime && (
                 <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Hub hours: <strong className="font-mono">{slotStation.schedule.openTime} - {slotStation.schedule.closeTime}</strong>
+                  Hub hours: <strong className="tabular-nums">{slotStation.schedule.openTime} - {slotStation.schedule.closeTime}</strong>
                 </span>
               )}
             </div>
@@ -1339,11 +1339,11 @@ export default function NodeManagement({ theme }) {
                   required
                   value={newSlotForm.slotCapacityKwh}
                   onChange={(e) => setNewSlotForm({ ...newSlotForm, slotCapacityKwh: e.target.value })}
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs tabular-nums text-slate-900 dark:text-white"
                 />
               </div>
               <div>
-                <label htmlFor="slot-count" className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Booking Slots</label>
+                <label htmlFor="slot-count" className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Reservation Slots</label>
                 <input
                   id="slot-count"
                   type="number"
@@ -1351,7 +1351,7 @@ export default function NodeManagement({ theme }) {
                   required
                   value={newSlotForm.availableSlots}
                   onChange={(e) => setNewSlotForm({ ...newSlotForm, availableSlots: e.target.value })}
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs tabular-nums text-slate-900 dark:text-white"
                 />
               </div>
               <div className="sm:flex sm:items-end">

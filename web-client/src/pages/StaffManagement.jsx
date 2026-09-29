@@ -404,7 +404,7 @@ export default function StaffManagement({ theme, currentUser }) {
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
               Staff &amp; Operator Administration
             </h1>
             <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-2xl">
@@ -442,12 +442,12 @@ export default function StaffManagement({ theme, currentUser }) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Staff</span>
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Total Staff</span>
             <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
               <Shield className="h-4 w-4" />
             </div>
           </div>
-          <div className="mt-2 text-2xl font-display font-extrabold text-slate-900 dark:text-white">
+          <div className="mt-2 text-2xl font-display font-bold text-slate-900 dark:text-white">
             {totalStaffCount}
           </div>
           <span className="text-[11px] text-slate-400">All web console accounts</span>
@@ -455,12 +455,12 @@ export default function StaffManagement({ theme, currentUser }) {
 
         <div className="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Grid Operators</span>
+            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Grid Operators</span>
             <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
               <Radio className="h-4 w-4" />
             </div>
           </div>
-          <div className="mt-2 text-2xl font-display font-extrabold text-emerald-600 dark:text-emerald-400">
+          <div className="mt-2 text-2xl font-display font-bold text-emerald-600 dark:text-emerald-400">
             {operatorCount}
           </div>
           <span className="text-[11px] text-slate-400">Operational tools only</span>
@@ -468,12 +468,12 @@ export default function StaffManagement({ theme, currentUser }) {
 
         <div className="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Backoffice Admins</span>
+            <span className="text-xs font-bold text-amber-600 dark:text-amber-400">Backoffice Admins</span>
             <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
               <ShieldCheck className="h-4 w-4" />
             </div>
           </div>
-          <div className="mt-2 text-2xl font-display font-extrabold text-amber-600 dark:text-amber-400">
+          <div className="mt-2 text-2xl font-display font-bold text-amber-600 dark:text-amber-400">
             {backofficeCount}
           </div>
           <span className="text-[11px] text-slate-400">Full administration access</span>
@@ -481,12 +481,12 @@ export default function StaffManagement({ theme, currentUser }) {
 
         <div className="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">Active Accounts</span>
+            <span className="text-xs font-bold text-cyan-600 dark:text-cyan-400">Active Accounts</span>
             <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-500">
               <UserCheck className="h-4 w-4" />
             </div>
           </div>
-          <div className="mt-2 text-2xl font-display font-extrabold text-cyan-600 dark:text-cyan-400">
+          <div className="mt-2 text-2xl font-display font-bold text-cyan-600 dark:text-cyan-400">
             {activeCount} / {totalStaffCount}
           </div>
           <span className="text-[11px] text-slate-400">Can currently sign in</span>
@@ -579,9 +579,9 @@ export default function StaffManagement({ theme, currentUser }) {
         ) : (
           <>
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left border-collapse text-[13px]">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/40 text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider text-[11px] whitespace-nowrap">
+                <tr className="border-b border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/40 text-slate-600 dark:text-slate-400 font-bold text-xs whitespace-nowrap">
                   <th className="py-3.5 px-6">Staff Member</th>
                   <th className="py-3.5 px-4">Role</th>
                   <th className="py-3.5 px-4">Contact</th>
@@ -616,7 +616,7 @@ export default function StaffManagement({ theme, currentUser }) {
                                 {u.fullName}
                               </span>
                               {isCurrent && (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                                <span className="px-1.5 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30">
                                   You
                                 </span>
                               )}
@@ -659,7 +659,7 @@ export default function StaffManagement({ theme, currentUser }) {
                             <span className="truncate max-w-[200px]" title={u.address}>{u.address}</span>
                           </div>
                         ) : isOperator ? (
-                          <span className="inline-flex items-center gap-1 whitespace-nowrap text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                          <span className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
                             <AlertCircle className="h-3 w-3" />
                             <span>No hub assigned</span>
                           </span>
@@ -785,7 +785,7 @@ export default function StaffManagement({ theme, currentUser }) {
         title="New Staff Account"
       >
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          Grid Operators get the operational tools (bookings, QR verification, battery slots). Backoffice Admins get full administration access.
+          Grid Operators get the operational tools (reservations, QR verification, battery slots). Backoffice Admins get full administration access.
         </p>
 
         {modalError && (
@@ -810,7 +810,7 @@ export default function StaffManagement({ theme, currentUser }) {
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-amber-500/50"
               />
               {/* Mirrors the backend format check (CreateStaffUserDto) */}
-              <span className="text-[10px] text-slate-400 mt-1 block">12-digit NIC, 9 digits + V/X, or ADMIN/OPERATOR + 3 digits.</span>
+              <span className="text-[11px] text-slate-400 mt-1 block">12-digit NIC, 9 digits + V/X, or ADMIN/OPERATOR + 3 digits.</span>
             </div>
 
             <div>
@@ -923,7 +923,7 @@ export default function StaffManagement({ theme, currentUser }) {
                 placeholder="At least 8 characters, letters and numbers"
                 value={createForm.password}
                 onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-                className="w-full pl-3 pr-10 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 font-mono [&::-ms-reveal]:hidden"
+                className="w-full pl-3 pr-10 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 tabular-nums [&::-ms-reveal]:hidden"
               />
               <button
                 type="button"
@@ -940,7 +940,7 @@ export default function StaffManagement({ theme, currentUser }) {
               </button>
             </div>
             <span
-              className={`text-[10px] mt-1 flex items-center gap-1 ${
+              className={`text-[11px] mt-1 flex items-center gap-1 ${
                 !createForm.password
                   ? 'text-slate-400'
                   : meetsPasswordPolicy(createForm.password)
@@ -1256,7 +1256,7 @@ export default function StaffManagement({ theme, currentUser }) {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="At least 8 characters, letters and numbers"
-                className="w-full pl-3 pr-20 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-amber-500/50 [&::-ms-reveal]:hidden"
+                className="w-full pl-3 pr-20 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white tabular-nums focus:ring-2 focus:ring-amber-500/50 [&::-ms-reveal]:hidden"
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                 {newPassword && (
@@ -1304,7 +1304,7 @@ export default function StaffManagement({ theme, currentUser }) {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Re-enter new password to verify"
-                className="w-full pl-3 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-amber-500/50 [&::-ms-reveal]:hidden"
+                className="w-full pl-3 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white tabular-nums focus:ring-2 focus:ring-amber-500/50 [&::-ms-reveal]:hidden"
               />
               <button
                 type="button"

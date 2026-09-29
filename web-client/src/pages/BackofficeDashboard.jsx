@@ -126,11 +126,11 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="max-w-2xl">
-            <h1 className="text-3xl sm:text-4xl font-display font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+            <h1 className="text-3xl sm:text-4xl font-display font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
               Backoffice Overview
             </h1>
             <p className="mt-2.5 text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
-              Solar hubs, prosumer accounts and energy bookings at a glance.
+              Solar hubs, prosumer accounts and energy reservations at a glance.
             </p>
           </div>
 
@@ -192,7 +192,7 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
             <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-semibold">
               <Zap className="h-4 w-4" /> Station Capacity
             </div>
-            <div className="text-2xl font-display font-black text-slate-900 dark:text-white mt-2">
+            <div className="text-2xl font-display font-bold text-slate-900 dark:text-white mt-2">
               {display(network.totalCapacityKwh)} <span className="text-sm font-normal text-slate-500 dark:text-slate-400">kWh</span>
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Combined capacity of active hubs</p>
@@ -203,7 +203,7 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
             <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
               <BatteryCharging className="h-4 w-4" /> Battery Slots in Use
             </div>
-            <div className="text-2xl font-display font-black text-slate-900 dark:text-white mt-2">
+            <div className="text-2xl font-display font-bold text-slate-900 dark:text-white mt-2">
               {display(`${network.occupiedSlots} / ${network.totalSlots}`)}
             </div>
             <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden" aria-hidden="true">
@@ -215,9 +215,9 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
           {/* Open bookings */}
           <div className="p-4 rounded-2xl bg-cyan-500/5 dark:bg-slate-950/60 border border-cyan-500/20">
             <div className="flex items-center gap-1.5 text-xs text-cyan-600 dark:text-cyan-400 font-semibold">
-              <Activity className="h-4 w-4" /> Open Bookings
+              <Activity className="h-4 w-4" /> Open Reservations
             </div>
-            <div className="text-2xl font-display font-black text-slate-900 dark:text-white mt-2">
+            <div className="text-2xl font-display font-bold text-slate-900 dark:text-white mt-2">
               {display(network.openBookings)}
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Pending or approved</p>
@@ -228,10 +228,10 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
             <div className="flex items-center gap-1.5 text-xs text-violet-600 dark:text-violet-400 font-semibold">
               <CheckCircle2 className="h-4 w-4" /> Completed Energy
             </div>
-            <div className="text-2xl font-display font-black text-slate-900 dark:text-white mt-2">
+            <div className="text-2xl font-display font-bold text-slate-900 dark:text-white mt-2">
               {display(network.completedKwh.toFixed(1))} <span className="text-sm font-normal text-slate-500 dark:text-slate-400">kWh</span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">From completed bookings</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">From completed reservations</p>
           </div>
         </div>
       </div>
@@ -251,8 +251,8 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
             <ArrowUpRight className="h-4 w-4 text-slate-400 dark:text-slate-500 group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors" />
           </div>
           <div className="mt-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Active Solar Hubs</p>
-            <div className="text-3xl font-display font-black text-slate-900 dark:text-white mt-1">
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Active Solar Hubs</p>
+            <div className="text-3xl font-display font-bold text-slate-900 dark:text-white mt-1">
               {display(stats.activeStationsCount)}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">Manage hubs and battery slots</p>
@@ -270,7 +270,7 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
               <Clock className="h-6 w-6" />
             </div>
             {hasLoaded && stats.pendingProsumersCount > 0 ? (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30">
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30">
                 NEEDS REVIEW
               </span>
             ) : (
@@ -278,8 +278,8 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
             )}
           </div>
           <div className="mt-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Pending Prosumers</p>
-            <div className="text-3xl font-display font-black text-slate-900 dark:text-white mt-1">
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Pending Prosumers</p>
+            <div className="text-3xl font-display font-bold text-slate-900 dark:text-white mt-1">
               {display(stats.pendingProsumersCount)}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">Waiting for Backoffice approval</p>
@@ -299,11 +299,11 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
             <ArrowUpRight className="h-4 w-4 text-slate-400 dark:text-slate-500 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors" />
           </div>
           <div className="mt-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Active Prosumers</p>
-            <div className="text-3xl font-display font-black text-slate-900 dark:text-white mt-1">
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Active Prosumers</p>
+            <div className="text-3xl font-display font-bold text-slate-900 dark:text-white mt-1">
               {display(stats.activeProsumersCount)}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">Approved and able to book</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">Approved and able to reserve energy</p>
           </div>
         </button>
 
@@ -320,8 +320,8 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
             <ArrowUpRight className="h-4 w-4 text-slate-400 dark:text-slate-500 group-hover:text-cyan-500 dark:group-hover:text-cyan-400 transition-colors" />
           </div>
           <div className="mt-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Upcoming Bookings</p>
-            <div className="text-3xl font-display font-black text-slate-900 dark:text-white mt-1">
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Upcoming Reservations</p>
+            <div className="text-3xl font-display font-bold text-slate-900 dark:text-white mt-1">
               {display(stats.approvedFutureBookingsCount)}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
@@ -351,7 +351,7 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
           <div>
             <h2 className="font-display font-bold text-xl text-slate-900 dark:text-white">Pending Prosumer Approvals</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              New registrations start as Pending and can't book energy until a Backoffice officer approves them.
+              New registrations start as Pending and can't reserve energy until a Backoffice officer approves them.
             </p>
           </div>
           <button

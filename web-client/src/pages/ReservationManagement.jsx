@@ -116,7 +116,7 @@ export default function ReservationManagement({ theme }) {
         prosumerNic: prev.prosumerNic || defaultProsumer
       }));
     } catch (err) {
-      console.error('Failed to load reservations, stations, or prosumers', err);
+      console.error('Failed to load bookings, stations or prosumers', err);
       showFeedback('Failed to load reservations. Check that the API is running and try again.', 'error');
     } finally {
       setLoading(false);
@@ -467,11 +467,11 @@ export default function ReservationManagement({ theme }) {
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-display font-black text-slate-900 dark:text-white tracking-tight">
-              Energy Bookings
+            <h1 className="text-2xl sm:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
+              Energy Reservations
             </h1>
             <p className="mt-1.5 text-slate-600 dark:text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed">
-              Bookings must be scheduled within 7 days. Changes, and cancellations by prosumers, need at least 12 hours' notice.
+              Reservations must be scheduled within 7 days. Changes, and cancellations by prosumers, need at least 12 hours' notice.
             </p>
           </div>
 
@@ -514,33 +514,33 @@ export default function ReservationManagement({ theme }) {
       {/* KPI Metrics Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Bookings</span>
-          <div className="text-2xl font-display font-black text-slate-900 dark:text-white mt-1">{stats.total}</div>
+          <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Total Reservations</span>
+          <div className="text-2xl font-display font-bold text-slate-900 dark:text-white mt-1">{stats.total}</div>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/80 border border-amber-500/30 shadow-xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">Pending</span>
-          <div className="text-2xl font-display font-black text-amber-600 dark:text-amber-400 mt-1">{stats.pending}</div>
+          <span className="text-xs font-bold text-amber-600 dark:text-amber-400">Pending</span>
+          <div className="text-2xl font-display font-bold text-amber-600 dark:text-amber-400 mt-1">{stats.pending}</div>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/80 border border-emerald-500/30 shadow-xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Approved</span>
-          <div className="text-2xl font-display font-black text-emerald-600 dark:text-emerald-400 mt-1">{stats.approved}</div>
+          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Approved</span>
+          <div className="text-2xl font-display font-bold text-emerald-600 dark:text-emerald-400 mt-1">{stats.approved}</div>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/80 border border-cyan-500/30 shadow-xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">Completed</span>
-          <div className="text-2xl font-display font-black text-cyan-600 dark:text-cyan-400 mt-1">{stats.completed}</div>
+          <span className="text-xs font-bold text-cyan-600 dark:text-cyan-400">Completed</span>
+          <div className="text-2xl font-display font-bold text-cyan-600 dark:text-cyan-400 mt-1">{stats.completed}</div>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/80 border border-rose-500/30 shadow-xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">Cancelled</span>
-          <div className="text-2xl font-display font-black text-rose-600 dark:text-rose-400 mt-1">{stats.cancelled}</div>
+          <span className="text-xs font-bold text-rose-600 dark:text-rose-400">Cancelled</span>
+          <div className="text-2xl font-display font-bold text-rose-600 dark:text-rose-400 mt-1">{stats.cancelled}</div>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/80 border border-violet-500/30 shadow-xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">Completed Energy</span>
-          <div className="text-2xl font-display font-black text-violet-600 dark:text-violet-400 mt-1">{stats.completedKwh} <span className="text-xs font-normal">kWh</span></div>
+          <span className="text-xs font-bold text-violet-600 dark:text-violet-400">Completed Energy</span>
+          <div className="text-2xl font-display font-bold text-violet-600 dark:text-violet-400 mt-1">{stats.completedKwh} <span className="text-xs font-normal">kWh</span></div>
         </div>
       </div>
 
@@ -552,7 +552,7 @@ export default function ReservationManagement({ theme }) {
           <input
             type="text"
             placeholder="Search by NIC, reservation # or station"
-            aria-label="Search bookings by NIC, reservation number or station"
+            aria-label="Search reservations by NIC, reservation number or station"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-amber-500/40"
@@ -605,9 +605,9 @@ export default function ReservationManagement({ theme }) {
       {/* Reservations Table */}
       <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 backdrop-blur-xl overflow-hidden shadow-sm dark:shadow-xl">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-[13px] border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/60 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider whitespace-nowrap">
+              <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/60 text-slate-500 dark:text-slate-400 font-bold whitespace-nowrap">
                 <th className="py-4 px-4 sm:px-6">Reservation #</th>
                 <th className="py-4 px-3">Prosumer NIC</th>
                 <th className="py-4 px-3">Station</th>
@@ -647,7 +647,7 @@ export default function ReservationManagement({ theme }) {
                         </div>
                         {/* The backend also stamps a token on edited Pending bookings; a pass only exists once approved */}
                         {res.qrCodeToken && (res.status === 'Approved' || res.status === 'Completed') && (
-                          <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-0.5">
+                          <span className="tabular-nums text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-0.5">
                             <ShieldCheck className="h-3 w-3" /> QR issued
                           </span>
                         )}
@@ -667,11 +667,11 @@ export default function ReservationManagement({ theme }) {
 
                       {/* Scheduled Time + 12-hour rule (the rule only matters while a booking can still change) */}
                       <td className="py-4 px-3 whitespace-nowrap">
-                        <div className="font-mono text-slate-600 dark:text-slate-300">
+                        <div className="tabular-nums text-slate-600 dark:text-slate-300">
                           {formatSchedule(res.scheduledDateTime)}
                         </div>
                         {isActive && (
-                          <span className={`mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                          <span className={`mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border ${
                             notice.isLocked
                               ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'
                               : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
@@ -692,7 +692,7 @@ export default function ReservationManagement({ theme }) {
                           )}
                           <span>{res.energyAmountKwh} kWh</span>
                         </div>
-                        <span className="text-[10px] text-slate-500">{res.tradeType}</span>
+                        <span className="text-[11px] text-slate-500">{res.tradeType}</span>
                       </td>
 
                       {/* Status Badge */}
@@ -729,7 +729,7 @@ export default function ReservationManagement({ theme }) {
                           <button
                             onClick={() => { setAuditRes(res); setIsAuditDrawerOpen(true); }}
                             className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[11px] transition active:scale-95 cursor-pointer"
-                            title="Booking details & history"
+                            title="Reservation details & history"
                             aria-label={`Details for ${res.reservationNumber}`}
                           >
                             <FileText className="h-3.5 w-3.5" />
@@ -793,7 +793,7 @@ export default function ReservationManagement({ theme }) {
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
-          itemLabel="bookings"
+          itemLabel="reservations"
         />
       </div>
 
@@ -801,7 +801,7 @@ export default function ReservationManagement({ theme }) {
       <Modal
         isOpen={isApproveModalOpen}
         onClose={() => { setIsApproveModalOpen(false); setRejectMode(false); }}
-        title="Confirm Booking Approval"
+        title="Confirm Reservation Approval"
       >
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
           Approving issues the QR pass the prosumer shows at the hub.
@@ -828,13 +828,13 @@ export default function ReservationManagement({ theme }) {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className={`font-mono font-bold text-xs ${
+                  <div className={`tabular-nums font-bold text-xs ${
                     (currentStation?.availableBatterySlots || 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                   }`}>
                     {currentStation ? `${currentStation.availableBatterySlots} / ${currentStation.totalBatterySlots} free slots` : 'Slot info unavailable'}
                   </div>
                   {currentStation && (
-                    <div className="text-[10px] text-slate-400">
+                    <div className="text-[11px] text-slate-400">
                       {currentStation.availableBatterySlots > 0 ? 'Slots available' : 'Full'}
                     </div>
                   )}
@@ -848,7 +848,7 @@ export default function ReservationManagement({ theme }) {
                   <div>
                     <p className="font-bold">Can't approve a DropOff: no free battery slots</p>
                     <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5">
-                      This hub has 0 free battery slots. Reject or cancel this booking, or ask the prosumer to choose another station.
+                      This hub has 0 free battery slots. Reject or cancel this reservation, or ask the prosumer to choose another station.
                     </p>
                   </div>
                 </div>
@@ -858,7 +858,7 @@ export default function ReservationManagement({ theme }) {
               {approveBlockedByTime && (
                 <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
-                  <p className="font-bold">The scheduled time has passed. Reject or cancel this booking instead.</p>
+                  <p className="font-bold">The scheduled time has passed. Reject or cancel this reservation instead.</p>
                 </div>
               )}
 
@@ -874,7 +874,7 @@ export default function ReservationManagement({ theme }) {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-slate-700 dark:text-slate-300">Scheduled Time:</span>
-                  <span className="font-mono text-slate-900 dark:text-white">{formatSchedule(selectedRes.scheduledDateTime)}</span>
+                  <span className="tabular-nums text-slate-900 dark:text-white">{formatSchedule(selectedRes.scheduledDateTime)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-slate-700 dark:text-slate-300">Energy:</span>
@@ -929,7 +929,7 @@ export default function ReservationManagement({ theme }) {
                 className="px-3 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
               >
                 <XCircle className="h-3.5 w-3.5" />
-                <span>Reject Booking</span>
+                <span>Reject Reservation</span>
               </button>
             )}
           </div>
@@ -963,7 +963,7 @@ export default function ReservationManagement({ theme }) {
         title={`Cancel Reservation ${selectedRes?.reservationNumber || ''}`}
       >
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          Cancelling releases any battery slot held for this booking.
+          Cancelling releases any battery slot held for this reservation.
         </p>
 
         {/* Backoffice may cancel inside the 12-hour window that blocks prosumers */}
@@ -973,7 +973,7 @@ export default function ReservationManagement({ theme }) {
             <span>
               {cancelNotice.isPast
                 ? 'The scheduled time has already passed.'
-                : 'This booking starts in less than 12 hours, so the prosumer can no longer cancel it themselves.'}{' '}
+                : 'This reservation starts in less than 12 hours, so the prosumer can no longer cancel it themselves.'}{' '}
               You are cancelling it as Backoffice (override). Please record the reason.
             </span>
           </div>
@@ -1053,7 +1053,7 @@ export default function ReservationManagement({ theme }) {
               </select>
             ) : (
               <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs">
-                No active prosumers found. A prosumer must be approved by Backoffice before bookings can be made.
+                No active prosumers found. A prosumer must be approved by Backoffice before reservations can be made.
               </div>
             )}
 
@@ -1066,7 +1066,7 @@ export default function ReservationManagement({ theme }) {
                     <span>{selectedProsumer.fullName}</span>
                     <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">({selectedProsumer.nic})</span>
                   </div>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
                     <ShieldCheck className="h-3 w-3" />
                     Active
                   </span>
@@ -1149,7 +1149,7 @@ export default function ReservationManagement({ theme }) {
               <div>
                 <p className="font-bold">No free battery slots</p>
                 <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5">
-                  "{selectedStation?.name}" has 0 free battery slots, so DropOff bookings can't be made there right now.
+                  "{selectedStation?.name}" has 0 free battery slots, so DropOff reservations can't be made there right now.
                 </p>
               </div>
             </div>
@@ -1184,7 +1184,7 @@ export default function ReservationManagement({ theme }) {
                       type="button"
                       onClick={() => setCreateForm({ ...createForm, energyAmountKwh: val })}
                       aria-label={`${val} kWh`}
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition cursor-pointer ${
+                      className={`px-1.5 py-0.5 rounded text-[11px] font-bold transition cursor-pointer ${
                         +createForm.energyAmountKwh === val
                           ? 'bg-amber-500 text-slate-950'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -1226,7 +1226,7 @@ export default function ReservationManagement({ theme }) {
                   : 'bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 hover:brightness-105 active:scale-95 cursor-pointer'
               }`}
             >
-              {actionLoading ? 'Scheduling...' : isStationFullForDropOff ? 'No Free Slots' : 'Confirm Booking'}
+              {actionLoading ? 'Scheduling...' : isStationFullForDropOff ? 'No Free Slots' : 'Confirm Reservation'}
             </button>
           </div>
         </form>
@@ -1242,13 +1242,13 @@ export default function ReservationManagement({ theme }) {
         {editingRes && (
           <form onSubmit={handleEditSubmit} className="space-y-4">
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Changes are allowed until 12 hours before the booking. The new time must be between now and {maxDateObj.toLocaleDateString()} 23:59.
+              Changes are allowed until 12 hours before the reservation. The new time must be between now and {maxDateObj.toLocaleDateString()} 23:59.
             </p>
 
             {editingRes.status === 'Approved' && (
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2">
                 <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
-                <span>This booking is already approved. Saving issues a new QR pass, so the prosumer's current QR code will stop working.</span>
+                <span>This reservation is already approved. Saving issues a new QR pass, so the prosumer's current QR code will stop working.</span>
               </div>
             )}
 
@@ -1352,7 +1352,7 @@ export default function ReservationManagement({ theme }) {
                     <Zap className="h-5 w-5" />
                   </div>
                   <div>
-                    <div className="text-xs uppercase tracking-wider text-slate-400 font-bold">Reservation</div>
+                    <div className="text-xs text-slate-400 font-bold">Reservation #</div>
                     <div className="font-mono text-sm font-bold text-slate-900 dark:text-white">
                       {viewingRes.reservationNumber}
                     </div>
@@ -1380,15 +1380,15 @@ export default function ReservationManagement({ theme }) {
                   <img src={qrDataUrl} alt={`QR pass for ${viewingRes.reservationNumber}`} className="w-44 h-44 object-contain" />
                   <p className="text-[11px] text-slate-500 mt-2 text-center">
                     {viewingRes.status === 'Completed'
-                      ? 'Already used: this booking has been completed.'
-                      : 'The Grid Operator scans this code at the hub to complete the booking.'}
+                      ? 'Already used: this reservation has been completed.'
+                      : 'The Grid Operator scans this code at the hub to complete the reservation.'}
                   </p>
                 </div>
               ) : (
                 <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-xs mb-4 text-center">
                   {viewingRes.qrCodeToken
                     ? 'Generating QR code…'
-                    : 'No QR pass has been issued for this booking. A pass is created when the booking is approved.'}
+                    : 'No QR pass has been issued for this reservation. A pass is created when the reservation is approved.'}
                 </div>
               )}
 
@@ -1418,11 +1418,11 @@ export default function ReservationManagement({ theme }) {
               {/* Key Pass Details Grid */}
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] uppercase text-slate-400 block font-semibold">Prosumer NIC</span>
+                  <span className="text-xs text-slate-400 block font-semibold">Prosumer NIC</span>
                   <span className="font-mono font-bold text-slate-900 dark:text-white">{viewingRes.prosumerNic}</span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] uppercase text-slate-400 block font-semibold">Trade Type</span>
+                  <span className="text-xs text-slate-400 block font-semibold">Trade Type</span>
                   <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1">
                     {viewingRes.tradeType === 'DropOff' ? (
                       <>
@@ -1438,20 +1438,20 @@ export default function ReservationManagement({ theme }) {
                   </span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] uppercase text-slate-400 block font-semibold">Energy</span>
+                  <span className="text-xs text-slate-400 block font-semibold">Energy</span>
                   <span className="font-bold text-amber-600 dark:text-amber-400 text-sm">
                     {viewingRes.energyAmountKwh} kWh
                   </span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] uppercase text-slate-400 block font-semibold">Station</span>
+                  <span className="text-xs text-slate-400 block font-semibold">Station</span>
                   <span className="font-bold text-slate-900 dark:text-white truncate block">
                     {viewingRes.stationName || '—'}
                   </span>
                 </div>
                 <div className="col-span-2 p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] uppercase text-slate-400 block font-semibold">Scheduled Time</span>
-                  <span className="font-mono text-slate-900 dark:text-white">
+                  <span className="text-xs text-slate-400 block font-semibold">Scheduled Time</span>
+                  <span className="tabular-nums text-slate-900 dark:text-white">
                     {formatSchedule(viewingRes.scheduledDateTime)}
                   </span>
                 </div>
@@ -1487,7 +1487,7 @@ export default function ReservationManagement({ theme }) {
       <Modal
         isOpen={isAuditDrawerOpen}
         onClose={() => setIsAuditDrawerOpen(false)}
-        title={`Booking Details: ${auditRes?.reservationNumber || ''}`}
+        title={`Reservation Details: ${auditRes?.reservationNumber || ''}`}
       >
         {auditRes && (
           <div className="space-y-4">
@@ -1495,7 +1495,7 @@ export default function ReservationManagement({ theme }) {
             <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs space-y-2">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Reservation #</span>
+                  <span className="text-xs font-bold text-slate-400 block">Reservation #</span>
                   <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">{auditRes.reservationNumber}</span>
                 </div>
                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
@@ -1541,7 +1541,7 @@ export default function ReservationManagement({ theme }) {
                     <ShieldCheck className="h-4 w-4 text-cyan-500" />
                     <span>Grid Operator Verification</span>
                   </div>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                  <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
                     auditRes.status === 'Completed'
                       ? 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30'
                       : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
@@ -1560,7 +1560,7 @@ export default function ReservationManagement({ theme }) {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-slate-500">Completed at:</span>
-                      <span className="font-mono">
+                      <span className="tabular-nums">
                         {formatTimestamp(auditRes.completedAt || auditRes.updatedAt)}
                       </span>
                     </div>
@@ -1589,7 +1589,7 @@ export default function ReservationManagement({ theme }) {
                   </div>
                   <div className="flex items-center justify-between text-slate-500">
                     <span>Cancelled at:</span>
-                    <span className="font-mono text-slate-700 dark:text-slate-300">{formatTimestamp(auditRes.updatedAt)}</span>
+                    <span className="tabular-nums text-slate-700 dark:text-slate-300">{formatTimestamp(auditRes.updatedAt)}</span>
                   </div>
                 </div>
               </div>
@@ -1601,20 +1601,20 @@ export default function ReservationManagement({ theme }) {
               <div className="space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400">
                 <div className="flex items-center justify-between gap-3">
                   <span>Created:</span>
-                  <span className="font-mono text-slate-800 dark:text-slate-200">{formatTimestamp(auditRes.createdAt)}</span>
+                  <span className="tabular-nums text-slate-800 dark:text-slate-200">{formatTimestamp(auditRes.createdAt)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span>Scheduled for:</span>
-                  <span className="font-mono text-slate-800 dark:text-slate-200">{formatTimestamp(auditRes.scheduledDateTime)}</span>
+                  <span className="tabular-nums text-slate-800 dark:text-slate-200">{formatTimestamp(auditRes.scheduledDateTime)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span>Last updated:</span>
-                  <span className="font-mono text-slate-800 dark:text-slate-200">{formatTimestamp(auditRes.updatedAt)}</span>
+                  <span className="tabular-nums text-slate-800 dark:text-slate-200">{formatTimestamp(auditRes.updatedAt)}</span>
                 </div>
                 {auditRes.qrCodeToken && (auditRes.status === 'Approved' || auditRes.status === 'Completed') && (
                   <div className="pt-1.5 border-t border-slate-200 dark:border-slate-800">
-                    <span className="text-[10px] text-slate-400 block mb-0.5">QR token:</span>
-                    <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400 break-all">{auditRes.qrCodeToken}</span>
+                    <span className="text-[11px] text-slate-400 block mb-0.5">QR token:</span>
+                    <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400 break-all">{auditRes.qrCodeToken}</span>
                   </div>
                 )}
               </div>
