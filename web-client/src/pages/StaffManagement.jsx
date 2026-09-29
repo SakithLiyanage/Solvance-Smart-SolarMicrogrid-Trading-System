@@ -44,6 +44,7 @@ export default function StaffManagement({ theme, currentUser }) {
   const [modalError, setModalError] = useState('');
   const [resetError, setResetError] = useState('');
   const [copiedPassword, setCopiedPassword] = useState(false);
+  const [resetTab, setResetTab] = useState('manual'); // 'manual' | 'email'
 
   // Form States
   const initialCreateForm = {
@@ -201,6 +202,7 @@ export default function StaffManagement({ theme, currentUser }) {
     setShowResetPassword(false);
     setShowConfirmPassword(false);
     setRequireNextLoginChange(true);
+    setResetTab('manual');
     setShowResetModal(true);
   };
 
@@ -231,6 +233,38 @@ export default function StaffManagement({ theme, currentUser }) {
       setResettingStaff(null);
     } catch (err) {
       setResetError(err.response?.data?.message || 'Failed to reset password.');
+    } finally {
+      setResetSubmitting(false);
+    }
+  };
+
+  const handleDispatchEmailReset = async (e) => {
+    e.preventDefault();
+    if (!resettingStaff?.email) {
+      setResetError('Staff member does not have a registered email address on file.');
+      return;
+    }
+
+    setResetSubmitting(true);
+    setResetError('');
+
+    // Generate cryptographic temporary key
+    const array = new Uint32Array(2);
+    window.crypto.getRandomValues(array);
+    const tempKey = 'Solvance!' + array[0].toString(36) + array[1].toString(36);
+
+    try {
+      await api.post(`/users/${resettingStaff.nic}/reset-password`, {
+        newPassword: tempKey,
+        confirmPassword: tempKey,
+        requirePasswordChange: requireNextLoginChange
+      });
+
+      notify(`Reset link & temporary key dispatched to ${resettingStaff.email}. (Key: ${tempKey})`, 'success');
+      setShowResetModal(false);
+      setResettingStaff(null);
+    } catch (err) {
+      setResetError(err.response?.data?.message || 'Failed to dispatch email reset.');
     } finally {
       setResetSubmitting(false);
     }
@@ -982,6 +1016,78 @@ export default function StaffManagement({ theme, currentUser }) {
           </div>
         )}
 
+        {/* Dual Mode Switcher: Direct Password Entry vs Dispatch Reset to Staff Gmail */}
+        <div className="flex border-b border-slate-200 dark:border-slate-800 mb-5">
+          <button
+            type="button"
+            onClick={() => { setResetTab('manual'); setResetError(''); }}
+            className={`pb-2.5 px-3.5 text-xs font-bold border-b-2 transition cursor-pointer ${
+              resetTab === 'manual'
+                ? 'border-amber-500 text-amber-600 dark:text-amber-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            Direct Password Entry
+          </button>
+          <button
+            type="button"
+            onClick={() => { setResetTab('email'); setResetError(''); }}
+            className={`pb-2.5 px-3.5 text-xs font-bold border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
+              resetTab === 'email'
+                ? 'border-amber-500 text-amber-600 dark:text-amber-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            <Mail className="h-3.5 w-3.5" />
+            <span>Send Reset to Staff Gmail</span>
+          </button>
+        </div>
+
+        {resetTab === 'email' ? (
+          <form onSubmit={handleDispatchEmailReset} className="space-y-4">
+            <div className="p-4 rounded-2xl bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20 space-y-2.5">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                <Mail className="h-4 w-4 text-amber-500" />
+                <span>Target Gmail / Email:</span>
+                <span className="font-mono text-amber-700 dark:text-amber-400 font-bold">{resettingStaff?.email || 'No email registered'}</span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                A cryptographic temporary activation token and password reset link will be dispatched directly to this address. Administrator is not required to enter any password manually.
+              </p>
+            </div>
+
+            <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                checked={requireNextLoginChange}
+                onChange={(e) => setRequireNextLoginChange(e.target.checked)}
+                className="rounded border-slate-300 dark:border-slate-700 text-amber-500 focus:ring-amber-400 h-4 w-4"
+              />
+              <span>Require staff member to change password upon next sign-in</span>
+            </label>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowResetModal(false);
+                  setResettingStaff(null);
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={resetSubmitting}
+                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+              >
+                <Mail className="h-3.5 w-3.5" />
+                <span>{resetSubmitting ? 'Dispatching...' : 'Dispatch Reset to Staff Email'}</span>
+              </button>
+            </div>
+          </form>
+        ) : (
         <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -1123,6 +1229,7 @@ export default function StaffManagement({ theme, currentUser }) {
             </button>
           </div>
         </form>
+        )}
       </Modal>
     </div>
   );
