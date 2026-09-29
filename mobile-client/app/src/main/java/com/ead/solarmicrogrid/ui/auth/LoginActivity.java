@@ -45,7 +45,7 @@ import retrofit2.Response;
 public class LoginActivity extends AppCompatActivity {
 
     private TextInputEditText etUsername, etPassword;
-    private Button btnLogin, btnQuickProsumer, btnQuickOperator;
+    private Button btnLogin;
     private ImageButton btnThemeToggle;
     private android.widget.ImageView ivBrandLogo;
     private TextView tvRegister;
@@ -89,8 +89,6 @@ public class LoginActivity extends AppCompatActivity {
         etPassword = findViewById(R.id.etPassword);
         btnLogin = findViewById(R.id.btnLogin);
         tvRegister = findViewById(R.id.tvRegister);
-        btnQuickProsumer = findViewById(R.id.btnQuickProsumer);
-        btnQuickOperator = findViewById(R.id.btnQuickOperator);
         progressBar = findViewById(R.id.progressBar);
         btnThemeToggle = findViewById(R.id.btnThemeToggle);
         ivBrandLogo = findViewById(R.id.ivBrandLogo);
@@ -114,16 +112,6 @@ public class LoginActivity extends AppCompatActivity {
         tvRegister.setOnClickListener(v -> {
             startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
             overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
-        });
-
-        btnQuickProsumer.setOnClickListener(v -> {
-            etUsername.setText("200012345678");
-            etPassword.setText("Prosumer@123");
-        });
-
-        btnQuickOperator.setOnClickListener(v -> {
-            etUsername.setText("OPERATOR001");
-            etPassword.setText("Operator@123");
         });
     }
 

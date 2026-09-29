@@ -196,62 +196,6 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Evaluation Quick Login Chips -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="1-TAP EVALUATION LOGIN"
-            android:textColor="@color/text_muted"
-            android:textSize="10sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.08"
-            android:layout_marginTop="22dp"
-            android:layout_marginBottom="10dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnQuickProsumer"
-                android:layout_width="0dp"
-                android:layout_height="46dp"
-                android:layout_weight="1"
-                android:layout_marginEnd="6dp"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:text="Sunil (Prosumer)"
-                app:icon="@drawable/ic_zap"
-                app:iconTint="@color/primary"
-                app:iconSize="16dp"
-                app:iconGravity="textStart"
-                android:textAllCaps="false"
-                android:textColor="@color/primary"
-                android:textSize="12sp"
-                app:cornerRadius="20dp"
-                app:strokeColor="@color/primary"
-                app:strokeWidth="1.2dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnQuickOperator"
-                android:layout_width="0dp"
-                android:layout_height="46dp"
-                android:layout_weight="1"
-                android:layout_marginStart="6dp"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:text="Nuwan (Operator)"
-                app:icon="@drawable/ic_tool"
-                app:iconTint="@color/accent"
-                app:iconSize="16dp"
-                app:iconGravity="textStart"
-                android:textAllCaps="false"
-                android:textColor="@color/accent"
-                android:textSize="12sp"
-                app:cornerRadius="20dp"
-                app:strokeColor="@color/accent"
-                app:strokeWidth="1.2dp" />
-        </LinearLayout>
 
         <!-- Progress Indicator -->
         <ProgressBar

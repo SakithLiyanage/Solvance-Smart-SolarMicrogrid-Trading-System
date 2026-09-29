@@ -16,7 +16,7 @@
 import React, { useState } from 'react';
 import { 
   Shield, Zap, AlertCircle, ArrowRight, Sun, Moon, 
-  Activity, Cpu, Eye, EyeOff, KeyRound, CheckCircle2, XCircle, Lock, Key, Sparkles
+  Activity, Cpu, Eye, EyeOff, CheckCircle2, XCircle, Lock, Key, Sparkles
 } from 'lucide-react';
 import api from '../api/client';
 import Modal from '../components/Modal';
@@ -45,12 +45,6 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
   const isFormValid = isLengthValid && isAlphaNumeric && isMatch;
 
   const isDark = theme === 'dark';
-
-  const fillCredentials = (nic, pass) => {
-    setUsernameOrNic(nic);
-    setPassword(pass);
-    setError('');
-  };
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -255,31 +249,6 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
                 </div>
               </div>
 
-              {/* Quick Demo Credentials Pill Bar */}
-              <div className="pt-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
-                  <KeyRound className="h-3 w-3 text-amber-500" />
-                  <span>Quick Demo Accounts:</span>
-                </span>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fillCredentials('ADMIN001', 'Admin@123')}
-                    className="py-1.5 px-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[11px] font-bold text-left transition active:scale-95 cursor-pointer flex items-center justify-between"
-                  >
-                    <span>Backoffice Admin</span>
-                    <span className="text-[9px] font-mono opacity-70">ADMIN001</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => fillCredentials('OPERATOR001', 'Operator@123')}
-                    className="py-1.5 px-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold text-left transition active:scale-95 cursor-pointer flex items-center justify-between"
-                  >
-                    <span>Grid Operator</span>
-                    <span className="text-[9px] font-mono opacity-70">OPERATOR001</span>
-                  </button>
-                </div>
-              </div>
 
               <button
                 type="submit"
