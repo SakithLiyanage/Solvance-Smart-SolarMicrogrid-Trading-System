@@ -16,7 +16,7 @@
 import React, { useState } from 'react';
 import { 
   Shield, Zap, AlertCircle, ArrowRight, Sun, Moon, 
-  Activity, Cpu, Eye, EyeOff, KeyRound, CheckCircle2, XCircle, Lock, Key
+  Activity, Cpu, Eye, EyeOff, KeyRound, CheckCircle2, XCircle, Lock, Key, Sparkles
 } from 'lucide-react';
 import api from '../api/client';
 import Modal from '../components/Modal';
