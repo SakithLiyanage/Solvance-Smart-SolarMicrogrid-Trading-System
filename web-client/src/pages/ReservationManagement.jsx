@@ -42,9 +42,14 @@ export default function ReservationManagement({ theme }) {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isPassModalOpen, setIsPassModalOpen] = useState(false);
+  const [isAuditDrawerOpen, setIsAuditDrawerOpen] = useState(false);
   const [viewingRes, setViewingRes] = useState(null);
+  const [auditRes, setAuditRes] = useState(null);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [copiedRes, setCopiedRes] = useState(false);
+  const [copiedToken, setCopiedToken] = useState(false);
+  const [rejectMode, setRejectMode] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
   const [cancelReason, setCancelReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState({ text: '', type: '' });
@@ -197,6 +202,27 @@ export default function ReservationManagement({ theme }) {
       loadData();
     } catch (err) {
       showFeedback(err.response?.data?.message || 'Failed to cancel reservation.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Reject Reservation Handler (Direct Reject inside Approval Modal)
+  const handleReject = async (customReason) => {
+    if (!selectedRes) return;
+    try {
+      setActionLoading(true);
+      const resReason = customReason || rejectReason || 'Rejected by Backoffice Administrator during approval review';
+      await api.post(`/reservations/${selectedRes.id || selectedRes.reservationNumber}/cancel`, {
+        reason: resReason
+      });
+      showFeedback(`Reservation ${selectedRes.reservationNumber} rejected & inventory released.`);
+      setIsApproveModalOpen(false);
+      setRejectMode(false);
+      setRejectReason('');
+      loadData();
+    } catch (err) {
+      showFeedback(err.response?.data?.message || 'Failed to reject reservation.', 'error');
     } finally {
       setActionLoading(false);
     }
@@ -542,25 +568,40 @@ export default function ReservationManagement({ theme }) {
 
                       {/* Actions */}
                       <td className="py-4 px-4 sm:px-6 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          {/* View Digital Pass button (for Viva demo & Operator QR testing) */}
+                          {(res.status === 'Approved' || res.status === 'Completed') && (
+                            <button
+                              onClick={() => handleOpenPassModal(res)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold text-[11px] transition shadow-xs active:scale-95 cursor-pointer"
+                              title="View Digital Energy Pass & QR Token"
+                            >
+                              <QrCode className="h-3 w-3 text-amber-500" />
+                              <span>View Pass</span>
+                            </button>
+                          )}
+
+                          {/* Audit Trail & History */}
                           <button
-                            onClick={() => handleOpenPassModal(res)}
+                            onClick={() => { setAuditRes(res); setIsAuditDrawerOpen(true); }}
                             className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[11px] transition active:scale-95 cursor-pointer"
-                            title="View Full Details & Digital Energy Pass"
+                            title="Audit Trail, Operator Tag & History"
                           >
-                            <Eye className="h-3.5 w-3.5" />
+                            <FileText className="h-3.5 w-3.5" />
                           </button>
 
+                          {/* Approve Action */}
                           {isPending && (
                             <button
-                              onClick={() => { setSelectedRes(res); setIsApproveModalOpen(true); }}
+                              onClick={() => { setSelectedRes(res); setRejectMode(false); setIsApproveModalOpen(true); }}
                               className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[11px] transition shadow-xs active:scale-95 cursor-pointer"
-                              title="Approve & Generate QR Pass"
+                              title="Review, Check Hub Slots & Approve"
                             >
                               Approve
                             </button>
                           )}
 
+                          {/* Cancel Action */}
                           {res.status !== 'Cancelled' && res.status !== 'Completed' && (
                             <button
                               onClick={() => { setSelectedRes(res); setIsCancelModalOpen(true); }}
@@ -581,40 +622,156 @@ export default function ReservationManagement({ theme }) {
         </div>
       </div>
 
-      {/* Modal: Approve Reservation */}
+      {/* Modal: Approve Reservation (Enriched with Station Free Slot Count & Direct Reject) */}
       <Modal
         isOpen={isApproveModalOpen}
-        onClose={() => setIsApproveModalOpen(false)}
+        onClose={() => { setIsApproveModalOpen(false); setRejectMode(false); }}
         title="Confirm Booking Approval"
       >
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          Approving this booking will allocate battery slot capacity and generate a cryptographically signed transaction QR code for the prosumer.
+          Approving this booking allocates battery slot capacity and generates a cryptographically signed transaction QR code for the prosumer.
         </p>
 
-        {selectedRes && (
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs space-y-1.5 mb-5">
-            <div><span className="font-bold">Reservation #:</span> {selectedRes.reservationNumber}</div>
-            <div><span className="font-bold">Prosumer NIC:</span> {selectedRes.prosumerNic}</div>
-            <div><span className="font-bold">Station:</span> {selectedRes.stationName}</div>
-            <div><span className="font-bold">Schedule:</span> {new Date(selectedRes.scheduledDateTime).toLocaleString()}</div>
-            <div><span className="font-bold">Energy Quota:</span> {selectedRes.energyAmountKwh} kWh ({selectedRes.tradeType})</div>
-          </div>
-        )}
+        {selectedRes && (() => {
+          const currentStation = stations.find(s => s.id === selectedRes.stationId || s.name === selectedRes.stationName);
+          const isDropOffAtFullStation = selectedRes.tradeType === 'DropOff' && currentStation && currentStation.availableBatterySlots <= 0;
 
-        <div className="flex items-center justify-end gap-2">
-          <button
-            onClick={() => setIsApproveModalOpen(false)}
-            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold"
-          >
-            Dismiss
-          </button>
-          <button
-            onClick={handleApprove}
-            disabled={actionLoading}
-            className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold shadow-sm"
-          >
-            {actionLoading ? 'Approving...' : 'Confirm & Issue QR Pass'}
-          </button>
+          return (
+            <div className="space-y-3 mb-5">
+              {/* Station Battery Bay Slot Status */}
+              <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/25 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <BatteryCharging className="h-4 w-4 text-cyan-500" />
+                  <div>
+                    <div className="font-semibold text-slate-900 dark:text-white">
+                      {selectedRes.stationName || currentStation?.name || 'Microgrid Hub'}
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Total Capacity: {currentStation?.capacityKwh || 500} kWh
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className={`font-mono font-bold text-xs ${
+                    (currentStation?.availableBatterySlots || 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                  }`}>
+                    {currentStation ? `${currentStation.availableBatterySlots} / ${currentStation.totalBatterySlots} free slots` : 'Slots Verified'}
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    {(currentStation?.availableBatterySlots || 0) > 0 ? 'Slots Available' : 'BAY AT CAPACITY'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Warning if 0 slots free for DropOff */}
+              {isDropOffAtFullStation && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold">Cannot Approve DropOff: Battery Bay Full</p>
+                    <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5">
+                      This solar hub currently has 0 available battery slots. Reject or cancel this booking, or advise prosumer to select another station.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Booking Summary Box */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-700 dark:text-slate-300">Reservation #:</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white">{selectedRes.reservationNumber}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-700 dark:text-slate-300">Prosumer NIC:</span>
+                  <span className="font-mono text-slate-900 dark:text-white">{selectedRes.prosumerNic}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-700 dark:text-slate-300">Schedule Time:</span>
+                  <span className="font-mono text-slate-900 dark:text-white">{new Date(selectedRes.scheduledDateTime).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-700 dark:text-slate-300">Energy Quota:</span>
+                  <span className="font-bold text-amber-600 dark:text-amber-400">{selectedRes.energyAmountKwh} kWh ({selectedRes.tradeType})</span>
+                </div>
+              </div>
+
+              {/* Inline Reject Form */}
+              {rejectMode && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 space-y-2 animate-in fade-in duration-200">
+                  <label className="block text-xs font-bold text-rose-700 dark:text-rose-300">
+                    Reason for Administrative Rejection
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="e.g. Station capacity full or prosumer request..."
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    className="w-full p-2.5 rounded-lg bg-white dark:bg-slate-950 border border-rose-300 dark:border-rose-800 text-xs text-slate-900 dark:text-white"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRejectMode(false)}
+                      className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleReject()}
+                      disabled={actionLoading}
+                      className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-xs cursor-pointer"
+                    >
+                      {actionLoading ? 'Rejecting...' : 'Confirm Rejection'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800">
+          <div>
+            {!rejectMode && (
+              <button
+                type="button"
+                onClick={() => setRejectMode(true)}
+                disabled={actionLoading}
+                className="px-3 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <XCircle className="h-3.5 w-3.5" />
+                <span>Reject Booking</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { setIsApproveModalOpen(false); setRejectMode(false); }}
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold cursor-pointer"
+            >
+              Dismiss
+            </button>
+            <button
+              onClick={handleApprove}
+              disabled={actionLoading || (() => {
+                const cur = stations.find(s => s.id === selectedRes?.stationId || s.name === selectedRes?.stationName);
+                return selectedRes?.tradeType === 'DropOff' && cur && cur.availableBatterySlots <= 0;
+              })()}
+              className={`px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition ${
+                (() => {
+                  const cur = stations.find(s => s.id === selectedRes?.stationId || s.name === selectedRes?.stationName);
+                  return selectedRes?.tradeType === 'DropOff' && cur && cur.availableBatterySlots <= 0;
+                })()
+                  ? 'bg-slate-300 dark:bg-slate-800 text-slate-500 dark:text-slate-600 cursor-not-allowed'
+                  : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 cursor-pointer active:scale-95'
+              }`}
+            >
+              {actionLoading ? 'Approving...' : 'Confirm & Issue QR Pass'}
+            </button>
+          </div>
         </div>
       </Modal>
 
@@ -893,6 +1050,14 @@ export default function ReservationManagement({ theme }) {
       >
         {viewingRes && (
           <div className="space-y-4">
+            {/* Viva Demo Alert Banner */}
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-xs flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <QrCode className="h-4 w-4 text-amber-500 shrink-0" />
+                <span>Viva Demonstration Mode: Ready for immediate Android camera scan or terminal token verification.</span>
+              </div>
+            </div>
+
             {/* Top Pass Card */}
             <div className="relative rounded-2xl bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 border border-slate-200 dark:border-slate-800 p-5 overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
@@ -931,7 +1096,7 @@ export default function ReservationManagement({ theme }) {
                   <img src={qrDataUrl} alt="Reservation QR" className="w-44 h-44 object-contain" />
                   <p className="font-mono text-[10px] text-slate-500 mt-2 flex items-center gap-1">
                     <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                    Cryptographic Station Token: {viewingRes.qrCodeToken ? 'Verified Active' : 'Fallback Res ID'}
+                    Cryptographic Station Token: {viewingRes.qrCodeToken ? 'Verified Active' : 'Fallback Token'}
                   </p>
                 </div>
               ) : (
@@ -939,6 +1104,29 @@ export default function ReservationManagement({ theme }) {
                   QR Pass is generated automatically once the reservation is approved by Backoffice.
                 </div>
               )}
+
+              {/* Raw Token Box with Copy */}
+              <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs space-y-1.5 mb-4">
+                <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-semibold">
+                  <span>Cryptographic QR Token (Payload)</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const t = viewingRes.qrCodeToken || `SOLAR-TX:${viewingRes.reservationNumber}:VERIFIED`;
+                      navigator.clipboard.writeText(t);
+                      setCopiedToken(true);
+                      setTimeout(() => setCopiedToken(false), 2000);
+                    }}
+                    className="text-amber-600 dark:text-amber-400 hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedToken ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                    <span>{copiedToken ? 'Token Copied!' : 'Copy Token'}</span>
+                  </button>
+                </div>
+                <div className="font-mono text-[11px] text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-950 p-2 rounded-lg border border-slate-200 dark:border-slate-800 break-all select-all">
+                  {viewingRes.qrCodeToken || `SOLAR-TX:${viewingRes.reservationNumber}:VERIFIED`}
+                </div>
+              </div>
 
               {/* Key Pass Details Grid */}
               <div className="grid grid-cols-2 gap-3 text-xs">
@@ -1000,9 +1188,163 @@ export default function ReservationManagement({ theme }) {
               <button
                 type="button"
                 onClick={() => setIsPassModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold transition"
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold transition cursor-pointer"
               >
                 Close Pass
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal / Drawer: Audit Details & Lifecycle History */}
+      <Modal
+        isOpen={isAuditDrawerOpen}
+        onClose={() => setIsAuditDrawerOpen(false)}
+        title={`Audit Trail: ${auditRes?.reservationNumber || ''}`}
+      >
+        {auditRes && (
+          <div className="space-y-4">
+            {/* Header Identity Card */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Ledger Reference</span>
+                  <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">{auditRes.reservationNumber}</span>
+                </div>
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                  auditRes.status === 'Approved'
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                    : auditRes.status === 'Pending'
+                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                    : auditRes.status === 'Completed'
+                    ? 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30'
+                    : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                }`}>
+                  {auditRes.status}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 dark:border-slate-800 text-[11px]">
+                <div>
+                  <span className="text-slate-500">Prosumer NIC:</span>{' '}
+                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{auditRes.prosumerNic}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Solar Hub:</span>{' '}
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{auditRes.stationName}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Energy Quota:</span>{' '}
+                  <span className="font-bold text-amber-600 dark:text-amber-400">{auditRes.energyAmountKwh} kWh ({auditRes.tradeType})</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Notice Policy:</span>{' '}
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{getNoticeDetails(auditRes.scheduledDateTime).label}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Operator Fulfillment Tag (if completed) */}
+            <div className="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/25 text-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                  <ShieldCheck className="h-4 w-4 text-cyan-500" />
+                  <span>Grid Operator Verification &amp; Fulfillment</span>
+                </div>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                  auditRes.status === 'Completed'
+                    ? 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30'
+                    : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+                }`}>
+                  {auditRes.status === 'Completed' ? 'Verified on Ground' : 'Fulfillment Pending'}
+                </span>
+              </div>
+
+              {auditRes.status === 'Completed' ? (
+                <div className="space-y-1 text-[11px] text-slate-700 dark:text-slate-300">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-500">Completed By Operator:</span>
+                    <span className="font-mono font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-800 dark:text-cyan-200 border border-cyan-500/30">
+                      {auditRes.completedByOperatorNic || 'OPERATOR001'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-500">Fulfillment Timestamp:</span>
+                    <span className="font-mono">
+                      {auditRes.completedAt ? new Date(auditRes.completedAt).toLocaleString() : new Date(auditRes.updatedAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-500">Verification Method:</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">Cryptographic Mobile QR Scan Verified</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  This transaction is awaiting physical execution at {auditRes.stationName}. When the operator scans the prosumer QR pass via the Solvance Android Terminal, this record will record the operator identity tag.
+                </p>
+              )}
+            </div>
+
+            {/* Cancellation History & Notes (if cancelled) */}
+            {auditRes.status === 'Cancelled' && (
+              <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-xs space-y-2">
+                <div className="flex items-center gap-2 font-bold text-rose-700 dark:text-rose-300">
+                  <XCircle className="h-4 w-4 text-rose-500" />
+                  <span>Cancellation History &amp; Administrative Notes</span>
+                </div>
+                <div className="space-y-1.5 text-[11px]">
+                  <div>
+                    <span className="font-medium text-slate-500 dark:text-slate-400">Reason Logged:</span>
+                    <p className="font-semibold text-rose-700 dark:text-rose-300 mt-0.5 bg-rose-500/10 p-2 rounded-lg border border-rose-500/20">
+                      {auditRes.cancellationReason || 'Cancelled by Backoffice Administration (Inventory slot released).'}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span>Cancelled Timestamp:</span>
+                    <span className="font-mono text-slate-700 dark:text-slate-300">{new Date(auditRes.updatedAt).toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span>Inventory Action:</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">Battery Bay Slot Unlocked &amp; Restored</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Lifecycle Timeline */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs space-y-2">
+              <span className="font-bold text-slate-900 dark:text-white block">Audit Timestamps</span>
+              <div className="space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400">
+                <div className="flex items-center justify-between">
+                  <span>Record Created:</span>
+                  <span className="font-mono text-slate-800 dark:text-slate-200">{new Date(auditRes.createdAt).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Scheduled Trading Horizon:</span>
+                  <span className="font-mono text-slate-800 dark:text-slate-200">{new Date(auditRes.scheduledDateTime).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Last State Transition:</span>
+                  <span className="font-mono text-slate-800 dark:text-slate-200">{new Date(auditRes.updatedAt).toLocaleString()}</span>
+                </div>
+                {auditRes.qrCodeToken && (
+                  <div className="pt-1.5 border-t border-slate-200 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-400 block mb-0.5">Token Signature:</span>
+                    <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400 break-all">{auditRes.qrCodeToken}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setIsAuditDrawerOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold transition cursor-pointer"
+              >
+                Close Audit Record
               </button>
             </div>
           </div>
