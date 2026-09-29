@@ -345,5 +345,36 @@ namespace SolarMicrogridApi.Services
             var result = await _context.Users.UpdateOneAsync(u => u.Nic == nic, update);
             return result.ModifiedCount > 0;
         }
+
+        public async Task<bool> ResetPasswordAsync(string nic, string newPassword, string requesterRole, string requesterNic)
+        {
+            // Method: ResetPasswordAsync - Securely updates user password hash with authorization safeguard.
+            var user = await _context.Users.Find(u => u.Nic == nic).FirstOrDefaultAsync();
+            if (user == null)
+            {
+                return false;
+            }
+
+            // Security Rule: Backoffice officers cannot reset passwords for other Backoffice officers
+            if (user.Role == "Backoffice" && user.Nic != requesterNic)
+            {
+                throw new UnauthorizedAccessException("Security policy violation: Administrators cannot reset credentials of other Backoffice Administrators.");
+            }
+
+            if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
+            {
+                throw new ArgumentException("Password must contain at least 6 characters.");
+            }
+
+            var filter = Builders<User>.Filter.Eq(u => u.Nic, nic);
+            var update = Builders<User>.Update
+                .Set(u => u.PasswordHash, BCrypt.Net.BCrypt.HashPassword(newPassword))
+                .Set(u => u.FailedLoginAttempts, 0)
+                .Set(u => u.LockoutEnd, null)
+                .Set(u => u.UpdatedAt, DateTime.UtcNow);
+
+            var result = await _context.Users.UpdateOneAsync(filter, update);
+            return result.ModifiedCount > 0;
+        }
     }
 }
