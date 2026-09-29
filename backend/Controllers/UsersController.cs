@@ -160,6 +160,18 @@ namespace SolarMicrogridApi.Controllers
             var currentRole = User.FindFirstValue(ClaimTypes.Role) ?? "Backoffice";
             var operatorNic = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "ADMIN001";
 
+            var targetUser = await _userService.GetUserByNicAsync(nic);
+            if (targetUser == null)
+            {
+                return NotFound(new { message = $"User with NIC '{nic}' not found." });
+            }
+
+            // Security Rule: Administrators cannot alter status of other Backoffice Administrators
+            if (targetUser.Role == "Backoffice" && targetUser.Nic != operatorNic)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "Security policy violation: Administrators cannot alter status of other Backoffice Administrators." });
+            }
+
             try
             {
                 var success = await _userService.UpdateUserStatusAsync(nic, dto.Status, currentRole, operatorNic);
@@ -176,7 +188,7 @@ namespace SolarMicrogridApi.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
             }
         }
 
@@ -188,6 +200,19 @@ namespace SolarMicrogridApi.Controllers
         public async Task<IActionResult> UpdateUserByNic(string nic, [FromBody] UpdateProfileDto dto)
         {
             // Method: UpdateUserByNic - Allows Backoffice officers to update user profile information and solar hardware specs.
+            var requesterNic = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var targetUser = await _userService.GetUserByNicAsync(nic);
+            if (targetUser == null)
+            {
+                return NotFound(new { message = $"User with NIC '{nic}' not found." });
+            }
+
+            // Security Rule: Administrators cannot edit other Backoffice Administrators
+            if (targetUser.Role == "Backoffice" && targetUser.Nic != requesterNic)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "Security policy violation: Administrators cannot edit profile details of other Backoffice Administrators." });
+            }
+
             var success = await _userService.UpdateProfileAsync(nic, dto);
             if (!success)
             {
@@ -195,6 +220,47 @@ namespace SolarMicrogridApi.Controllers
             }
 
             return Ok(new { message = $"Profile for '{nic}' updated successfully." });
+        }
+
+        /// <summary>
+        /// Resets a staff member or user password (Backoffice only; self or non-admin staff).
+        /// </summary>
+        [HttpPost("{nic}/reset-password")]
+        [Authorize(Roles = "Backoffice")]
+        public async Task<IActionResult> ResetPassword(string nic, [FromBody] ResetPasswordDto dto)
+        {
+            // Method: ResetPassword - Allows Backoffice officers to reset credentials for staff and prosumers.
+            var requesterRole = User.FindFirstValue(ClaimTypes.Role) ?? "Backoffice";
+            var requesterNic = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
+
+            if (string.IsNullOrWhiteSpace(dto.NewPassword))
+            {
+                return BadRequest(new { message = "Password cannot be empty." });
+            }
+
+            if (!string.IsNullOrEmpty(dto.ConfirmPassword) && dto.NewPassword != dto.ConfirmPassword)
+            {
+                return BadRequest(new { message = "New password and confirm password do not match." });
+            }
+
+            try
+            {
+                var success = await _userService.ResetPasswordAsync(nic, dto.NewPassword, requesterRole, requesterNic, dto.RequirePasswordChange);
+                if (!success)
+                {
+                    return NotFound(new { message = $"User with NIC '{nic}' not found." });
+                }
+
+                return Ok(new { message = $"Password for account '{nic}' successfully updated." });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         /// <summary>
@@ -254,5 +320,12 @@ namespace SolarMicrogridApi.Controllers
     public class UpdateStatusDto
     {
         public string Status { get; set; } = "Active"; // "Active" or "Deactivated"
+    }
+
+    public class ResetPasswordDto
+    {
+        public string NewPassword { get; set; } = string.Empty;
+        public string ConfirmPassword { get; set; } = string.Empty;
+        public bool RequirePasswordChange { get; set; } = false;
     }
 }

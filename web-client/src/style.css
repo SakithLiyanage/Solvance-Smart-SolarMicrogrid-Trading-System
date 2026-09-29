@@ -4,7 +4,6 @@
   --primary-gold: #f59e0b;
   --primary-emerald: #10b981;
   --primary-cyan: #06b6d4;
-  color-scheme: light dark;
 }
 
 * {
@@ -15,6 +14,27 @@
 html {
   background-color: #f8fafc;
   color: #0f172a;
+  color-scheme: light;
+}
+
+/* Select & Option Contrast Fixes */
+select {
+  color-scheme: light;
+}
+
+html.dark select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+html.dark select option,
+.dark select option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
 }
 
 body {
@@ -30,6 +50,7 @@ body {
 html.dark, html.dark body {
   background-color: #030712;
   color: #f8fafc;
+  color-scheme: dark;
 }
 
 h1, h2, h3, h4, h5, h6, .font-display {
