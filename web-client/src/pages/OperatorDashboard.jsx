@@ -407,14 +407,14 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
 
       // The backend signs a QR token on approval; never show a made-up token that can't be verified
       if (!fullPassData.qrCodeToken) {
-        showToast(`Booking #${fullPassData.reservationNumber} approved. Refresh to load its QR pass.`, 'warning');
+        showToast(`Reservation #${fullPassData.reservationNumber} approved. Refresh to load its QR pass.`, 'warning');
         return;
       }
 
       setApprovedPassData(fullPassData);
       setGeneratedQrDataUrl('');
       setIsPassModalOpen(true);
-      showToast(`Booking #${fullPassData.reservationNumber} approved. QR pass issued.`, 'success');
+      showToast(`Reservation #${fullPassData.reservationNumber} approved. QR pass issued.`, 'success');
 
       // Draw the QR image separately: a rendering failure must not look like a failed approval
       try {
@@ -485,8 +485,8 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
         scheduledDateTime: new Date(createForm.scheduledDateTime).toISOString()
       };
       const res = await api.post('/reservations', payload);
-      setCreateSuccess(`Booking #${res.data.reservationNumber} successfully created.`);
-      showToast(`Booking #${res.data.reservationNumber} scheduled successfully!`, 'success');
+      setCreateSuccess(`Reservation #${res.data.reservationNumber} successfully created.`);
+      showToast(`Reservation #${res.data.reservationNumber} scheduled successfully!`, 'success');
       setTimeout(() => {
         setIsCreateModalOpen(false);
         setCreateSuccess('');
@@ -526,8 +526,8 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
         tradeType: editForm.tradeType
       };
       await api.put(`/reservations/${editingReservation.id}`, payload);
-      setEditSuccess('Reservation modified successfully.');
-      showToast('Reservation schedule updated successfully.', 'success');
+      setEditSuccess('Reservation updated.');
+      showToast('Reservation updated.', 'success');
       setTimeout(() => {
         setEditingReservation(null);
         setEditSuccess('');
@@ -535,7 +535,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
       }, 1500);
       loadOperationalData();
     } catch (err) {
-      setEditError(err.response?.data?.message || 'Failed to modify reservation.');
+      setEditError(err.response?.data?.message || 'Failed to update reservation.');
       setEditSubmitting(false);
     }
   };
@@ -558,7 +558,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
       await api.post(`/reservations/${cancellingReservation.id}/cancel`, {
         reason: cancelReason || 'Operator Administrative Cancellation'
       });
-      setCancelSuccess('Reservation cancelled successfully and slots released.');
+      setCancelSuccess('Reservation cancelled and slots released.');
       showToast('Reservation cancelled and slots released.', 'info');
       setTimeout(() => {
         setCancellingReservation(null);
@@ -697,9 +697,9 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-5 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Booking Queue</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Reservation Queue</p>
             <p className="text-2xl font-display font-black text-amber-600 dark:text-amber-400 mt-1">
-              {kpis.queue} Bookings
+              {kpis.queue} Reservations
             </p>
             <p className="text-[11px] text-slate-400 mt-0.5">Pending &amp; approved, all stations</p>
           </div>
@@ -759,7 +759,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
           }`}
         >
           <Clock className="h-4 w-4" />
-          <span>Booking Queue ({kpis.queue})</span>
+          <span>Reservation Queue ({kpis.queue})</span>
         </button>
         <button
           onClick={() => setOperatorTab(2)}
@@ -904,7 +904,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
             ) : (
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2">
                 <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  <label htmlFor="approved-pass-select">Approved bookings</label>
+                  <label htmlFor="approved-pass-select">Approved reservations</label>
                   <span className="text-[11px] font-mono text-amber-600 dark:text-amber-400 font-bold">
                     {reservations.filter((r) => r.status === 'Approved').length} ready
                   </span>
@@ -925,7 +925,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                   }}
                   className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-mono text-slate-900 dark:text-white"
                 >
-                  <option value="">Select an approved booking to inspect…</option>
+                  <option value="">Select an approved reservation to inspect…</option>
                   {reservations
                     .filter((r) => r.status === 'Approved')
                     .map((r) => (
@@ -1005,7 +1005,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 pt-1 font-mono text-[11px] bg-white/60 dark:bg-slate-950/60 p-3 rounded-xl border border-emerald-500/20">
-                  <div>Reservation: <strong className="text-slate-900 dark:text-white">{verifiedResult.reservationNumber}</strong></div>
+                  <div>Reservation #: <strong className="text-slate-900 dark:text-white">{verifiedResult.reservationNumber}</strong></div>
                   <div>Prosumer NIC: <strong className="text-slate-900 dark:text-white">{verifiedResult.prosumerNic}</strong></div>
                   <div>Energy: <strong className="text-emerald-600 dark:text-emerald-400">{verifiedResult.energyAmountKwh} kWh</strong></div>
                   <div>Station: <strong className="text-slate-900 dark:text-white">{verifiedResult.stationName}</strong></div>
@@ -1155,10 +1155,10 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-display font-bold text-slate-900 dark:text-white">
-                  Booking Queue
+                  Reservation Queue
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Upcoming bookings first (soonest at the top), then overdue ones, then history.
+                  Upcoming reservations first (soonest at the top), then overdue ones, then history.
                 </p>
               </div>
 
@@ -1181,7 +1181,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                 className="self-start sm:self-auto shrink-0 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer"
               >
                 <Plus className="h-3.5 w-3.5" />
-                <span>New Booking</span>
+                <span>New Reservation</span>
               </button>
             </div>
 
@@ -1191,7 +1191,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                 <input
                   type="text"
                   placeholder="Filter NIC, Res # or Hub"
-                  aria-label="Filter bookings by NIC, reservation number or hub"
+                  aria-label="Filter reservations by NIC, reservation number or hub"
                   value={searchNic}
                   onChange={(e) => setSearchNic(e.target.value)}
                   className="pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 w-full focus:ring-1 focus:ring-amber-500"
@@ -1220,11 +1220,11 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
           {loadingReservations ? (
             <div className="p-12 text-center text-slate-400 text-xs">
               <RefreshCw className="h-6 w-6 text-amber-500 dark:text-amber-400 animate-spin mx-auto mb-2" />
-              <span>Loading bookings…</span>
+              <span>Loading reservations…</span>
             </div>
           ) : filteredReservations.length === 0 ? (
             <div className="p-12 text-center text-slate-400 text-xs">
-              No bookings match these filters.
+              No reservations match these filters.
             </div>
           ) : (
             <>
@@ -1259,7 +1259,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                           <div className="min-w-[180px] font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                             <span>{r.stationName}</span>
                             {!isMatchingActiveStation && (
-                              <span className="shrink-0 whitespace-nowrap text-[10px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-500" title="Booking is for a different hub than your operating hub">
+                              <span className="shrink-0 whitespace-nowrap text-[10px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-500" title="Reservation is for a different hub than your operating hub">
                                 Other Hub
                               </span>
                             )}
@@ -1311,7 +1311,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                                 onClick={() => handleApproveReservation(r)}
                                 disabled={notice.isPast || approvingId === r.id}
                                 className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold text-[11px] transition active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
-                                title={notice.isPast ? 'Appointment time has passed. Cancel it instead.' : 'Approve Reservation & Issue QR Pass'}
+                                title={notice.isPast ? 'Appointment time has passed. Cancel it instead.' : 'Approve reservation & issue QR pass'}
                               >
                                 <CheckCircle2 className="h-3.5 w-3.5" />
                                 <span>{approvingId === r.id ? 'Approving…' : 'Approve'}</span>
@@ -1385,7 +1385,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
               pageSize={queuePageSize}
               onPageChange={setQueuePage}
               onPageSizeChange={setQueuePageSize}
-              itemLabel="bookings"
+              itemLabel="reservations"
             />
             </>
           )}
@@ -1514,7 +1514,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                   onClick={() => handleDirectVerifyQr(inspectingPass.qrCodeToken || inspectingPass.reservationNumber)}
                   title={
                     !passIsApproved
-                      ? `Only approved bookings can be completed (this one is ${inspectingPass.status})`
+                      ? `Only approved reservations can be completed (this one is ${inspectingPass.status})`
                       : !passHubMatches
                       ? "Switch to the pass's station first"
                       : 'Verify the pass and complete the energy transfer'
@@ -1623,7 +1623,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="New Booking"
+        title="New Reservation"
         maxWidth="max-w-lg"
       >
         <form onSubmit={handleCreateReservation} className="space-y-4 text-xs">
@@ -1729,7 +1729,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
               disabled={createSubmitting}
               className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
             >
-              {createSubmitting ? 'Creating…' : 'Create Booking'}
+              {createSubmitting ? 'Creating…' : 'Create Reservation'}
             </button>
           </div>
         </form>
@@ -1741,7 +1741,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
       <Modal
         isOpen={editingReservation !== null}
         onClose={() => setEditingReservation(null)}
-        title={`Edit Booking #${editingReservation?.reservationNumber || ''}`}
+        title={`Edit Reservation #${editingReservation?.reservationNumber || ''}`}
         maxWidth="max-w-md"
       >
         <form onSubmit={handleUpdateReservation} className="space-y-4 text-xs">
@@ -1829,7 +1829,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
       <Modal
         isOpen={cancellingReservation !== null}
         onClose={() => setCancellingReservation(null)}
-        title={`Cancel Booking #${cancellingReservation?.reservationNumber || ''}`}
+        title={`Cancel Reservation #${cancellingReservation?.reservationNumber || ''}`}
         maxWidth="max-w-md"
       >
         <form onSubmit={handleCancelReservation} className="space-y-4 text-xs">
@@ -1847,7 +1847,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
           )}
 
           <p className="text-slate-600 dark:text-slate-300">
-            Cancel this booking? Its reserved battery slot will be released.
+            Cancel this reservation? Its reserved battery slot will be released.
           </p>
 
           {/* Operator-assisted cancellation: prosumers are blocked inside 12 hours, operators may override */}
@@ -1857,7 +1857,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
               <span>
                 {getNoticeState(cancellingReservation.scheduledDateTime).isPast
                   ? 'The scheduled time has already passed.'
-                  : 'This booking starts in less than 12 hours, so the prosumer can no longer cancel it themselves.'}{' '}
+                  : 'This reservation starts in less than 12 hours, so the prosumer can no longer cancel it themselves.'}{' '}
                 You are cancelling on their behalf as a Grid Operator (override). Please record the reason.
               </span>
             </div>
