@@ -23,25 +23,81 @@
 //     https://tailwindcss.com/
 // ============================================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
-  Plus, Cpu, MapPin, Battery, Calendar, AlertCircle,
-  CheckCircle2, ShieldAlert, Edit3, Power, RefreshCw,
-  Clock, Navigation, ShieldCheck, ExternalLink, Eye, Map,
-  BatteryCharging, Layers, Info, Trash2
+  Plus, Cpu, MapPin, Battery, Calendar, AlertCircle, AlertTriangle,
+  CheckCircle2, Edit3, Power, RefreshCw, Clock, ExternalLink, Map,
+  BatteryCharging, LayoutGrid, Info, Trash2, Search, X
 } from 'lucide-react';
 import api from '../api/client';
 import Modal from '../components/Modal';
+import Toast from '../components/Toast';
+import Pagination, { usePagination } from '../components/Pagination';
+
+const STATUS_FILTERS = ['All', 'Active', 'Inactive'];
+const ALL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+// Local calendar date as YYYY-MM-DD. toISOString() gives the UTC date, which is
+// still "yesterday" in Sri Lanka between 00:00 and 05:30.
+const todayLocalIso = () => {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+// "HH:mm" -> minutes since midnight
+const toMinutes = (hhmm) => {
+  const [h, m] = (hhmm || '').split(':').map(Number);
+  return h * 60 + m;
+};
+
+// "2026-10-01" -> "Thu, 01 Oct" (falls back to the raw value if it isn't a date)
+const formatSlotDate = (iso) => {
+  const d = new Date(`${iso}T00:00`);
+  return Number.isNaN(d.getTime())
+    ? iso
+    : d.toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' });
+};
+
+// Our controllers return { message }; ASP.NET model validation returns { errors: { Field: [msg] } }
+const getApiError = (err, fallback) => {
+  const data = err?.response?.data;
+  if (data?.message) return data.message;
+  if (data?.errors) return Object.values(data.errors).flat().join(' ');
+  return fallback;
+};
+
+const emptySlotForm = () => ({
+  date: todayLocalIso(),
+  startTime: '08:00',
+  endTime: '10:00',
+  slotCapacityKwh: 50,
+  availableSlots: 5,
+  status: 'Open'
+});
 
 export default function NodeManagement({ theme }) {
   const [stations, setStations] = useState([]);
   const [loading, setLoading] = useState(true);
+  // stationId -> upcoming Pending/Approved bookings (the condition that blocks deactivation)
+  const [upcomingByStation, setUpcomingByStation] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStation, setEditingStation] = useState(null);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [formError, setFormError] = useState('');
+  const [saving, setSaving] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'map'
   const [selectedMapStation, setSelectedMapStation] = useState(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+
+  // Confirmation dialog for deactivate/delete, and the hub an action is running on
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [busyStationId, setBusyStationId] = useState(null);
+
+  // Toast System
+  const [toast, setToast] = useState({ message: '', type: 'success' });
+  const showToast = (message, type = 'success') => setToast({ message, type });
+  const closeToast = useCallback(() => setToast({ message: '', type: 'success' }), []);
 
   // Slots Management State
   const [slotStation, setSlotStation] = useState(null);
@@ -50,14 +106,11 @@ export default function NodeManagement({ theme }) {
   const [slotDateFilter, setSlotDateFilter] = useState('');
   const [slotError, setSlotError] = useState('');
   const [slotSuccess, setSlotSuccess] = useState('');
-  const [newSlotForm, setNewSlotForm] = useState({
-    date: new Date().toISOString().slice(0, 10),
-    startTime: '08:00',
-    endTime: '10:00',
-    slotCapacityKwh: 50,
-    availableSlots: 5,
-    status: 'Open'
-  });
+  const [slotSubmitting, setSlotSubmitting] = useState(false);
+  const [adjustingSlotId, setAdjustingSlotId] = useState(null);
+  const [pendingDeleteSlotId, setPendingDeleteSlotId] = useState(null);
+  const [newSlotForm, setNewSlotForm] = useState(emptySlotForm);
+  const slotsRequestRef = useRef(0);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -68,76 +121,130 @@ export default function NodeManagement({ theme }) {
     address: '',
     capacityKwh: 500,
     totalBatterySlots: 20,
-    availableBatterySlots: 20,
     openTime: '06:00',
     closeTime: '22:00'
   });
 
   const fetchSlots = async (stationId, date) => {
+    // Ignore responses that arrive after the user has switched hub or date
+    const requestId = ++slotsRequestRef.current;
     try {
       setLoadingSlots(true);
       setSlotError('');
       const q = date ? `?date=${encodeURIComponent(date)}` : '';
       const res = await api.get(`/slots/station/${stationId}${q}`);
-      setStationSlots(res.data || []);
+      if (requestId === slotsRequestRef.current) setStationSlots(res.data || []);
     } catch (err) {
-      setSlotError('Failed to load trading slots for this solar hub.');
+      if (requestId === slotsRequestRef.current) {
+        setSlotError(getApiError(err, 'Failed to load trading slots for this solar hub.'));
+      }
     } finally {
-      setLoadingSlots(false);
+      if (requestId === slotsRequestRef.current) setLoadingSlots(false);
     }
   };
 
   const openSlotsModal = (station) => {
     setSlotStation(station);
+    setStationSlots([]);
     setSlotError('');
     setSlotSuccess('');
     setSlotDateFilter('');
-    setNewSlotForm({
-      date: new Date().toISOString().slice(0, 10),
-      startTime: '08:00',
-      endTime: '10:00',
-      slotCapacityKwh: 50,
-      availableSlots: 5,
-      status: 'Open'
-    });
+    setPendingDeleteSlotId(null);
+    setNewSlotForm(emptySlotForm());
     fetchSlots(station.id);
   };
 
   const handleCreateSlot = async (e) => {
     e.preventDefault();
-    if (!slotStation) return;
+    if (!slotStation || slotSubmitting) return;
     setSlotError('');
     setSlotSuccess('');
+
+    const { date, startTime, endTime } = newSlotForm;
+    const start = toMinutes(startTime);
+    const end = toMinutes(endTime);
+    if (end <= start) {
+      setSlotError('End time must be after the start time.');
+      return;
+    }
+
+    const openTime = slotStation.schedule?.openTime;
+    const closeTime = slotStation.schedule?.closeTime;
+    if (openTime && closeTime && toMinutes(closeTime) > toMinutes(openTime)
+      && (start < toMinutes(openTime) || end > toMinutes(closeTime))) {
+      setSlotError(`Slots must fall within the hub's opening hours (${openTime} - ${closeTime}).`);
+      return;
+    }
+
+    // Checked against the loaded list; with a date filter active that is only the filtered date
+    const clash = stationSlots.find(
+      (s) => s.date === date && start < toMinutes(s.endTime) && toMinutes(s.startTime) < end
+    );
+    if (clash) {
+      setSlotError(`This overlaps an existing slot on ${formatSlotDate(date)} (${clash.startTime} - ${clash.endTime}).`);
+      return;
+    }
+
+    setSlotSubmitting(true);
     try {
       const payload = {
         stationId: slotStation.id,
-        date: newSlotForm.date,
-        startTime: newSlotForm.startTime,
-        endTime: newSlotForm.endTime,
+        date,
+        startTime,
+        endTime,
         slotCapacityKwh: parseFloat(newSlotForm.slotCapacityKwh),
         allocatedKwh: 0,
         availableSlots: parseInt(newSlotForm.availableSlots, 10),
         status: newSlotForm.status || 'Open'
       };
       await api.post('/slots', payload);
-      setSlotSuccess('Trading slot created successfully.');
-      fetchSlots(slotStation.id, slotDateFilter);
+      setSlotSuccess(`Trading slot added for ${formatSlotDate(date)}, ${startTime} - ${endTime}.`);
+      // Wait for the refreshed list so the overlap check sees the new slot before the button re-enables
+      await fetchSlots(slotStation.id, slotDateFilter);
     } catch (err) {
-      setSlotError(err.response?.data?.message || 'Failed to create energy slot.');
+      setSlotError(getApiError(err, 'Failed to create energy slot.'));
+    } finally {
+      setSlotSubmitting(false);
     }
   };
 
-  const handleUpdateSlotAvailability = async (slotId, newAvailable, newAllocated) => {
+  const handleUpdateSlotAvailability = async (slot, newAvailable) => {
+    if (adjustingSlotId) return;
+    setAdjustingSlotId(slot.id);
+    setSlotError('');
+    setSlotSuccess('');
     try {
-      setSlotError('');
-      await api.put(`/slots/${slotId}/availability`, {
-        availableSlots: parseInt(newAvailable, 10),
-        allocatedKwh: parseFloat(newAllocated)
+      await api.put(`/slots/${slot.id}/availability`, {
+        availableSlots: newAvailable,
+        allocatedKwh: slot.allocatedKwh
       });
-      setSlotSuccess('Slot capacity updated.');
+      // Update the row in place (same status rule as the backend) so the next click builds on the new value
+      setStationSlots((prev) =>
+        prev.map((s) =>
+          s.id === slot.id ? { ...s, availableSlots: newAvailable, status: newAvailable <= 0 ? 'Full' : 'Open' } : s
+        )
+      );
+      setSlotSuccess('Slot availability updated.');
+    } catch (err) {
+      setSlotError(getApiError(err, 'Failed to update slot.'));
+    } finally {
+      setAdjustingSlotId(null);
+    }
+  };
+
+  const handleDeleteSlot = async (slotId) => {
+    setPendingDeleteSlotId(null);
+    setSlotError('');
+    setSlotSuccess('');
+    setAdjustingSlotId(slotId);
+    try {
+      await api.delete(`/slots/${slotId}`);
+      setSlotSuccess('Trading slot deleted.');
       if (slotStation) fetchSlots(slotStation.id, slotDateFilter);
     } catch (err) {
-      setSlotError(err.response?.data?.message || 'Failed to update slot.');
+      setSlotError(getApiError(err, 'Failed to delete slot. Check for linked upcoming reservations.'));
+    } finally {
+      setAdjustingSlotId(null);
     }
   };
 
@@ -147,13 +254,27 @@ export default function NodeManagement({ theme }) {
       const res = await api.get('/stations');
       const data = res.data || [];
       setStations(data);
-      if (data.length > 0) {
-        setSelectedMapStation((prev) => prev ? data.find(s => s.id === prev.id) || data[0] : data[0]);
-      }
+      setSelectedMapStation((prev) => (prev ? data.find((s) => s.id === prev.id) || data[0] || null : data[0] || null));
     } catch (err) {
-      console.error('Failed to load solar stations', err);
+      showToast(getApiError(err, 'Failed to load solar hubs.'), 'error');
     } finally {
       setLoading(false);
+    }
+
+    // Upcoming Pending/Approved bookings per hub: the same condition the backend uses to block deactivation
+    try {
+      const res = await api.get('/reservations');
+      const now = Date.now();
+      const counts = {};
+      (res.data || []).forEach((r) => {
+        if ((r.status === 'Pending' || r.status === 'Approved') && new Date(r.scheduledDateTime).getTime() >= now) {
+          counts[r.stationId] = (counts[r.stationId] || 0) + 1;
+        }
+      });
+      setUpcomingByStation(counts);
+    } catch {
+      // Informational only; the backend still enforces the rule
+      setUpcomingByStation({});
     }
   };
 
@@ -163,6 +284,7 @@ export default function NodeManagement({ theme }) {
 
   const openCreateModal = () => {
     setEditingStation(null);
+    setFormError('');
     setFormData({
       stationCode: 'HUB-NEW-' + Math.floor(100 + Math.random() * 900),
       name: '',
@@ -171,7 +293,6 @@ export default function NodeManagement({ theme }) {
       address: '',
       capacityKwh: 500,
       totalBatterySlots: 20,
-      availableBatterySlots: 20,
       openTime: '06:00',
       closeTime: '22:00'
     });
@@ -180,6 +301,7 @@ export default function NodeManagement({ theme }) {
 
   const openEditModal = (station) => {
     setEditingStation(station);
+    setFormError('');
     setFormData({
       stationCode: station.stationCode,
       name: station.name,
@@ -188,114 +310,210 @@ export default function NodeManagement({ theme }) {
       address: station.address,
       capacityKwh: station.capacityKwh,
       totalBatterySlots: station.totalBatterySlots,
-      availableBatterySlots: station.availableBatterySlots,
       openTime: station.schedule?.openTime || '06:00',
       closeTime: station.schedule?.closeTime || '22:00'
     });
     setIsModalOpen(true);
   };
 
+  // Battery racks currently in use at the hub being edited
+  const occupiedSlots = editingStation
+    ? Math.max(0, (editingStation.totalBatterySlots || 0) - (editingStation.availableBatterySlots || 0))
+    : 0;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    if (saving) return;
+    setFormError('');
+
+    const stationCode = formData.stationCode.trim().toUpperCase();
+    const name = formData.name.trim();
+    const address = formData.address.trim();
+    const latitude = parseFloat(formData.latitude);
+    const longitude = parseFloat(formData.longitude);
+    const capacityKwh = parseFloat(formData.capacityKwh);
+    const totalBatterySlots = parseInt(formData.totalBatterySlots, 10);
+
+    if (toMinutes(formData.closeTime) <= toMinutes(formData.openTime)) {
+      setFormError('Closing time must be after opening time.');
+      return;
+    }
+
+    const duplicate = stations.find(
+      (s) => s.id !== editingStation?.id && (s.stationCode || '').toUpperCase() === stationCode
+    );
+    if (duplicate) {
+      setFormError(`Station code ${stationCode} is already used by ${duplicate.name}.`);
+      return;
+    }
+
+    if (totalBatterySlots < occupiedSlots) {
+      setFormError(`${occupiedSlots} battery slots are occupied right now, so the total can't be lower than ${occupiedSlots}.`);
+      return;
+    }
+
+    if (editingStation) {
+      // The backend answers "Station not found" when an update changes nothing, so skip no-op saves
+      const unchanged =
+        stationCode === editingStation.stationCode &&
+        name === editingStation.name &&
+        address === editingStation.address &&
+        latitude === editingStation.latitude &&
+        longitude === editingStation.longitude &&
+        capacityKwh === editingStation.capacityKwh &&
+        totalBatterySlots === editingStation.totalBatterySlots &&
+        formData.openTime === editingStation.schedule?.openTime &&
+        formData.closeTime === editingStation.schedule?.closeTime;
+      if (unchanged) {
+        setIsModalOpen(false);
+        showToast('No changes to save.', 'info');
+        return;
+      }
+    }
 
     const payload = {
-      stationCode: formData.stationCode,
-      name: formData.name,
-      latitude: parseFloat(formData.latitude),
-      longitude: parseFloat(formData.longitude),
-      address: formData.address,
-      capacityKwh: parseFloat(formData.capacityKwh),
-      totalBatterySlots: parseInt(formData.totalBatterySlots),
-      availableBatterySlots: parseInt(formData.availableBatterySlots),
+      stationCode,
+      name,
+      latitude,
+      longitude,
+      address,
+      capacityKwh,
+      totalBatterySlots,
+      // Racks that are occupied stay occupied when the total changes
+      availableBatterySlots: totalBatterySlots - occupiedSlots,
       schedule: {
         openTime: formData.openTime,
         closeTime: formData.closeTime,
-        daysOpen: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        daysOpen: editingStation?.schedule?.daysOpen?.length ? editingStation.schedule.daysOpen : ALL_DAYS
       },
-      isActive: true
+      // Editing must not silently reactivate a deactivated hub
+      isActive: editingStation ? editingStation.isActive : true
     };
 
+    setSaving(true);
     try {
       if (editingStation) {
         await api.put(`/stations/${editingStation.id}`, payload);
-        setSuccess(`Solar Station '${formData.name}' specifications updated.`);
+        showToast(`Solar hub '${name}' updated.`);
       } else {
         await api.post('/stations', payload);
-        setSuccess(`New Microgrid Station '${formData.name}' registered.`);
+        showToast(`Solar hub '${name}' added.`);
       }
       setIsModalOpen(false);
-      setTimeout(() => setSuccess(''), 4000);
       fetchStations();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save solar station.');
+      setFormError(getApiError(err, 'Failed to save the solar hub.'));
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleToggleActive = async (station) => {
-    setError('');
-    setSuccess('');
+  const runStationAction = async (station, action) => {
+    setBusyStationId(station.id);
     try {
-      if (station.isActive) {
-        // Enforce backend check: blocked if active energy reservations exist
+      if (action === 'deactivate') {
         await api.post(`/stations/${station.id}/deactivate`);
-        setSuccess(`Station '${station.name}' successfully deactivated.`);
-      } else {
+        showToast(`Solar hub '${station.name}' deactivated.`);
+      } else if (action === 'reactivate') {
         await api.post(`/stations/${station.id}/reactivate`);
-        setSuccess(`Station '${station.name}' reactivated.`);
+        showToast(`Solar hub '${station.name}' reactivated.`);
+      } else {
+        await api.delete(`/stations/${station.id}`);
+        showToast(`Solar hub '${station.name}' and its trading slots deleted.`);
       }
-      setTimeout(() => setSuccess(''), 4000);
-      fetchStations();
+      // Keep the card's buttons disabled until it shows the new state
+      await fetchStations();
     } catch (err) {
-      setError(err.response?.data?.message || 'Action failed.');
-      setTimeout(() => setError(''), 6000);
+      showToast(getApiError(err, 'Action failed.'), 'error');
+    } finally {
+      setBusyStationId(null);
+      setConfirmAction(null);
     }
   };
 
-  const handleDeleteStation = async (station) => {
-    if (!window.confirm(`Permanently delete Solar Station '${station.name}' and all its trading slots? This action cannot be undone.`)) {
-      return;
-    }
-    setError('');
-    setSuccess('');
-    try {
-      await api.delete(`/stations/${station.id}`);
-      setSuccess(`Solar Station '${station.name}' and related slots deleted.`);
-      setTimeout(() => setSuccess(''), 4000);
-      fetchStations();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete station. Make sure no active reservations exist.');
-      setTimeout(() => setError(''), 6000);
-    }
+  const upcomingWarning = (station) => {
+    const upcoming = upcomingByStation[station.id] || 0;
+    return upcoming > 0
+      ? `This hub has ${upcoming} upcoming booking${upcoming === 1 ? '' : 's'}, so the server will block this until ${upcoming === 1 ? 'it is' : 'they are'} completed or cancelled.`
+      : '';
   };
 
-  const handleDeleteSlot = async (slotId) => {
-    if (!window.confirm('Are you sure you want to permanently delete this trading slot?')) {
+  const requestToggleActive = (station) => {
+    if (!station.isActive) {
+      runStationAction(station, 'reactivate');
       return;
     }
-    setSlotError('');
-    setSlotSuccess('');
-    try {
-      await api.delete(`/slots/${slotId}`);
-      setSlotSuccess('Trading slot deleted successfully.');
-      setTimeout(() => setSlotSuccess(''), 4000);
-      if (slotStation) fetchSlots(slotStation.id, slotDateFilter);
-    } catch (err) {
-      setSlotError(err.response?.data?.message || 'Failed to delete slot. Check for linked active reservations.');
-      setTimeout(() => setSlotError(''), 6000);
-    }
+    setConfirmAction({
+      station,
+      action: 'deactivate',
+      title: `Deactivate ${station.name}?`,
+      message: 'Prosumers will not be able to book this hub until it is reactivated.',
+      warning: upcomingWarning(station),
+      confirmLabel: 'Deactivate'
+    });
   };
+
+  const requestDelete = (station) => {
+    setConfirmAction({
+      station,
+      action: 'delete',
+      title: `Delete ${station.name}?`,
+      message: 'The hub and all of its trading slots will be permanently deleted. This cannot be undone.',
+      warning: upcomingWarning(station),
+      confirmLabel: 'Delete permanently'
+    });
+  };
+
+  const statusCounts = useMemo(
+    () => ({
+      All: stations.length,
+      Active: stations.filter((s) => s.isActive).length,
+      Inactive: stations.filter((s) => !s.isActive).length
+    }),
+    [stations]
+  );
+
+  const filteredStations = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return stations.filter((s) => {
+      if (statusFilter === 'Active' && !s.isActive) return false;
+      if (statusFilter === 'Inactive' && s.isActive) return false;
+      if (!query) return true;
+      return [s.name, s.stationCode, s.address].some((v) => (v || '').toLowerCase().includes(query));
+    });
+  }, [stations, search, statusFilter]);
+
+  // Page size 9 = three rows of three cards
+  const hubPager = usePagination(filteredStations, 9, `${statusFilter}|${search}`);
+
+  const sortedSlots = useMemo(
+    () => [...stationSlots].sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`)),
+    [stationSlots]
+  );
+  const slotPager = usePagination(sortedSlots, 10, `${slotStation?.id || ''}|${slotDateFilter}`);
+
+  const statusBadge = (isActive) =>
+    isActive
+      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+      : 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30';
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={closeToast}
+        duration={toast.type === 'error' ? 7000 : 4000}
+      />
+
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Solar Microgrid Hub Nodes
+            Solar Hubs
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Configure generation capacity, battery storage slots, and daily operating windows.
+            Configure capacity, battery storage slots, opening hours and trading slots.
           </p>
         </div>
 
@@ -304,32 +522,35 @@ export default function NodeManagement({ theme }) {
           <div className="flex bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-inner">
             <button
               onClick={() => setViewMode('grid')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${viewMode === 'grid'
+              aria-pressed={viewMode === 'grid'}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${viewMode === 'grid'
                   ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
             >
-              Grid View
+              <LayoutGrid className="h-3.5 w-3.5" />
+              Cards
             </button>
             <button
               onClick={() => {
                 setViewMode('map');
                 if (!selectedMapStation && stations.length > 0) setSelectedMapStation(stations[0]);
               }}
+              aria-pressed={viewMode === 'map'}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${viewMode === 'map'
                   ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
             >
-              <Map className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
-              Google Map View
+              <Map className="h-3.5 w-3.5" />
+              Map
             </button>
           </div>
 
           <button
             onClick={fetchStations}
             disabled={loading}
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold transition shadow-sm"
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer disabled:cursor-wait"
           >
             <RefreshCw className={`h-3.5 w-3.5 text-amber-500 dark:text-amber-400 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -344,51 +565,95 @@ export default function NodeManagement({ theme }) {
         </div>
       </div>
 
-      {/* Notice Banner */}
+      {/* Business rule notice */}
       <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.03] dark:bg-slate-900/60 backdrop-blur-md p-3.5 sm:p-4 flex items-center gap-3 transition-colors duration-300">
         <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
           <Info className="h-4 w-4 text-amber-600 dark:text-amber-400" />
         </div>
         <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
           <strong className="font-semibold text-slate-900 dark:text-white mr-1.5">Notice:</strong>
-          Solar hub stations with active or scheduled energy reservations cannot be deactivated until all bookings are completed or cancelled.
+          A hub with upcoming Pending or Approved bookings can't be deactivated or deleted until those bookings are completed or cancelled.
         </p>
       </div>
 
-      {/* Notifications */}
-      {error && (
-        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 text-xs sm:text-sm flex items-start gap-3 font-medium animate-in fade-in">
-          <ShieldAlert className="h-5 w-5 shrink-0 mt-0.5 text-red-500" />
-          <div>
-            <strong className="block font-bold">Action Blocked by Central Business Rule:</strong>
-            <span>{error}</span>
-          </div>
+      {/* Search & status filter */}
+      <div className="flex flex-col md:flex-row md:items-center gap-2.5">
+        <div className="relative md:w-72 shrink-0">
+          <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Search name, code or address"
+            aria-label="Search solar hubs by name, code or address"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 pr-3 py-2 w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-amber-500/50"
+          />
         </div>
-      )}
-
-      {success && (
-        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-sm flex items-center gap-3 font-medium animate-in fade-in">
-          <CheckCircle2 className="h-5 w-5 text-emerald-500 dark:text-emerald-400 shrink-0" />
-          <span>{success}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          {STATUS_FILTERS.map((status) => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              aria-pressed={statusFilter === status}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap ${statusFilter === status
+                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                  : 'bg-slate-100 dark:bg-slate-900/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'
+                }`}
+            >
+              {status} <span className="opacity-70 font-mono">({statusCounts[status]})</span>
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
-      {/* Stations View: Map or Cards Grid */}
-      {viewMode === 'map' ? (
+      {/* Stations View: loading / empty / map / cards */}
+      {loading && stations.length === 0 ? (
+        <div className="p-12 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 text-center text-xs text-slate-400">
+          <RefreshCw className="h-6 w-6 text-amber-500 animate-spin mx-auto mb-2" />
+          Loading solar hubs...
+        </div>
+      ) : filteredStations.length === 0 ? (
+        <div className="p-12 rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900/60 text-center space-y-3">
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            {stations.length === 0 ? 'No solar hubs yet.' : 'No solar hubs match your search or filter.'}
+          </p>
+          {stations.length === 0 ? (
+            <button
+              onClick={openCreateModal}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Add the first hub</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setSearch('');
+                setStatusFilter('All');
+              }}
+              className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
+            >
+              Clear search and filter
+            </button>
+          )}
+        </div>
+      ) : viewMode === 'map' ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Interactive Google Map Panel */}
           <div className="lg:col-span-8 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 overflow-hidden shadow-sm dark:shadow-xl backdrop-blur-xl flex flex-col">
             <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/40">
-              <div className="flex items-center gap-2.5">
-                <span className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
                   <MapPin className="h-4 w-4" />
                 </span>
-                <div>
-                  <h3 className="font-display font-bold text-slate-900 dark:text-white text-sm">
-                    {selectedMapStation ? selectedMapStation.name : 'Interactive Solar Map'}
+                <div className="min-w-0">
+                  <h3 className="font-display font-bold text-slate-900 dark:text-white text-sm truncate">
+                    {selectedMapStation ? selectedMapStation.name : 'Solar hub map'}
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {selectedMapStation ? `${selectedMapStation.latitude}° N, ${selectedMapStation.longitude}° E • ${selectedMapStation.address}` : 'Select a hub node to focus GPS coordinates'}
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                    {selectedMapStation
+                      ? `${Number(selectedMapStation.latitude).toFixed(4)}, ${Number(selectedMapStation.longitude).toFixed(4)} • ${selectedMapStation.address}`
+                      : 'Select a hub to show its GPS location'}
                   </p>
                 </div>
               </div>
@@ -405,10 +670,10 @@ export default function NodeManagement({ theme }) {
               )}
             </div>
 
-            <div className="relative w-full h-[450px] sm:h-[520px] bg-slate-100 dark:bg-slate-950">
+            <div className="relative w-full h-[360px] sm:h-[520px] bg-slate-100 dark:bg-slate-950">
               {selectedMapStation ? (
                 <iframe
-                  title="Google Maps Station Explorer"
+                  title={`Map of ${selectedMapStation.name}`}
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}
@@ -419,25 +684,34 @@ export default function NodeManagement({ theme }) {
                 />
               ) : (
                 <div className="h-full flex items-center justify-center text-slate-400 text-xs">
-                  Select a station node from the list to view on Google Maps.
+                  Select a hub from the list to view it on Google Maps.
                 </div>
               )}
             </div>
           </div>
 
-          {/* Station Selector & Telemetry List */}
+          {/* Hub selector list */}
           <div className="lg:col-span-4 space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-1">
-              Active Microgrid Nodes ({stations.length})
+              Solar hubs ({filteredStations.length})
             </h3>
             <div className="space-y-3 max-h-[580px] overflow-y-auto pr-1">
-              {stations.map((s) => {
+              {hubPager.pageItems.map((s) => {
                 const isSelected = selectedMapStation && selectedMapStation.id === s.id;
                 return (
                   <div
                     key={s.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={!!isSelected}
                     onClick={() => setSelectedMapStation(s)}
-                    className={`p-4 rounded-2xl border transition-all cursor-pointer ${isSelected
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelectedMapStation(s);
+                      }
+                    }}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/50 ${isSelected
                         ? 'bg-amber-500/10 border-amber-500/50 shadow-md ring-1 ring-amber-500/30'
                         : 'bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                       }`}
@@ -446,148 +720,183 @@ export default function NodeManagement({ theme }) {
                       <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">
                         {s.stationCode}
                       </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${s.isActive ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/15 text-red-600 dark:text-red-400'
-                        }`}>
-                        {s.isActive ? 'Operational' : 'Inactive'}
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusBadge(s.isActive)}`}>
+                        {s.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </div>
                     <h4 className="font-bold text-slate-900 dark:text-white text-sm truncate">{s.name}</h4>
                     <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{s.address}</p>
 
-                    <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300 font-mono">
-                      <span>{s.capacityKwh} kW Output</span>
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-300">
+                      <span className="font-mono">
+                        {s.capacityKwh} kWh &bull; {s.availableBatterySlots}/{s.totalBatterySlots} battery slots free
+                      </span>
                       <button
-                        onClick={(e) => { e.stopPropagation(); openSlotsModal(s); }}
-                        className="text-amber-600 dark:text-amber-400 hover:underline font-bold flex items-center gap-1 font-sans text-xs cursor-pointer"
-                        title="Configure Energy Trading Slots"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openSlotsModal(s);
+                        }}
+                        className="shrink-0 text-amber-600 dark:text-amber-400 hover:underline font-bold flex items-center gap-1 text-xs cursor-pointer"
                       >
                         <BatteryCharging className="h-3.5 w-3.5" />
-                        <span>Slots ({s.availableBatterySlots})</span>
+                        <span>Trading slots</span>
                       </button>
                     </div>
                   </div>
                 );
               })}
             </div>
+            <Pagination
+              page={hubPager.page}
+              totalPages={hubPager.totalPages}
+              totalItems={hubPager.totalItems}
+              pageSize={hubPager.pageSize}
+              onPageChange={hubPager.setPage}
+              itemLabel="hubs"
+              className="border-t-0"
+            />
           </div>
         </div>
       ) : (
         /* Stations Cards Grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {stations.map((station) => {
-            const slotPercent = Math.round((station.availableBatterySlots / (station.totalBatterySlots || 1)) * 100);
-            return (
-              <div
-                key={station.id}
-                className={`rounded-3xl border transition-all duration-300 overflow-hidden backdrop-blur-xl shadow-sm dark:shadow-xl ${station.isActive
-                    ? 'bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800 hover:border-amber-500/40 hover:shadow-lg dark:hover:shadow-2xl dark:hover:shadow-amber-500/5 hover:-translate-y-1'
-                    : 'bg-slate-50 dark:bg-slate-950/60 border-red-200 dark:border-red-900/30 opacity-75'
-                  }`}
-              >
-                {/* Card Header */}
-                <div className="p-6 border-b border-slate-100 dark:border-slate-800/80">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold px-2.5 py-1 bg-slate-100 dark:bg-slate-800/80 text-amber-600 dark:text-amber-400 border border-slate-200 dark:border-slate-700/60 rounded-lg">
-                      {station.stationCode}
-                    </span>
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold ${station.isActive
-                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                          : 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30'
-                        }`}
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full ${station.isActive ? 'bg-emerald-500 dark:bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
-                      <span>{station.isActive ? 'Operational' : 'Deactivated'}</span>
-                    </span>
+        <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {hubPager.pageItems.map((station) => {
+              const slotPercent = Math.min(
+                100,
+                Math.max(0, Math.round((station.availableBatterySlots / (station.totalBatterySlots || 1)) * 100))
+              );
+              const upcoming = upcomingByStation[station.id] || 0;
+              const isBusy = busyStationId === station.id;
+              return (
+                <div
+                  key={station.id}
+                  className={`rounded-3xl border transition-all duration-300 overflow-hidden backdrop-blur-xl shadow-sm dark:shadow-xl flex flex-col ${station.isActive
+                      ? 'bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800 hover:border-amber-500/40 hover:shadow-lg dark:hover:shadow-2xl dark:hover:shadow-amber-500/5'
+                      : 'bg-slate-50 dark:bg-slate-950/60 border-red-200 dark:border-red-900/30'
+                    }`}
+                >
+                  {/* Card Header */}
+                  <div className="p-6 border-b border-slate-100 dark:border-slate-800/80">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs font-bold px-2.5 py-1 bg-slate-100 dark:bg-slate-800/80 text-amber-600 dark:text-amber-400 border border-slate-200 dark:border-slate-700/60 rounded-lg">
+                        {station.stationCode}
+                      </span>
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold ${statusBadge(station.isActive)}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${station.isActive ? 'bg-emerald-500 dark:bg-emerald-400' : 'bg-red-500'}`} />
+                        <span>{station.isActive ? 'Active' : 'Inactive'}</span>
+                      </span>
+                    </div>
+
+                    <h3 className="mt-3.5 text-lg font-display font-bold text-slate-900 dark:text-white">{station.name}</h3>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate">{station.address}</span>
+                    </p>
                   </div>
 
-                  <h3 className="mt-3.5 text-lg font-display font-bold text-slate-900 dark:text-white">{station.name}</h3>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                    <span className="truncate">{station.address}</span>
-                  </p>
-                </div>
-
-                {/* Card Specs */}
-                <div className="p-6 space-y-4 text-xs">
-                  {/* Gen Capacity */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                      <Cpu className="h-4 w-4 text-amber-500 dark:text-amber-400" /> Photovoltaic Output:
-                    </span>
-                    <span className="font-bold text-slate-900 dark:text-white font-mono">{station.capacityKwh} kW</span>
-                  </div>
-
-                  {/* Battery Storage Slots */}
-                  <div>
-                    <div className="flex justify-between items-center mb-1.5">
+                  {/* Card Specs */}
+                  <div className="p-6 space-y-4 text-xs flex-1">
+                    <div className="flex justify-between items-center">
                       <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                        <Battery className="h-4 w-4 text-emerald-500 dark:text-emerald-400" /> Battery Storage Slots:
+                        <Cpu className="h-4 w-4 text-amber-500 dark:text-amber-400" /> Capacity:
                       </span>
-                      <span className="font-bold text-slate-900 dark:text-white font-mono">
-                        {station.availableBatterySlots} / {station.totalBatterySlots} free
+                      <span className="font-bold text-slate-900 dark:text-white font-mono">{station.capacityKwh} kWh</span>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                          <Battery className="h-4 w-4 text-emerald-500 dark:text-emerald-400" /> Battery slots:
+                        </span>
+                        <span className="font-bold text-slate-900 dark:text-white font-mono">
+                          {station.availableBatterySlots} / {station.totalBatterySlots} free
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${slotPercent > 50 ? 'bg-emerald-500' : slotPercent > 20 ? 'bg-amber-500' : 'bg-red-500'}`}
+                          style={{ width: `${slotPercent}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                        <Clock className="h-4 w-4 text-sky-500 dark:text-sky-400" /> Opening hours:
+                      </span>
+                      <span className="font-bold text-slate-700 dark:text-slate-300 font-mono">
+                        {station.schedule?.openTime && station.schedule?.closeTime
+                          ? `${station.schedule.openTime} - ${station.schedule.closeTime}`
+                          : 'Not set'}
                       </span>
                     </div>
-                    {/* Capacity Bar */}
-                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${slotPercent > 50 ? 'bg-emerald-500' : slotPercent > 20 ? 'bg-amber-500' : 'bg-red-500'
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                        <Calendar className="h-4 w-4 text-violet-500 dark:text-violet-400" /> Upcoming bookings:
+                      </span>
+                      <span className={`font-bold font-mono ${upcoming > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                        {upcoming}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card Actions */}
+                  <div className="p-6 pt-0 space-y-2">
+                    <button
+                      onClick={() => openSlotsModal(station)}
+                      className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-bold rounded-xl transition cursor-pointer whitespace-nowrap"
+                    >
+                      <BatteryCharging className="h-3.5 w-3.5" />
+                      <span>Trading slots</span>
+                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => openEditModal(station)}
+                        className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition border border-slate-200 dark:border-slate-700 cursor-pointer"
+                      >
+                        <Edit3 className="h-3.5 w-3.5 text-slate-400" />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        onClick={() => requestToggleActive(station)}
+                        disabled={isBusy}
+                        className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-wait ${station.isActive
+                            ? 'bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/30'
+                            : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
                           }`}
-                        style={{ width: `${slotPercent}%` }}
-                      />
+                        title={station.isActive
+                          ? (upcoming > 0 ? `Blocked while ${upcoming} upcoming booking(s) exist` : 'Deactivate this hub')
+                          : 'Reactivate this hub'}
+                      >
+                        <Power className="h-3.5 w-3.5" />
+                        <span>{isBusy ? 'Working...' : station.isActive ? 'Deactivate' : 'Reactivate'}</span>
+                      </button>
+                      <button
+                        onClick={() => requestDelete(station)}
+                        disabled={isBusy}
+                        aria-label={`Delete ${station.name}`}
+                        title="Permanently delete this hub (blocked while upcoming bookings exist)"
+                        className="inline-flex items-center justify-center gap-1 px-2.5 py-2 bg-slate-100 dark:bg-slate-800/80 hover:bg-red-500/10 text-slate-500 hover:text-red-500 dark:hover:text-red-400 text-xs font-bold rounded-xl transition border border-slate-200 dark:border-slate-700 cursor-pointer disabled:opacity-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
-
-                  {/* Operating Schedule Window */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                      <Clock className="h-4 w-4 text-sky-500 dark:text-sky-400" /> Daily Window:
-                    </span>
-                    <span className="font-bold text-slate-700 dark:text-slate-300 font-mono">
-                      {station.schedule ? `${station.schedule.openTime} - ${station.schedule.closeTime}` : '06:00 - 22:00'}
-                    </span>
-                  </div>
                 </div>
-
-                {/* Card Actions */}
-                <div className="p-6 pt-0 flex flex-wrap gap-2">
-                  <button
-                    onClick={() => openSlotsModal(station)}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-bold rounded-xl transition cursor-pointer"
-                    title="Manage Energy Trading Time Slots"
-                  >
-                    <BatteryCharging className="h-3.5 w-3.5" />
-                    <span>Trading Slots</span>
-                  </button>
-                  <button
-                    onClick={() => openEditModal(station)}
-                    className="inline-flex items-center justify-center gap-1 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition border border-slate-200 dark:border-slate-700 cursor-pointer"
-                  >
-                    <Edit3 className="h-3.5 w-3.5 text-slate-400" />
-                    <span>Specs</span>
-                  </button>
-                  <button
-                    onClick={() => handleToggleActive(station)}
-                    className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition cursor-pointer ${station.isActive
-                        ? 'bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/30'
-                        : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
-                      }`}
-                    title={station.isActive ? 'Deactivation blocked if active reservations exist' : 'Reactivate station'}
-                  >
-                    <Power className="h-3.5 w-3.5" />
-                    <span>{station.isActive ? 'Deactivate' : 'Reactivate'}</span>
-                  </button>
-                  <button
-                    onClick={() => handleDeleteStation(station)}
-                    className="inline-flex items-center justify-center gap-1 px-2.5 py-2 bg-slate-100 dark:bg-slate-800/80 hover:bg-red-500/10 text-slate-500 hover:text-red-500 dark:hover:text-red-400 text-xs font-bold rounded-xl transition border border-slate-200 dark:border-slate-750 cursor-pointer"
-                    title="Permanently delete station (blocked if active reservations exist)"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          <Pagination
+            page={hubPager.page}
+            totalPages={hubPager.totalPages}
+            totalItems={hubPager.totalItems}
+            pageSize={hubPager.pageSize}
+            onPageChange={hubPager.setPage}
+            itemLabel="hubs"
+            className="border-t-0"
+          />
         </div>
       )}
 
@@ -595,24 +904,39 @@ export default function NodeManagement({ theme }) {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingStation ? 'Configure Solar Hub Specifications' : 'Register New Solar Grid Hub'}
+        title={editingStation ? `Edit ${editingStation.name}` : 'Add Solar Hub'}
         maxWidth="max-w-lg"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          {formError && (
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>{formError}</span>
+            </div>
+          )}
+
+          {editingStation && !editingStation.isActive && (
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs">
+              This hub is inactive. Saving changes keeps it inactive; use Reactivate on its card to bring it back.
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Station Code</label>
+              <label htmlFor="hub-code" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Station Code</label>
               <input
+                id="hub-code"
                 type="text"
                 required
                 value={formData.stationCode}
                 onChange={(e) => setFormData({ ...formData, stationCode: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono uppercase focus:ring-2 focus:ring-amber-500/50"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Hub Name</label>
+              <label htmlFor="hub-name" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Hub Name</label>
               <input
+                id="hub-name"
                 type="text"
                 required
                 placeholder="e.g. Colombo South Station"
@@ -624,8 +948,9 @@ export default function NodeManagement({ theme }) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Physical Location Address</label>
+            <label htmlFor="hub-address" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Address</label>
             <input
+              id="hub-address"
               type="text"
               required
               placeholder="e.g. 102 Baseline Road, Colombo"
@@ -637,10 +962,14 @@ export default function NodeManagement({ theme }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">GPS Latitude</label>
+              <label htmlFor="hub-lat" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">GPS Latitude</label>
+              {/* step="any" so coordinates pasted from Google Maps (6+ decimals) pass browser validation */}
               <input
+                id="hub-lat"
                 type="number"
-                step="0.0001"
+                step="any"
+                min="-90"
+                max="90"
                 required
                 value={formData.latitude}
                 onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
@@ -648,10 +977,13 @@ export default function NodeManagement({ theme }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">GPS Longitude</label>
+              <label htmlFor="hub-lng" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">GPS Longitude</label>
               <input
+                id="hub-lng"
                 type="number"
-                step="0.0001"
+                step="any"
+                min="-180"
+                max="180"
                 required
                 value={formData.longitude}
                 onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
@@ -662,10 +994,13 @@ export default function NodeManagement({ theme }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Output (kW)</label>
+              <label htmlFor="hub-capacity" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Capacity (kWh)</label>
               <input
+                id="hub-capacity"
                 type="number"
+                step="any"
                 min="1"
+                max="100000"
                 required
                 value={formData.capacityKwh}
                 onChange={(e) => setFormData({ ...formData, capacityKwh: e.target.value })}
@@ -673,32 +1008,43 @@ export default function NodeManagement({ theme }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Battery Storage Slots</label>
+              <label htmlFor="hub-slots" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Battery Slots (total)</label>
               <input
+                id="hub-slots"
                 type="number"
-                min="1"
+                min={Math.max(1, occupiedSlots)}
+                max="1000"
                 required
                 value={formData.totalBatterySlots}
-                onChange={(e) => setFormData({ ...formData, totalBatterySlots: e.target.value, availableBatterySlots: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, totalBatterySlots: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 font-mono"
               />
+              {editingStation && (
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                  {occupiedSlots} occupied now; free slots = total &minus; {occupiedSlots}.
+                </p>
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Open Time</label>
+              <label htmlFor="hub-open" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Opening Time</label>
               <input
+                id="hub-open"
                 type="time"
+                required
                 value={formData.openTime}
                 onChange={(e) => setFormData({ ...formData, openTime: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Close Time</label>
+              <label htmlFor="hub-close" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Closing Time</label>
               <input
+                id="hub-close"
                 type="time"
+                required
                 value={formData.closeTime}
                 onChange={(e) => setFormData({ ...formData, closeTime: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
@@ -716,19 +1062,60 @@ export default function NodeManagement({ theme }) {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition cursor-pointer"
+              disabled={saving}
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {editingStation ? 'Save Changes' : 'Register Hub'}
+              {saving ? 'Saving...' : editingStation ? 'Save Changes' : 'Add Hub'}
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Deactivate / delete confirmation */}
+      <Modal
+        isOpen={confirmAction !== null}
+        onClose={() => {
+          if (!busyStationId) setConfirmAction(null);
+        }}
+        title={confirmAction?.title || ''}
+        maxWidth="max-w-md"
+      >
+        {confirmAction && (
+          <div className="space-y-4 text-xs">
+            <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{confirmAction.message}</p>
+            {confirmAction.warning && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+                <span>{confirmAction.warning}</span>
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setConfirmAction(null)}
+                disabled={!!busyStationId}
+                className="px-4 py-2 rounded-xl font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => runStationAction(confirmAction.station, confirmAction.action)}
+                disabled={!!busyStationId}
+                className="px-4 py-2 rounded-xl font-bold bg-red-600 hover:bg-red-500 text-white transition cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+              >
+                {busyStationId ? 'Working...' : confirmAction.confirmLabel}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* Energy Slots Management Modal */}
       <Modal
         isOpen={slotStation !== null}
         onClose={() => setSlotStation(null)}
-        title={`Energy Trading Slots - ${slotStation?.name || ''}`}
+        title={`Trading Slots - ${slotStation?.name || ''}`}
         maxWidth="max-w-3xl"
       >
         <div className="space-y-5 text-xs">
@@ -748,10 +1135,11 @@ export default function NodeManagement({ theme }) {
 
           {/* Filter by Date */}
           <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 dark:bg-slate-950/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Calendar className="h-4 w-4 text-amber-500" />
-              <span className="font-semibold text-slate-700 dark:text-slate-300">Filter by Date:</span>
+              <label htmlFor="slot-date-filter" className="font-semibold text-slate-700 dark:text-slate-300">Filter by date:</label>
               <input
+                id="slot-date-filter"
                 type="date"
                 value={slotDateFilter}
                 onChange={(e) => {
@@ -776,6 +1164,7 @@ export default function NodeManagement({ theme }) {
               onClick={() => slotStation && fetchSlots(slotStation.id, slotDateFilter)}
               className="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-amber-500 cursor-pointer"
               title="Refresh slots"
+              aria-label="Refresh slots"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loadingSlots ? 'animate-spin' : ''}`} />
             </button>
@@ -783,95 +1172,145 @@ export default function NodeManagement({ theme }) {
 
           {/* Existing Slots Table */}
           <div>
-            <h4 className="font-bold text-slate-900 dark:text-white mb-2">Configured Trading Slots</h4>
-            {loadingSlots ? (
+            <h4 className="font-bold text-slate-900 dark:text-white mb-2">Configured slots</h4>
+            {loadingSlots && stationSlots.length === 0 ? (
               <div className="p-6 text-center text-slate-400">Loading slots...</div>
             ) : stationSlots.length === 0 ? (
               <div className="p-6 text-center text-slate-400 bg-slate-50 dark:bg-slate-950/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-                No trading slots configured for this date. Add one below.
+                {slotDateFilter ? 'No trading slots on this date. Add one below.' : 'No trading slots for this hub yet. Add one below.'}
               </div>
             ) : (
-              <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800 text-slate-500 font-bold uppercase text-[10px]">
-                    <tr>
-                      <th className="px-3 py-2">Date</th>
-                      <th className="px-3 py-2">Time Window</th>
-                      <th className="px-3 py-2">Capacity</th>
-                      <th className="px-3 py-2">Allocated</th>
-                      <th className="px-3 py-2">Available Slots</th>
-                      <th className="px-3 py-2">Status</th>
-                      <th className="px-3 py-2 text-right">Adjust</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[11px]">
-                    {stationSlots.map((slot) => (
-                      <tr key={slot.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td className="px-3 py-2 font-bold text-slate-900 dark:text-white">{slot.date}</td>
-                        <td className="px-3 py-2 text-amber-600 dark:text-amber-400">{slot.startTime} - {slot.endTime}</td>
-                        <td className="px-3 py-2">{slot.slotCapacityKwh} kWh</td>
-                        <td className="px-3 py-2 text-slate-500">{slot.allocatedKwh} kWh</td>
-                        <td className="px-3 py-2 font-bold text-emerald-600 dark:text-emerald-400">{slot.availableSlots}</td>
-                        <td className="px-3 py-2">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${slot.status === 'Open' ? 'bg-emerald-500/15 text-emerald-600' :
-                              slot.status === 'Full' ? 'bg-red-500/15 text-red-600' : 'bg-amber-500/15 text-amber-600'
-                            }`}>
-                            {slot.status}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          <div className="inline-flex items-center gap-1 font-sans">
-                            <button
-                              onClick={() => handleUpdateSlotAvailability(slot.id, Math.max(0, slot.availableSlots - 1), slot.allocatedKwh)}
-                              className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded font-bold text-xs cursor-pointer"
-                              title="Decrement available slot"
-                            >
-                              -
-                            </button>
-                            <button
-                              onClick={() => handleUpdateSlotAvailability(slot.id, slot.availableSlots + 1, slot.allocatedKwh)}
-                              className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded font-bold text-xs cursor-pointer"
-                              title="Increment available slot"
-                            >
-                              +
-                            </button>
-                            <button
-                              onClick={() => handleDeleteSlot(slot.id)}
-                              className="p-1 hover:bg-red-500/10 text-slate-400 hover:text-red-500 rounded transition cursor-pointer ml-1"
-                              title="Delete this trading slot"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
-                          </div>
-                        </td>
+              <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800 text-slate-500 font-bold uppercase text-[10px] whitespace-nowrap">
+                      <tr>
+                        <th className="px-3 py-2">Date</th>
+                        <th className="px-3 py-2">Time</th>
+                        <th className="px-3 py-2">Capacity</th>
+                        <th className="px-3 py-2">Allocated</th>
+                        <th className="px-3 py-2">Available</th>
+                        <th className="px-3 py-2">Status</th>
+                        <th className="px-3 py-2 text-right">Adjust</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[11px]">
+                      {slotPager.pageItems.map((slot) => {
+                        const isAdjusting = adjustingSlotId === slot.id;
+                        return (
+                          <tr key={slot.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                            <td className="px-3 py-2 font-bold text-slate-900 dark:text-white whitespace-nowrap">{formatSlotDate(slot.date)}</td>
+                            <td className="px-3 py-2 text-amber-600 dark:text-amber-400 whitespace-nowrap">{slot.startTime} - {slot.endTime}</td>
+                            <td className="px-3 py-2 whitespace-nowrap">{slot.slotCapacityKwh} kWh</td>
+                            <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{slot.allocatedKwh} kWh</td>
+                            <td className="px-3 py-2 font-bold text-emerald-600 dark:text-emerald-400">{slot.availableSlots}</td>
+                            <td className="px-3 py-2">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${slot.status === 'Open'
+                                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                  : slot.status === 'Full'
+                                    ? 'bg-red-500/15 text-red-700 dark:text-red-300'
+                                    : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                                }`}>
+                                {slot.status}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              {pendingDeleteSlotId === slot.id ? (
+                                <div className="inline-flex items-center gap-1 font-sans">
+                                  <button
+                                    onClick={() => handleDeleteSlot(slot.id)}
+                                    className="px-2 py-0.5 rounded bg-red-600 hover:bg-red-500 text-white font-bold text-[11px] cursor-pointer"
+                                  >
+                                    Delete?
+                                  </button>
+                                  <button
+                                    onClick={() => setPendingDeleteSlotId(null)}
+                                    aria-label="Keep this slot"
+                                    className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="inline-flex items-center gap-1 font-sans">
+                                  {/* Backend reports "not found" for a no-op update, so "-" stops at 0 */}
+                                  <button
+                                    onClick={() => handleUpdateSlotAvailability(slot, slot.availableSlots - 1)}
+                                    disabled={isAdjusting || slot.availableSlots <= 0}
+                                    aria-label="One fewer available booking slot"
+                                    className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded font-bold text-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                  >
+                                    -
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdateSlotAvailability(slot, slot.availableSlots + 1)}
+                                    disabled={isAdjusting}
+                                    aria-label="One more available booking slot"
+                                    className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded font-bold text-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                  >
+                                    +
+                                  </button>
+                                  <button
+                                    onClick={() => setPendingDeleteSlotId(slot.id)}
+                                    disabled={isAdjusting}
+                                    aria-label="Delete this trading slot"
+                                    title="Delete this trading slot"
+                                    className="p-1 hover:bg-red-500/10 text-slate-400 hover:text-red-500 rounded transition cursor-pointer ml-1 disabled:opacity-40"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination
+                  page={slotPager.page}
+                  totalPages={slotPager.totalPages}
+                  totalItems={slotPager.totalItems}
+                  pageSize={slotPager.pageSize}
+                  onPageChange={slotPager.setPage}
+                  onPageSizeChange={slotPager.setPageSize}
+                  itemLabel="slots"
+                />
               </div>
             )}
           </div>
 
           {/* Add New Slot Form */}
           <div className="p-4 bg-slate-50 dark:bg-slate-950/60 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-            <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-              <Plus className="h-3.5 w-3.5 text-amber-500" />
-              <span>Create Energy Slot for this Hub</span>
-            </h4>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <Plus className="h-3.5 w-3.5 text-amber-500" />
+                <span>Add a trading slot</span>
+              </h4>
+              {slotStation?.schedule?.openTime && slotStation?.schedule?.closeTime && (
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Hub hours: <strong className="font-mono">{slotStation.schedule.openTime} - {slotStation.schedule.closeTime}</strong>
+                </span>
+              )}
+            </div>
             <form onSubmit={handleCreateSlot} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Date</label>
+                <label htmlFor="slot-date" className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Date</label>
                 <input
+                  id="slot-date"
                   type="date"
                   required
+                  min={todayLocalIso()}
                   value={newSlotForm.date}
                   onChange={(e) => setNewSlotForm({ ...newSlotForm, date: e.target.value })}
                   className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Start Time</label>
+                <label htmlFor="slot-start" className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Start Time</label>
                 <input
+                  id="slot-start"
                   type="time"
                   required
                   value={newSlotForm.startTime}
@@ -880,8 +1319,9 @@ export default function NodeManagement({ theme }) {
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">End Time</label>
+                <label htmlFor="slot-end" className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">End Time</label>
                 <input
+                  id="slot-end"
                   type="time"
                   required
                   value={newSlotForm.endTime}
@@ -890,10 +1330,11 @@ export default function NodeManagement({ theme }) {
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Slot Capacity (kWh)</label>
+                <label htmlFor="slot-capacity" className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Slot Capacity (kWh)</label>
                 <input
+                  id="slot-capacity"
                   type="number"
-                  step="1"
+                  step="any"
                   min="1"
                   required
                   value={newSlotForm.slotCapacityKwh}
@@ -902,8 +1343,9 @@ export default function NodeManagement({ theme }) {
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Total Booking Slots</label>
+                <label htmlFor="slot-count" className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Booking Slots</label>
                 <input
+                  id="slot-count"
                   type="number"
                   min="1"
                   required
@@ -915,9 +1357,10 @@ export default function NodeManagement({ theme }) {
               <div className="sm:flex sm:items-end">
                 <button
                   type="submit"
-                  className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg transition active:scale-95 cursor-pointer shadow-sm text-xs"
+                  disabled={slotSubmitting}
+                  className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg transition active:scale-95 cursor-pointer shadow-sm text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Add Slot
+                  {slotSubmitting ? 'Adding...' : 'Add Slot'}
                 </button>
               </div>
             </form>
