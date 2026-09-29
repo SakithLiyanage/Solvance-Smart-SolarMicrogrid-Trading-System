@@ -17,7 +17,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, Radio, Search, Filter, RefreshCw, UserPlus, 
   Edit3, CheckCircle2, XCircle, Shield, Mail, Phone, MapPin, 
-  Hash, Lock, UserX, UserCheck, AlertCircle, Sparkles, Key, 
+  Hash, Lock, UserX, UserCheck, AlertCircle, Key, 
   Clock, ShieldAlert, Cpu, Eye, EyeOff, Copy, Check
 } from 'lucide-react';
 import api from '../api/client';
@@ -38,6 +38,7 @@ export default function StaffManagement({ theme, currentUser }) {
   const [showResetModal, setShowResetModal] = useState(false);
   const [showCreatePassword, setShowCreatePassword] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [resetSubmitting, setResetSubmitting] = useState(false);
   const [modalError, setModalError] = useState('');
@@ -59,6 +60,8 @@ export default function StaffManagement({ theme, currentUser }) {
   const [editingStaff, setEditingStaff] = useState(null);
   const [resettingStaff, setResettingStaff] = useState(null);
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [requireNextLoginChange, setRequireNextLoginChange] = useState(true);
   const [editForm, setEditForm] = useState({
     fullName: '',
     email: '',
@@ -68,7 +71,7 @@ export default function StaffManagement({ theme, currentUser }) {
 
   const generateRandomPassword = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
-    let pwd = 'Solvance#';
+    let pwd = 'Solvance9#';
     for (let i = 0; i < 4; i++) {
       pwd += chars.charAt(Math.floor(Math.random() * chars.length));
     }
@@ -200,21 +203,44 @@ export default function StaffManagement({ theme, currentUser }) {
     }
 
     setResettingStaff(staff);
-    setNewPassword(generateRandomPassword());
+    setNewPassword('');
+    setConfirmPassword('');
     setResetError('');
     setCopiedPassword(false);
     setShowResetPassword(false);
+    setShowConfirmPassword(false);
+    setRequireNextLoginChange(true);
     setShowResetModal(true);
   };
 
+  const handleGenerateCompliantPassword = () => {
+    const pwd = generateRandomPassword();
+    setNewPassword(pwd);
+    setConfirmPassword(pwd);
+  };
+
+  // Password policy validation flags
+  const isResetLengthValid = newPassword.length >= 8;
+  const isResetAlphaNumeric = /[a-zA-Z]/.test(newPassword) && /[0-9]/.test(newPassword);
+  const isResetMatch = newPassword.length > 0 && newPassword === confirmPassword;
+  const isResetFormValid = isResetLengthValid && isResetAlphaNumeric && isResetMatch;
+
   const handleResetPasswordSubmit = async (e) => {
     e.preventDefault();
+    if (!isResetFormValid) {
+      setResetError('Password does not satisfy enterprise security policy requirements.');
+      return;
+    }
+
     setResetError('');
     setResetSubmitting(true);
 
     try {
-      await api.post(`/users/${resettingStaff.nic}/reset-password`, { newPassword });
-      notify(`Password for ${resettingStaff.fullName} (${resettingStaff.nic}) successfully reset.`, 'success');
+      await api.post(`/users/${resettingStaff.nic}/reset-password`, { 
+        newPassword,
+        confirmPassword 
+      });
+      notify(`Password for ${resettingStaff.fullName} (${resettingStaff.nic}) successfully updated.`, 'success');
       setShowResetModal(false);
       setResettingStaff(null);
     } catch (err) {
@@ -752,9 +778,6 @@ export default function StaffManagement({ theme, currentUser }) {
                     {s.stationCode} — {s.name} ({s.address})
                   </option>
                 ))}
-                <option value="Central Command & Dispatch Headquarters" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                  Central Command &amp; Dispatch Headquarters
-                </option>
               </select>
             ) : (
               <select
@@ -772,23 +795,23 @@ export default function StaffManagement({ theme, currentUser }) {
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Temporary Secure Password *
+                Initial Account Password *
               </label>
               <button
                 type="button"
                 onClick={() => setCreateForm({ ...createForm, password: generateRandomPassword() })}
                 className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
               >
-                <Sparkles className="h-3 w-3" />
-                <span>Generate Secure Pass</span>
+                <RefreshCw className="h-3 w-3" />
+                <span>Auto-fill Password</span>
               </button>
             </div>
             <div className="relative">
               <input
                 type={showCreatePassword ? 'text' : 'password'}
                 required
-                minLength={6}
-                placeholder="••••••••"
+                minLength={8}
+                placeholder="Enter password (min. 8 alphanumeric characters)"
                 value={createForm.password}
                 onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
                 className="w-full pl-3 pr-10 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 font-mono"
@@ -806,7 +829,7 @@ export default function StaffManagement({ theme, currentUser }) {
                 )}
               </button>
             </div>
-            <span className="text-[10px] text-slate-400 mt-1 block">Minimum 6 characters recommended</span>
+            <span className="text-[10px] text-slate-400 mt-1 block">Minimum 8 characters with letters and numbers.</span>
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
@@ -901,10 +924,7 @@ export default function StaffManagement({ theme, currentUser }) {
                     {s.stationCode} — {s.name} ({s.address})
                   </option>
                 ))}
-                <option value="Central Command & Dispatch Headquarters" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                  Central Command &amp; Dispatch Headquarters
-                </option>
-                {editForm.address && !stations.some(s => `${s.stationCode} — ${s.name}` === editForm.address) && editForm.address !== "Central Command & Dispatch Headquarters" && (
+                {editForm.address && !stations.some(s => `${s.stationCode} — ${s.name}` === editForm.address) && (
                   <option value={editForm.address} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{editForm.address}</option>
                 )}
               </select>
@@ -968,15 +988,15 @@ export default function StaffManagement({ theme, currentUser }) {
           setShowResetModal(false);
           setResettingStaff(null);
         }}
-        title={`Reset Password — ${resettingStaff?.fullName}`}
+        title={`Reset Password — ${resettingStaff?.fullName || ''}`}
       >
         <div className="mb-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 mb-2">
-            <Key className="h-3.5 w-3.5" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 mb-2">
+            <Key className="h-3.5 w-3.5 text-amber-500" />
             <span>NIC: {resettingStaff?.nic} &bull; Role: {resettingStaff?.role}</span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Provision a new temporary password for this staff member. You can generate a random strong password or enter custom credentials.
+            Specify a new password for this staff member. New credentials must satisfy enterprise identity complexity requirements.
           </p>
         </div>
 
@@ -990,15 +1010,15 @@ export default function StaffManagement({ theme, currentUser }) {
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                New Temporary Password *
+                New Password *
               </label>
               <button
                 type="button"
-                onClick={() => setNewPassword(generateRandomPassword())}
+                onClick={handleGenerateCompliantPassword}
                 className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
               >
-                <Sparkles className="h-3 w-3" />
-                <span>Regenerate Password</span>
+                <RefreshCw className="h-3 w-3" />
+                <span>Auto-fill Compliant Password</span>
               </button>
             </div>
 
@@ -1006,24 +1026,26 @@ export default function StaffManagement({ theme, currentUser }) {
               <input
                 type={showResetPassword ? 'text' : 'password'}
                 required
-                minLength={6}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full pl-3 pr-20 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-amber-500/50"
+                placeholder="Enter new password (min. 8 alphanumeric characters)"
+                className="w-full pl-3 pr-20 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-amber-500/50"
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={handleCopyPassword}
-                  title="Copy password to clipboard"
-                  className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
-                >
-                  {copiedPassword ? (
-                    <Check className="h-3.5 w-3.5 text-emerald-500" />
-                  ) : (
-                    <Copy className="h-3.5 w-3.5" />
-                  )}
-                </button>
+                {newPassword && (
+                  <button
+                    type="button"
+                    onClick={handleCopyPassword}
+                    title="Copy password to clipboard"
+                    className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+                  >
+                    {copiedPassword ? (
+                      <Check className="h-3.5 w-3.5 text-emerald-500" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setShowResetPassword(!showResetPassword)}
@@ -1038,10 +1060,82 @@ export default function StaffManagement({ theme, currentUser }) {
                 </button>
               </div>
             </div>
-            <span className="text-[10px] text-slate-400 mt-1 block">
-              Minimum 6 characters. Copy and share securely with the operator.
-            </span>
           </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Confirm New Password *
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter new password to verify"
+                className="w-full pl-3 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-amber-500/50"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                title={showConfirmPassword ? "Hide password" : "Show password"}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="h-3.5 w-3.5 text-amber-500" />
+                ) : (
+                  <Eye className="h-3.5 w-3.5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Validation Criteria Checklist */}
+          <div className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1.5">
+            <div className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              Password Policy Requirements:
+            </div>
+            <div className="flex items-center gap-2 text-[11px]">
+              {isResetLengthValid ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              )}
+              <span className={isResetLengthValid ? 'text-emerald-700 dark:text-emerald-400 font-medium' : 'text-slate-500 dark:text-slate-400'}>
+                At least 8 characters
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px]">
+              {isResetAlphaNumeric ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              )}
+              <span className={isResetAlphaNumeric ? 'text-emerald-700 dark:text-emerald-400 font-medium' : 'text-slate-500 dark:text-slate-400'}>
+                Contains both letters and numbers
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px]">
+              {isResetMatch ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              )}
+              <span className={isResetMatch ? 'text-emerald-700 dark:text-emerald-400 font-medium' : 'text-slate-500 dark:text-slate-400'}>
+                Passwords match
+              </span>
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer pt-1">
+            <input
+              type="checkbox"
+              checked={requireNextLoginChange}
+              onChange={(e) => setRequireNextLoginChange(e.target.checked)}
+              className="rounded border-slate-300 dark:border-slate-700 text-amber-500 focus:ring-amber-400 h-4 w-4"
+            />
+            <span>Require staff member to change password upon next sign-in</span>
+          </label>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
             <button
@@ -1056,10 +1150,10 @@ export default function StaffManagement({ theme, currentUser }) {
             </button>
             <button
               type="submit"
-              disabled={resetSubmitting || !newPassword}
+              disabled={resetSubmitting || !isResetFormValid}
               className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md disabled:opacity-50 cursor-pointer"
             >
-              {resetSubmitting ? 'Updating...' : 'Set & Save Password'}
+              {resetSubmitting ? 'Updating...' : 'Update Password'}
             </button>
           </div>
         </form>
