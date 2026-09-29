@@ -361,9 +361,14 @@ namespace SolarMicrogridApi.Services
                 throw new UnauthorizedAccessException("Security policy violation: Administrators cannot reset credentials of other Backoffice Administrators.");
             }
 
-            if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
+            if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 8)
             {
-                throw new ArgumentException("Password must contain at least 6 characters.");
+                throw new ArgumentException("Password must contain at least 8 characters.");
+            }
+
+            if (!newPassword.Any(char.IsLetter) || !newPassword.Any(char.IsDigit))
+            {
+                throw new ArgumentException("Password must contain at least one letter and one number.");
             }
 
             var filter = Builders<User>.Filter.Eq(u => u.Nic, nic);
