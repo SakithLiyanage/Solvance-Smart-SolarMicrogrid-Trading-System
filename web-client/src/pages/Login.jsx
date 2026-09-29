@@ -14,12 +14,14 @@
 // ============================================================================
 
 import React, { useState } from 'react';
-import { 
-  Shield, Zap, AlertCircle, ArrowRight, Sun, Moon, 
-  Activity, Cpu, Eye, EyeOff, CheckCircle2, XCircle, Lock, Key, Sparkles
+import {
+  AlertCircle, ArrowRight, Sun, Moon, Eye, EyeOff, CheckCircle2, XCircle, Key
 } from 'lucide-react';
 import api from '../api/client';
 import Modal from '../components/Modal';
+
+// Display name for the role codes returned by the API
+const ROLE_LABELS = { Backoffice: 'Backoffice', GridOperator: 'Grid Operator' };
 
 export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHome }) {
   const [usernameOrNic, setUsernameOrNic] = useState('');
@@ -48,6 +50,7 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
+    if (loading) return;
     setError('');
     setLoading(true);
 
@@ -61,7 +64,7 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
 
       // Ensure only web-authorized roles can access the web console
       if (role !== 'Backoffice' && role !== 'GridOperator') {
-        setError('Prosumers must access system services via the Native Android Mobile Application.');
+        setError('This console is for Backoffice and Grid Operator staff. Prosumers sign in with the Solvance Android app.');
         setLoading(false);
         return;
       }
@@ -81,14 +84,26 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
       localStorage.setItem('solar_user_data', JSON.stringify({ nic, fullName, email, role, status }));
       onLoginSuccess({ nic, fullName, email, role, status });
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please verify your credentials.');
+      // No response at all means the API is unreachable, not that the password is wrong
+      if (!err.response) {
+        setError('Cannot reach the server. Check your connection and try again.');
+      } else {
+        // The API explains lockouts (423) and pending/deactivated accounts (403) in `message`
+        setError(err.response.data?.message || 'Sign-in failed. Please check your details and try again.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const closeChangePasswordModal = () => {
+    setMustChangePasswordModal(false);
+    setPendingAuth(null); // drop the unused session token
+  };
+
   const handleChangePasswordSubmit = async (e) => {
     e.preventDefault();
+    if (changeLoading) return;
     if (!isFormValid) {
       setChangeError('Please satisfy all password complexity requirements.');
       return;
@@ -113,23 +128,28 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
       setMustChangePasswordModal(false);
       onLoginSuccess({ nic, fullName, email, role, status });
     } catch (err) {
-      setChangeError(err.response?.data?.message || 'Failed to update password.');
+      setChangeError(
+        err.response
+          ? err.response.data?.message || 'Failed to update password.'
+          : 'Cannot reach the server. Check your connection and try again.'
+      );
     } finally {
       setChangeLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden select-none transition-colors duration-300">
-      
+    // pt-24 keeps the card clear of the floating top controls on short/phone screens
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-center items-center pt-24 pb-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden transition-colors duration-300">
+
       {/* Floating Top Controls: Return to Landing and Theme Toggle */}
-      <div className="absolute top-6 left-6 right-6 z-20 flex items-center justify-between">
+      <div className="absolute top-6 left-4 right-4 sm:left-6 sm:right-6 z-20 flex items-center justify-between">
         {onBackToHome ? (
           <button
             onClick={onBackToHome}
             className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 shadow-md transition active:scale-95 cursor-pointer text-xs font-bold hover:text-amber-500"
           >
-            <span>&larr; Public Network Portal</span>
+            <span>&larr; Back to home</span>
           </button>
         ) : <div />}
 
@@ -178,13 +198,6 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
               className="relative h-20 sm:h-24 object-contain mx-auto drop-shadow-lg transition transform group-hover:scale-105 duration-300"
             />
           </div>
-          
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-slate-900/90 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60 shadow-sm mt-3 backdrop-blur-md">
-              <Sparkles className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
-              <span>Enterprise Grid Operations Portal</span>
-            </div>
-          </div>
         </div>
 
         {/* Glassmorphic Login Card */}
@@ -193,12 +206,12 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
           
           <div className="relative bg-white/90 dark:bg-slate-900/85 backdrop-blur-2xl py-8 px-6 sm:px-9 rounded-3xl border border-slate-200/90 dark:border-slate-800/80 shadow-xl dark:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.7)] transition-colors duration-300">
             <div className="mb-6 text-center">
-              <h2 className="text-xl font-display font-bold text-slate-900 dark:text-white tracking-tight">Staff Authentication</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Sign in with Backoffice Admin or Grid Operator credentials</p>
+              <h2 className="text-xl font-display font-bold text-slate-900 dark:text-white tracking-tight">Staff sign in</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">For Backoffice and Grid Operator accounts. Prosumers use the Android app.</p>
             </div>
 
             {error && (
-              <div className="mb-5 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/25 text-red-600 dark:text-red-300 text-xs font-medium flex items-start gap-2.5 animate-in fade-in">
+              <div role="alert" className="mb-5 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/25 text-red-600 dark:text-red-300 text-xs font-medium flex items-start gap-2.5 animate-in fade-in">
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-500" />
                 <span>{error}</span>
               </div>
@@ -206,13 +219,18 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
 
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                  Staff Identifier (NIC or Email)
+                <label htmlFor="login-identifier" className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+                  NIC, username or email
                 </label>
                 <div className="relative">
                   <input
+                    id="login-identifier"
                     type="text"
                     required
+                    autoFocus
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
                     value={usernameOrNic}
                     onChange={(e) => setUsernameOrNic(e.target.value)}
                     placeholder="e.g. ADMIN001 or OPERATOR001"
@@ -222,13 +240,15 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                  Secure Password
+                <label htmlFor="login-password" className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+                  Password
                 </label>
                 <div className="relative">
                   <input
+                    id="login-password"
                     type={showPassword ? 'text' : 'password'}
                     required
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
@@ -238,6 +258,8 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     title={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showPassword}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
                   >
                     {showPassword ? (
@@ -255,7 +277,7 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
                 disabled={loading}
                 className="w-full mt-2 relative overflow-hidden group/btn flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 shadow-md shadow-amber-500/25 transition-all transform active:scale-[0.98] disabled:opacity-50 cursor-pointer"
               >
-                <span>{loading ? 'Verifying Credentials...' : 'Authenticate & Access Console'}</span>
+                <span>{loading ? 'Signing in…' : 'Sign in'}</span>
                 {!loading && <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />}
               </button>
             </form>
@@ -266,43 +288,47 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
       {/* Modal: Mandatory First-Sign-In Password Change */}
       <Modal
         isOpen={mustChangePasswordModal}
-        onClose={() => setMustChangePasswordModal(false)}
-        title="Mandatory Password Update Required"
+        onClose={closeChangePasswordModal}
+        title="Change your temporary password"
       >
         <div className="mb-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 mb-2">
             <Key className="h-3.5 w-3.5 text-amber-500" />
-            <span>Account: {pendingAuth?.nic} ({pendingAuth?.role})</span>
+            <span>Account: {pendingAuth?.nic} ({ROLE_LABELS[pendingAuth?.role] || pendingAuth?.role})</span>
           </div>
           <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-            Your temporary password was provisioned by a system administrator. Enterprise security policy requires you to establish a personal confidential password before accessing the operational console.
+            Your account was set up with a temporary password. Choose a new password to continue.
           </p>
         </div>
 
         {changeError && (
-          <div className="mb-4 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 text-xs font-semibold animate-in fade-in">
+          <div role="alert" className="mb-4 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 text-xs font-semibold animate-in fade-in">
             {changeError}
           </div>
         )}
 
         <form onSubmit={handleChangePasswordSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              New Personal Password *
+            <label htmlFor="new-password" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              New password
             </label>
             <div className="relative">
               <input
+                id="new-password"
                 type={showNewPassword ? 'text' : 'password'}
                 required
+                autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password (min. 8 alphanumeric characters)"
+                placeholder="At least 8 characters, with letters and numbers"
                 className="w-full pl-3 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-amber-500/50"
               />
               <button
                 type="button"
                 onClick={() => setShowNewPassword(!showNewPassword)}
                 title={showNewPassword ? "Hide password" : "Show password"}
+                aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+                aria-pressed={showNewPassword}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
               >
                 {showNewPassword ? (
@@ -315,22 +341,26 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Confirm New Personal Password *
+            <label htmlFor="confirm-password" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Confirm new password
             </label>
             <div className="relative">
               <input
+                id="confirm-password"
                 type={showConfirmPassword ? 'text' : 'password'}
                 required
+                autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter new password to verify"
+                placeholder="Re-enter the new password"
                 className="w-full pl-3 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-amber-500/50"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 title={showConfirmPassword ? "Hide password" : "Show password"}
+                aria-label={showConfirmPassword ? "Hide confirmed password" : "Show confirmed password"}
+                aria-pressed={showConfirmPassword}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
               >
                 {showConfirmPassword ? (
@@ -345,7 +375,7 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
           {/* Validation Criteria */}
           <div className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1.5">
             <div className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              Password Complexity Requirements:
+              Password requirements
             </div>
             <div className="flex items-center gap-2 text-[11px]">
               {isLengthValid ? (
@@ -382,7 +412,7 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"
-              onClick={() => setMustChangePasswordModal(false)}
+              onClick={closeChangePasswordModal}
               className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
             >
               Cancel
@@ -390,9 +420,9 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
             <button
               type="submit"
               disabled={changeLoading || !isFormValid}
-              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md disabled:opacity-50 cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
-              {changeLoading ? 'Updating Credentials...' : 'Set Password & Enter Console'}
+              {changeLoading ? 'Saving…' : 'Save and sign in'}
             </button>
           </div>
         </form>

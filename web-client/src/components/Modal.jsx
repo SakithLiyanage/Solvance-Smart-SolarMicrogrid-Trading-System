@@ -1,8 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 export default function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-2xl' }) {
+  const titleId = useId();
+  const dialogRef = useRef(null);
+
   // Prevent body scrolling when modal is open
   useEffect(() => {
     if (isOpen) {
@@ -12,6 +15,19 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = 'ma
     }
     return () => {
       document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  // Move keyboard focus into the dialog while it is open, and give it back to the opener afterwards.
+  // A child input with autoFocus has already taken focus by now, so leave it there.
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const dialog = dialogRef.current;
+    const focusIsInside = dialog && dialog.contains(document.activeElement);
+    const opener = focusIsInside ? null : document.activeElement;
+    if (dialog && !focusIsInside) dialog.focus();
+    return () => {
+      if (opener && typeof opener.focus === 'function') opener.focus();
     };
   }, [isOpen]);
 
@@ -29,7 +45,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = 'ma
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 select-none w-screen min-h-screen">
+    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 w-screen min-h-screen">
       {/* Click outside backdrop overlay */}
       <div
         className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
@@ -37,19 +53,27 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = 'ma
         aria-hidden="true"
       />
 
-      <div className={`relative bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full ${maxWidth} max-h-[90vh] flex flex-col overflow-hidden my-auto z-10 transform transition-all animate-in fade-in zoom-in-95 duration-200`}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className={`relative bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full ${maxWidth} max-h-[90vh] flex flex-col overflow-hidden my-auto z-10 transform transition-all animate-in fade-in zoom-in-95 duration-200 focus:outline-none`}
+      >
         {/* Top Accent Gradient Border Line */}
         <div className="h-1.5 w-full shrink-0 bg-gradient-to-r from-amber-500 via-amber-300 to-emerald-400" />
 
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950/70 shrink-0">
-          <h3 className="font-display font-bold text-base sm:text-lg text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50 dark:bg-slate-950/70 shrink-0">
+          <h3 id={titleId} className="font-display font-bold text-base sm:text-lg text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
             {title}
           </h3>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 transition active:scale-90 cursor-pointer"
+            aria-label="Close dialog"
+            className="shrink-0 text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 transition active:scale-90 cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
