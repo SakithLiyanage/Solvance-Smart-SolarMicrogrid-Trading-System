@@ -27,9 +27,17 @@ export default function Toast({ message, type = 'success', onClose, duration = 4
     info: <Info className="h-5 w-5 text-cyan-400 shrink-0" />
   };
 
+  // Errors interrupt screen readers; everything else is announced politely
+  const isError = type === 'error';
+
   return createPortal(
-    <div className="fixed bottom-6 right-6 z-[10000] max-w-sm w-full animate-in slide-in-from-bottom-5 fade-in duration-300 pointer-events-auto">
-      <div className={`flex items-center justify-between gap-3 p-4 rounded-2xl border shadow-2xl backdrop-blur-xl ${bgStyles[type] || bgStyles.info}`}>
+    // Full-width with side gutters on phones; fixed 24rem card from sm up
+    <div className="fixed bottom-4 left-4 right-4 sm:bottom-6 sm:left-auto sm:right-6 sm:w-full sm:max-w-sm z-[10000] animate-in slide-in-from-bottom-5 fade-in duration-300 pointer-events-auto">
+      <div
+        role={isError ? 'alert' : 'status'}
+        aria-live={isError ? 'assertive' : 'polite'}
+        className={`flex items-center justify-between gap-3 p-4 rounded-2xl border shadow-2xl backdrop-blur-xl ${bgStyles[type] || bgStyles.info}`}
+      >
         <div className="flex items-center gap-3">
           {icons[type]}
           <p className="text-xs font-semibold leading-snug">{message}</p>
@@ -38,6 +46,7 @@ export default function Toast({ message, type = 'success', onClose, duration = 4
           <button
             type="button"
             onClick={onClose}
+            aria-label="Dismiss notification"
             className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition cursor-pointer"
           >
             <X className="h-4 w-4" />

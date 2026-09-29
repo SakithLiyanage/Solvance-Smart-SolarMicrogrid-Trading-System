@@ -16,7 +16,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
-import Modal from './components/Modal';
 import Login from './pages/Login';
 import LandingPage from './pages/LandingPage';
 import BackofficeDashboard from './pages/BackofficeDashboard';
@@ -25,8 +24,10 @@ import NodeManagement from './pages/NodeManagement';
 import OperatorDashboard from './pages/OperatorDashboard';
 import StaffManagement from './pages/StaffManagement';
 import ReservationManagement from './pages/ReservationManagement';
-import api from './api/client';
-import { UserPlus, Shield, Zap, CheckCircle2, ShieldCheck, Activity } from 'lucide-react';
+import { Smartphone } from 'lucide-react';
+
+// Roles allowed into the web console (Prosumers use the Android app)
+const STAFF_ROLES = ['Backoffice', 'GridOperator'];
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -35,18 +36,6 @@ export default function App() {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('solar_theme') || 'light';
   });
-
-  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
-  const [staffForm, setStaffForm] = useState({
-    nic: '',
-    fullName: '',
-    email: '',
-    phone: '',
-    password: '',
-    role: 'GridOperator'
-  });
-  const [staffSuccess, setStaffSuccess] = useState('');
-  const [staffError, setStaffError] = useState('');
 
   // Synchronize HTML element class with selected theme
   useEffect(() => {
@@ -75,37 +64,23 @@ export default function App() {
     }
   }, []);
 
+  // The API client fires this when the token is rejected (expired or invalid)
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setUser(null);
+      setActiveTab('overview');
+      setPublicView('login');
+    };
+    window.addEventListener('solvance:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('solvance:session-expired', handleSessionExpired);
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem('solar_auth_token');
     localStorage.removeItem('solar_user_data');
     setUser(null);
     setActiveTab('overview');
     setPublicView('home');
-  };
-
-  const handleCreateStaff = async (e) => {
-    e.preventDefault();
-    setStaffError('');
-    setStaffSuccess('');
-
-    try {
-      await api.post('/auth/register-staff', staffForm);
-      setStaffSuccess(`New ${staffForm.role} account created for ${staffForm.fullName} (${staffForm.nic}).`);
-      setStaffForm({
-        nic: '',
-        fullName: '',
-        email: '',
-        phone: '',
-        password: '',
-        role: 'GridOperator'
-      });
-      setTimeout(() => {
-        setIsStaffModalOpen(false);
-        setStaffSuccess('');
-      }, 2000);
-    } catch (err) {
-      setStaffError(err.response?.data?.message || 'Failed to create staff account.');
-    }
   };
 
   if (!user) {
@@ -119,12 +94,36 @@ export default function App() {
       );
     }
     return (
-      <Login 
-        onLoginSuccess={(userData) => setUser(userData)} 
+      <Login
+        onLoginSuccess={(userData) => setUser(userData)}
         theme={theme}
         onToggleTheme={toggleTheme}
         onBackToHome={() => setPublicView('home')}
       />
+    );
+  }
+
+  // Safety net: a non-staff session must never reach the staff console
+  if (!STAFF_ROLES.includes(user.role)) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex items-center justify-center p-6">
+        <div className="max-w-md w-full rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 text-center space-y-4 shadow-xl">
+          <div className="h-12 w-12 mx-auto rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+            <Smartphone className="h-6 w-6" />
+          </div>
+          <h1 className="font-display font-bold text-xl">This console is for staff</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            The web console is used by Backoffice and Grid Operator staff. Prosumers manage their bookings in the Solvance Android app.
+          </p>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm transition active:scale-95 cursor-pointer"
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
     );
   }
 
@@ -140,7 +139,6 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onLogout={handleLogout}
-        onOpenCreateStaff={() => setIsStaffModalOpen(true)}
         theme={theme}
         onToggleTheme={toggleTheme}
       />
@@ -176,134 +174,17 @@ export default function App() {
         )}
       </main>
 
-      {/* Modern Status Footer */}
+      {/* Footer */}
       <footer className="border-t border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl py-6 px-4 sm:px-8 relative z-10 transition-colors duration-300">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
           <div className="flex items-center gap-2">
             <span className="font-display font-extrabold text-slate-900 dark:text-white tracking-wider text-sm bg-gradient-to-r from-amber-500 to-amber-400 bg-clip-text text-transparent">
               SOLVANCE
             </span>
-            <span>&bull; Smart Solar Microgrid Trading Platform</span>
-            <span className="hidden md:inline">&bull; Decentralized Clean Energy Network (2026)</span>
+            <span>&bull; Smart Solar Microgrid Trading</span>
           </div>
         </div>
       </footer>
-
-      {/* Modal: Create Staff User (Backoffice Only) */}
-      <Modal
-        isOpen={isStaffModalOpen}
-        onClose={() => setIsStaffModalOpen(false)}
-        title="Provision New Staff Account"
-      >
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          Specification Rule: Backoffice administrators provision authorized system accounts for Backoffice and Grid Operator personnel.
-        </p>
-
-        {staffSuccess && (
-          <div className="mb-4 p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
-            <CheckCircle2 className="h-4 w-4 text-emerald-500 dark:text-emerald-400 shrink-0" />
-            <span>{staffSuccess}</span>
-          </div>
-        )}
-
-        {staffError && (
-          <div className="mb-4 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 text-xs font-medium animate-in fade-in">
-            {staffError}
-          </div>
-        )}
-
-        <form onSubmit={handleCreateStaff} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Staff NIC</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. 198512345678"
-                value={staffForm.nic}
-                onChange={(e) => setStaffForm({ ...staffForm, nic: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 font-mono"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Assigned Role</label>
-              <select
-                value={staffForm.role}
-                onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-semibold focus:ring-2 focus:ring-amber-500/50"
-              >
-                <option value="GridOperator">Grid Operator</option>
-                <option value="Backoffice">Backoffice Admin</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Full Legal Name</label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Anura Bandara"
-              value={staffForm.fullName}
-              onChange={(e) => setStaffForm({ ...staffForm, fullName: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
-              <input
-                type="email"
-                required
-                placeholder="staff@solargrid.lk"
-                value={staffForm.email}
-                onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
-              <input
-                type="tel"
-                required
-                placeholder="+94771234567"
-                value={staffForm.phone}
-                onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 font-mono"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Temporary Access Password</label>
-            <input
-              type="password"
-              required
-              placeholder="Minimum 6 characters"
-              value={staffForm.password}
-              onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50"
-            />
-          </div>
-
-          <div className="pt-3 flex justify-end gap-2 border-t border-slate-200 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={() => setIsStaffModalOpen(false)}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition active:scale-95 shadow-lg shadow-amber-500/20"
-            >
-              Provision Account
-            </button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 }
