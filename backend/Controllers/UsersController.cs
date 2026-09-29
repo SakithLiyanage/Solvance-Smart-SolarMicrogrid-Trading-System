@@ -233,6 +233,16 @@ namespace SolarMicrogridApi.Controllers
             var requesterRole = User.FindFirstValue(ClaimTypes.Role) ?? "Backoffice";
             var requesterNic = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
 
+            if (string.IsNullOrWhiteSpace(dto.NewPassword))
+            {
+                return BadRequest(new { message = "Password cannot be empty." });
+            }
+
+            if (!string.IsNullOrEmpty(dto.ConfirmPassword) && dto.NewPassword != dto.ConfirmPassword)
+            {
+                return BadRequest(new { message = "New password and confirm password do not match." });
+            }
+
             try
             {
                 var success = await _userService.ResetPasswordAsync(nic, dto.NewPassword, requesterRole, requesterNic);
@@ -315,5 +325,6 @@ namespace SolarMicrogridApi.Controllers
     public class ResetPasswordDto
     {
         public string NewPassword { get; set; } = string.Empty;
+        public string ConfirmPassword { get; set; } = string.Empty;
     }
 }
