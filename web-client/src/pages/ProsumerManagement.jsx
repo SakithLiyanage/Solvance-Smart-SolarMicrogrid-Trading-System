@@ -349,7 +349,7 @@ export default function ProsumerManagement({ theme }) {
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
               Prosumer Directory
             </h1>
             <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-2xl">
@@ -380,32 +380,32 @@ export default function ProsumerManagement({ theme }) {
       {/* KPI Stats & Metric Tickers */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs">
-          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Prosumers</span>
-          <div className="mt-2 text-2xl font-display font-extrabold text-slate-900 dark:text-white">
+          <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Total Prosumers</span>
+          <div className="mt-2 text-2xl font-display font-bold text-slate-900 dark:text-white">
             {users.length}
           </div>
           <span className="text-[11px] text-slate-400">All account statuses</span>
         </div>
 
         <div className="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs">
-          <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Pending Approvals</span>
-          <div className="mt-2 text-2xl font-display font-extrabold text-amber-600 dark:text-amber-400">
+          <span className="text-xs font-bold text-amber-600 dark:text-amber-400">Pending Approvals</span>
+          <div className="mt-2 text-2xl font-display font-bold text-amber-600 dark:text-amber-400">
             {pendingCount}
           </div>
           <span className="text-[11px] text-slate-400">Awaiting Backoffice review</span>
         </div>
 
         <div className="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs">
-          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Active Prosumers</span>
-          <div className="mt-2 text-2xl font-display font-extrabold text-emerald-600 dark:text-emerald-400">
+          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Active Prosumers</span>
+          <div className="mt-2 text-2xl font-display font-bold text-emerald-600 dark:text-emerald-400">
             {activeCount}
           </div>
           <span className="text-[11px] text-slate-400">Can log in and reserve energy</span>
         </div>
 
         <div className="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs">
-          <span className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Deactivated Accounts</span>
-          <div className="mt-2 text-2xl font-display font-extrabold text-red-600 dark:text-red-400">
+          <span className="text-xs font-bold text-red-600 dark:text-red-400">Deactivated Accounts</span>
+          <div className="mt-2 text-2xl font-display font-bold text-red-600 dark:text-red-400">
             {deactivatedCount}
           </div>
           <span className="text-[11px] text-slate-400">Only Backoffice can reactivate</span>
@@ -444,7 +444,7 @@ export default function ProsumerManagement({ theme }) {
               }`}
             >
               <span>{tab.label}</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+              <span className={`text-[11px] px-1.5 py-0.5 rounded-full tabular-nums font-bold ${
                 statusFilter === tab.id
                   ? 'bg-slate-950 text-amber-400'
                   : tab.alert ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-slate-200 dark:bg-slate-800'
@@ -459,8 +459,8 @@ export default function ProsumerManagement({ theme }) {
       {/* Prosumers Table */}
       <div className="rounded-3xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/60 backdrop-blur-xl overflow-hidden shadow-sm dark:shadow-xl transition-colors duration-300">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800/80 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[11px]">
+          <table className="w-full text-left text-[13px]">
+            <thead className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800/80 text-slate-500 dark:text-slate-400 font-bold text-xs">
               <tr>
                 <th className="py-3.5 px-4 whitespace-nowrap">Prosumer &amp; NIC</th>
                 <th className="py-3.5 px-3 whitespace-nowrap">Solar Installation</th>
@@ -510,13 +510,13 @@ export default function ProsumerManagement({ theme }) {
                                 <span>{u.nic}</span>
                               </span>
                               {assessment.nicInfo.isValid && (
-                                <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium border border-slate-200 dark:border-slate-700 whitespace-nowrap">
+                                <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium border border-slate-200 dark:border-slate-700 whitespace-nowrap">
                                   {assessment.nicInfo.gender} &bull; Born {assessment.nicInfo.birthYear} ({assessment.nicInfo.estimatedAge} yrs)
                                 </span>
                               )}
                             </div>
                             {u.approvedBy && (
-                              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 whitespace-nowrap">
+                              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 whitespace-nowrap">
                                 Approved by {u.approvedBy}
                               </p>
                             )}
@@ -533,9 +533,10 @@ export default function ProsumerManagement({ theme }) {
                           <Zap className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                           <span>{u.solarCapacityKw > 0 ? `${u.solarCapacityKw} kW` : 'Capacity not set'}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                           <Cpu className="h-3 w-3 text-slate-400 shrink-0" />
-                          <span className="truncate max-w-[150px]">{u.inverterSerial || 'No inverter serial'}</span>
+                          {/* Monospace only for a real serial, not the placeholder */}
+                          <span className={`truncate max-w-[150px] ${u.inverterSerial ? 'font-mono' : ''}`}>{u.inverterSerial || 'No inverter serial'}</span>
                         </div>
                         {u.address && (
                           <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
@@ -585,9 +586,9 @@ export default function ProsumerManagement({ theme }) {
                                 <span>{assessment.statusLabel}</span>
                               </span>
                             )}
-                            <div className="flex items-center gap-1 text-[10px] text-slate-400 shrink-0">
-                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono border whitespace-nowrap ${u.nicDocumentBase64 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-bold' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'}`} title="NIC Front Document">Front</span>
-                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono border whitespace-nowrap ${u.nicBackDocumentBase64 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-bold' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'}`} title="NIC Back Document">Back</span>
+                            <div className="flex items-center gap-1 text-[11px] text-slate-400 shrink-0">
+                              <span className={`px-1.5 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap ${u.nicDocumentBase64 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-bold' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'}`} title="NIC Front Document">Front</span>
+                              <span className={`px-1.5 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap ${u.nicBackDocumentBase64 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-bold' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'}`} title="NIC Back Document">Back</span>
                             </div>
                           </div>
                         </div>
@@ -747,7 +748,7 @@ export default function ProsumerManagement({ theme }) {
                       <h4 className="font-bold text-sm text-slate-900 dark:text-white">
                         {selectedKycUser.fullName}
                       </h4>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
                         selectedKycUser.status === 'Active'
                           ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
                           : selectedKycUser.status === 'Pending'
@@ -779,11 +780,11 @@ export default function ProsumerManagement({ theme }) {
                 {/* Column 1: Algorithmic NIC Extraction */}
                 <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                    <h5 className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <h5 className="font-bold text-xs text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                       <CreditCard className="h-3.5 w-3.5 text-amber-500" />
                       <span>Details from NIC</span>
                     </h5>
-                    <span className={`text-[10px] font-mono font-bold ${
+                    <span className={`text-xs font-bold ${
                       assessment.nicInfo.isValid ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
                     }`}>
                       {assessment.nicInfo.isValid ? 'Valid NIC' : 'Invalid NIC'}
@@ -792,28 +793,28 @@ export default function ProsumerManagement({ theme }) {
 
                   <div className="grid grid-cols-2 gap-2.5 text-[11px]">
                     <div>
-                      <span className="text-slate-400 block text-[10px]">NIC Format</span>
+                      <span className="text-slate-400 block text-[11px]">NIC Format</span>
                       <span className="font-bold text-slate-800 dark:text-slate-200">
                         {assessment.nicInfo.format || 'Unknown'}
                       </span>
                     </div>
 
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Gender</span>
+                      <span className="text-slate-400 block text-[11px]">Gender</span>
                       <span className="font-bold text-slate-800 dark:text-slate-200">
                         {assessment.nicInfo.gender || '—'}
                       </span>
                     </div>
 
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Birth Year</span>
+                      <span className="text-slate-400 block text-[11px]">Birth Year</span>
                       <span className="font-bold text-slate-800 dark:text-slate-200">
                         {assessment.nicInfo.birthYear || '—'}
                       </span>
                     </div>
 
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Age</span>
+                      <span className="text-slate-400 block text-[11px]">Age</span>
                       <span className="font-bold text-slate-800 dark:text-slate-200">
                         {assessment.nicInfo.estimatedAge ? `${assessment.nicInfo.estimatedAge} Years` : '—'}
                       </span>
@@ -822,7 +823,7 @@ export default function ProsumerManagement({ theme }) {
                     {/* Only old 9+V/X NICs encode voter status; 12-digit NICs don't */}
                     {selectedKycUser.nic && /[VX]$/i.test(selectedKycUser.nic) && assessment.nicInfo.isValid && (
                       <div className="col-span-2">
-                        <span className="text-slate-400 block text-[10px]">Voter Status</span>
+                        <span className="text-slate-400 block text-[11px]">Voter Status</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">
                           {assessment.nicInfo.suffix}
                         </span>
@@ -834,7 +835,7 @@ export default function ProsumerManagement({ theme }) {
                 {/* Column 2: Registered Profile & Installation Details */}
                 <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                    <h5 className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <h5 className="font-bold text-xs text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                       <Zap className="h-3.5 w-3.5 text-amber-500" />
                       <span>Contact &amp; Solar Details</span>
                     </h5>
@@ -842,21 +843,21 @@ export default function ProsumerManagement({ theme }) {
 
                   <div className="grid grid-cols-2 gap-2.5 text-[11px]">
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Email</span>
+                      <span className="text-slate-400 block text-[11px]">Email</span>
                       <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">
                         {selectedKycUser.email || '—'}
                       </span>
                     </div>
 
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Phone</span>
+                      <span className="text-slate-400 block text-[11px]">Phone</span>
                       <span className="font-bold text-slate-800 dark:text-slate-200">
                         {selectedKycUser.phone || '—'}
                       </span>
                     </div>
 
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Solar Capacity</span>
+                      <span className="text-slate-400 block text-[11px]">Solar Capacity</span>
                       <span className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-0.5">
                         <Zap className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                         {/* Show the stored value only; never an assumed default */}
@@ -865,14 +866,14 @@ export default function ProsumerManagement({ theme }) {
                     </div>
 
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Inverter Serial</span>
+                      <span className="text-slate-400 block text-[11px]">Inverter Serial</span>
                       <span className="font-mono text-slate-800 dark:text-slate-200 truncate block mt-0.5">
                         {selectedKycUser.inverterSerial || '—'}
                       </span>
                     </div>
 
                     <div className="col-span-2">
-                      <span className="text-slate-400 block text-[10px]">Address</span>
+                      <span className="text-slate-400 block text-[11px]">Address</span>
                       <span className="text-slate-800 dark:text-slate-200 flex items-center gap-1.5 mt-0.5">
                         <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                         <span>{selectedKycUser.address || '—'}</span>
@@ -897,7 +898,7 @@ export default function ProsumerManagement({ theme }) {
                     <CreditCard className="h-3.5 w-3.5" />
                     <span>NIC Front</span>
                     {selectedKycUser.nicDocumentBase64 && (
-                      <span className="text-[9px] px-1 rounded bg-emerald-500/20 text-emerald-800 dark:text-emerald-300">File</span>
+                      <span className="text-[11px] px-1 rounded bg-emerald-500/20 text-emerald-800 dark:text-emerald-300">File</span>
                     )}
                   </button>
 
@@ -913,7 +914,7 @@ export default function ProsumerManagement({ theme }) {
                     <Layers className="h-3.5 w-3.5" />
                     <span>NIC Back</span>
                     {selectedKycUser.nicBackDocumentBase64 && (
-                      <span className="text-[9px] px-1 rounded bg-emerald-500/20 text-emerald-800 dark:text-emerald-300">File</span>
+                      <span className="text-[11px] px-1 rounded bg-emerald-500/20 text-emerald-800 dark:text-emerald-300">File</span>
                     )}
                   </button>
 
@@ -1007,7 +1008,7 @@ export default function ProsumerManagement({ theme }) {
 
               {/* Verification Checklist */}
               <div>
-                <h4 className="font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2">
+                <h4 className="font-bold text-slate-600 dark:text-slate-300 mb-2">
                   Registration Checks
                 </h4>
                 <div className="space-y-2">
@@ -1027,7 +1028,7 @@ export default function ProsumerManagement({ theme }) {
                           <p className="text-[11px] text-slate-500 dark:text-slate-400">{c.detail}</p>
                         </div>
                       </div>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
                         c.passed ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
                       }`}>
                         {c.passed ? 'PASS' : 'REVIEW'}
@@ -1120,20 +1121,20 @@ export default function ProsumerManagement({ theme }) {
                   placeholder="e.g. 981234567V or 200012345678"
                   value={formData.nic}
                   onChange={(e) => setFormData({ ...formData, nic: e.target.value.toUpperCase() })}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono uppercase placeholder:normal-case focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono placeholder:normal-case focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                 />
                 {formData.nic.length > 0 && (() => {
                   const parsed = parseSriLankanNic(formData.nic);
                   if (parsed.isValid) {
                     return (
-                      <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mt-1 flex items-center gap-1">
+                      <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1 flex items-center gap-1">
                         <CheckCircle2 className="h-3 w-3 shrink-0" />
                         <span>{parsed.format} &bull; {parsed.gender} &bull; Born {parsed.birthYear} ({parsed.estimatedAge} yrs)</span>
                       </p>
                     );
                   }
                   return (
-                    <p className="text-[10px] text-slate-400 mt-1">
+                    <p className="text-[11px] text-slate-400 mt-1">
                       Format: 9 digits + V/X (e.g. 981234567V) or 12 digits (e.g. 200012345678)
                     </p>
                   );
@@ -1211,7 +1212,7 @@ export default function ProsumerManagement({ theme }) {
                     placeholder="e.g. 15"
                     value={formData.solarCapacityKw}
                     onChange={(e) => setFormData({ ...formData, solarCapacityKw: e.target.value })}
-                    className="w-full pl-3 pr-10 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                    className="w-full pl-3 pr-10 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white tabular-nums focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none">
                     kW
@@ -1245,7 +1246,7 @@ export default function ProsumerManagement({ theme }) {
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full pl-3 pr-10 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                  className="w-full pl-3 pr-10 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white tabular-nums focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                 />
                 <button
                   type="button"
@@ -1261,7 +1262,7 @@ export default function ProsumerManagement({ theme }) {
                   )}
                 </button>
               </div>
-              <p className="text-[10px] text-slate-400 mt-1">At least 6 characters. The prosumer uses it to sign in to the mobile app.</p>
+              <p className="text-[11px] text-slate-400 mt-1">At least 6 characters. The prosumer uses it to sign in to the mobile app.</p>
             </div>
 
             {/* Document Attachments Section */}
@@ -1286,7 +1287,7 @@ export default function ProsumerManagement({ theme }) {
                       <button
                         type="button"
                         onClick={() => handleRemoveFile('nicDocumentBase64')}
-                        className="text-red-500 hover:text-red-400 text-[10px] flex items-center gap-0.5 cursor-pointer font-medium"
+                        className="text-red-500 hover:text-red-400 text-[11px] flex items-center gap-0.5 cursor-pointer font-medium"
                       >
                         <Trash2 className="h-3 w-3" />
                         <span>Remove</span>
@@ -1302,11 +1303,11 @@ export default function ProsumerManagement({ theme }) {
                         className="h-10 w-16 object-cover rounded-lg border border-slate-300 dark:border-slate-700 shrink-0"
                       />
                       <div className="min-w-0">
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px] flex items-center gap-1">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px] flex items-center gap-1">
                           <CheckCircle2 className="h-3 w-3 shrink-0" />
                           <span>Front Copy Attached</span>
                         </span>
-                        <span className="text-slate-400 text-[9px] block truncate">Saved when you create the account</span>
+                        <span className="text-slate-400 text-[11px] block truncate">Saved when you create the account</span>
                       </div>
                     </div>
                   ) : (
@@ -1321,7 +1322,7 @@ export default function ProsumerManagement({ theme }) {
                       <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 group-hover:text-amber-600 dark:group-hover:text-amber-400">
                         Select Front Document
                       </span>
-                      <span className="text-[10px] text-slate-400">JPG, PNG up to 2MB</span>
+                      <span className="text-[11px] text-slate-400">JPG, PNG up to 2MB</span>
                     </label>
                   )}
                 </div>
@@ -1337,7 +1338,7 @@ export default function ProsumerManagement({ theme }) {
                       <button
                         type="button"
                         onClick={() => handleRemoveFile('nicBackDocumentBase64')}
-                        className="text-red-500 hover:text-red-400 text-[10px] flex items-center gap-0.5 cursor-pointer font-medium"
+                        className="text-red-500 hover:text-red-400 text-[11px] flex items-center gap-0.5 cursor-pointer font-medium"
                       >
                         <Trash2 className="h-3 w-3" />
                         <span>Remove</span>
@@ -1353,11 +1354,11 @@ export default function ProsumerManagement({ theme }) {
                         className="h-10 w-16 object-cover rounded-lg border border-slate-300 dark:border-slate-700 shrink-0"
                       />
                       <div className="min-w-0">
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px] flex items-center gap-1">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px] flex items-center gap-1">
                           <CheckCircle2 className="h-3 w-3 shrink-0" />
                           <span>Back Copy Attached</span>
                         </span>
-                        <span className="text-slate-400 text-[9px] block truncate">Saved when you create the account</span>
+                        <span className="text-slate-400 text-[11px] block truncate">Saved when you create the account</span>
                       </div>
                     </div>
                   ) : (
@@ -1372,7 +1373,7 @@ export default function ProsumerManagement({ theme }) {
                       <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 group-hover:text-amber-600 dark:group-hover:text-amber-400">
                         Select Back Document
                       </span>
-                      <span className="text-[10px] text-slate-400">JPG, PNG up to 2MB</span>
+                      <span className="text-[11px] text-slate-400">JPG, PNG up to 2MB</span>
                     </label>
                   )}
                 </div>
@@ -1389,7 +1390,7 @@ export default function ProsumerManagement({ theme }) {
                     <button
                       type="button"
                       onClick={() => handleRemoveFile('utilityBillBase64')}
-                      className="text-red-500 hover:text-red-400 text-[10px] flex items-center gap-0.5 cursor-pointer font-medium"
+                      className="text-red-500 hover:text-red-400 text-[11px] flex items-center gap-0.5 cursor-pointer font-medium"
                     >
                       <Trash2 className="h-3 w-3" />
                       <span>Remove</span>
@@ -1405,7 +1406,7 @@ export default function ProsumerManagement({ theme }) {
                       className="h-10 w-16 object-cover rounded-lg border border-slate-300 dark:border-slate-700 shrink-0"
                     />
                     <div className="min-w-0">
-                      <span className="text-cyan-600 dark:text-cyan-400 font-bold text-[10px] flex items-center gap-1">
+                      <span className="text-cyan-600 dark:text-cyan-400 font-bold text-[11px] flex items-center gap-1">
                         <CheckCircle2 className="h-3 w-3 shrink-0" />
                         <span>Electricity Bill Attached</span>
                       </span>
@@ -1423,7 +1424,7 @@ export default function ProsumerManagement({ theme }) {
                     <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 group-hover:text-amber-600 dark:group-hover:text-amber-400">
                       Select Electricity Bill
                     </span>
-                    <span className="text-[10px] text-slate-400">JPG, PNG up to 2MB</span>
+                    <span className="text-[11px] text-slate-400">JPG, PNG up to 2MB</span>
                   </label>
                 )}
               </div>
@@ -1476,10 +1477,10 @@ export default function ProsumerManagement({ theme }) {
 
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div>
-                <span className="text-[10px] text-slate-400 block font-medium">NIC (cannot be changed)</span>
+                <span className="text-[11px] text-slate-400 block font-medium">NIC (cannot be changed)</span>
                 <span className="font-mono font-bold text-amber-600 dark:text-amber-400 text-sm">{editingUser.nic}</span>
               </div>
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+              <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                 editingUser.status === 'Active'
                   ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
                   : editingUser.status === 'Pending'
@@ -1547,7 +1548,7 @@ export default function ProsumerManagement({ theme }) {
                     placeholder="Not set"
                     value={formData.solarCapacityKw}
                     onChange={(e) => setFormData({ ...formData, solarCapacityKw: e.target.value })}
-                    className="w-full pl-3 pr-10 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                    className="w-full pl-3 pr-10 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white tabular-nums focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none">
                     kW
@@ -1587,7 +1588,7 @@ export default function ProsumerManagement({ theme }) {
                       <button
                         type="button"
                         onClick={() => handleRemoveFile('nicDocumentBase64')}
-                        className="text-amber-600 hover:text-amber-500 dark:text-amber-400 text-[10px] flex items-center gap-0.5 cursor-pointer font-medium"
+                        className="text-amber-600 hover:text-amber-500 dark:text-amber-400 text-[11px] flex items-center gap-0.5 cursor-pointer font-medium"
                       >
                         <Upload className="h-3 w-3" />
                         <span>Replace</span>
@@ -1603,11 +1604,11 @@ export default function ProsumerManagement({ theme }) {
                         className="h-10 w-16 object-cover rounded-lg border border-slate-300 dark:border-slate-700 shrink-0"
                       />
                       <div className="min-w-0">
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px] flex items-center gap-1">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px] flex items-center gap-1">
                           <CheckCircle2 className="h-3 w-3 shrink-0" />
                           <span>Front Copy Attached</span>
                         </span>
-                        <span className="text-slate-400 text-[9px] block truncate">Document on file</span>
+                        <span className="text-slate-400 text-[11px] block truncate">Document on file</span>
                       </div>
                     </div>
                   ) : (
@@ -1622,7 +1623,7 @@ export default function ProsumerManagement({ theme }) {
                       <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 group-hover:text-amber-600 dark:group-hover:text-amber-400">
                         Select Front Document
                       </span>
-                      <span className="text-[10px] text-slate-400">JPG, PNG up to 2MB</span>
+                      <span className="text-[11px] text-slate-400">JPG, PNG up to 2MB</span>
                     </label>
                   )}
                 </div>
@@ -1637,7 +1638,7 @@ export default function ProsumerManagement({ theme }) {
                       <button
                         type="button"
                         onClick={() => handleRemoveFile('nicBackDocumentBase64')}
-                        className="text-amber-600 hover:text-amber-500 dark:text-amber-400 text-[10px] flex items-center gap-0.5 cursor-pointer font-medium"
+                        className="text-amber-600 hover:text-amber-500 dark:text-amber-400 text-[11px] flex items-center gap-0.5 cursor-pointer font-medium"
                       >
                         <Upload className="h-3 w-3" />
                         <span>Replace</span>
@@ -1653,11 +1654,11 @@ export default function ProsumerManagement({ theme }) {
                         className="h-10 w-16 object-cover rounded-lg border border-slate-300 dark:border-slate-700 shrink-0"
                       />
                       <div className="min-w-0">
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px] flex items-center gap-1">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px] flex items-center gap-1">
                           <CheckCircle2 className="h-3 w-3 shrink-0" />
                           <span>Reverse Copy Attached</span>
                         </span>
-                        <span className="text-slate-400 text-[9px] block truncate">Document on file</span>
+                        <span className="text-slate-400 text-[11px] block truncate">Document on file</span>
                       </div>
                     </div>
                   ) : (
@@ -1672,7 +1673,7 @@ export default function ProsumerManagement({ theme }) {
                       <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 group-hover:text-amber-600 dark:group-hover:text-amber-400">
                         Select Back Document
                       </span>
-                      <span className="text-[10px] text-slate-400">JPG, PNG up to 2MB</span>
+                      <span className="text-[11px] text-slate-400">JPG, PNG up to 2MB</span>
                     </label>
                   )}
                 </div>

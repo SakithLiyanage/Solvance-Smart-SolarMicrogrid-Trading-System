@@ -76,10 +76,10 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
               />
             </div>
             <div className="min-w-0">
-              <span className="font-display font-black text-xl tracking-wider text-slate-900 dark:text-white">
+              <span className="font-display font-extrabold text-xl tracking-wider text-slate-900 dark:text-white">
                 SOLVANCE
               </span>
-              <p className="hidden sm:block text-[10px] font-medium text-slate-500 dark:text-slate-400 -mt-0.5 tracking-wide">
+              <p className="hidden sm:block text-[11px] font-medium text-slate-500 dark:text-slate-400 -mt-0.5 tracking-wide">
                 Smart Solar Microgrid Trading
               </p>
             </div>
@@ -134,7 +134,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
       {/* Hero Section */}
       <section className="relative pt-16 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full flex flex-col items-center text-center">
         {/* Main Hero Title */}
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-display font-black tracking-tight text-slate-900 dark:text-white max-w-4xl leading-tight">
+        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-display font-bold tracking-tight text-slate-900 dark:text-white max-w-4xl leading-tight">
           Solar energy, reserved{' '}
           <span className="bg-gradient-to-r from-amber-500 via-amber-400 to-emerald-400 bg-clip-text text-transparent">
             at your local hub
@@ -150,7 +150,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
           <button
             onClick={onGoToLogin}
-            className="px-7 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 text-slate-950 font-display font-extrabold text-sm shadow-xl shadow-amber-500/25 transition active:scale-95 flex items-center gap-2.5 cursor-pointer"
+            className="px-7 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 text-slate-950 font-display font-bold text-sm shadow-xl shadow-amber-500/25 transition active:scale-95 flex items-center gap-2.5 cursor-pointer"
           >
             <span>Staff sign in</span>
             <ArrowRight className="h-4 w-4" />
@@ -186,7 +186,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
                 <MapPin className="h-4 w-4" />
                 <span>Active hubs</span>
               </div>
-              <div className="text-2xl font-display font-black text-slate-900 dark:text-white mt-1 font-mono">
+              <div className="text-2xl font-display font-bold text-slate-900 dark:text-white mt-1 tabular-nums">
                 {hasStats ? activeStations.length : '—'}
               </div>
               <p className="text-[11px] text-slate-500 mt-1">
@@ -199,7 +199,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
                 <BatteryCharging className="h-4 w-4" />
                 <span>Free battery slots</span>
               </div>
-              <div className="text-2xl font-display font-black text-slate-900 dark:text-white mt-1 font-mono">
+              <div className="text-2xl font-display font-bold text-slate-900 dark:text-white mt-1 tabular-nums">
                 {hasStats ? totalFreeSlots : '—'}
               </div>
               <p className="text-[11px] text-slate-500 mt-1">Available for drop-off reservations</p>
@@ -210,7 +210,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
                 <Sun className="h-4 w-4" />
                 <span>Total hub capacity</span>
               </div>
-              <div className="text-2xl font-display font-black text-slate-900 dark:text-white mt-1 font-mono">
+              <div className="text-2xl font-display font-bold text-slate-900 dark:text-white mt-1 tabular-nums">
                 {hasStats ? totalCapacityKwh.toLocaleString() : '—'} <span className="text-xs text-slate-500 font-sans">kWh</span>
               </div>
               <p className="text-[11px] text-slate-500 mt-1">Across active hubs</p>
@@ -222,7 +222,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
       {/* How It Works Section */}
       <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-3xl sm:text-4xl font-display font-black tracking-tight text-slate-900 dark:text-white">
+          <h2 className="text-3xl sm:text-4xl font-display font-bold tracking-tight text-slate-900 dark:text-white">
             How Solvance works
           </h2>
           <p className="mt-3 text-sm sm:text-base text-slate-600 dark:text-slate-400">
@@ -233,7 +233,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Step 1 */}
           <div className="p-8 rounded-3xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-amber-500/40 transition flex flex-col relative group">
-            <div className="h-14 w-14 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center font-display font-black text-xl mb-6 group-hover:scale-105 transition">
+            <div className="h-14 w-14 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center font-display font-bold text-xl mb-6 group-hover:scale-105 transition">
               01
             </div>
             <h3 className="text-lg font-display font-bold text-slate-900 dark:text-white">
@@ -250,7 +250,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
 
           {/* Step 2 */}
           <div className="p-8 rounded-3xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-emerald-500/40 transition flex flex-col relative group">
-            <div className="h-14 w-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-display font-black text-xl mb-6 group-hover:scale-105 transition">
+            <div className="h-14 w-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-display font-bold text-xl mb-6 group-hover:scale-105 transition">
               02
             </div>
             <h3 className="text-lg font-display font-bold text-slate-900 dark:text-white">
@@ -267,7 +267,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
 
           {/* Step 3 */}
           <div className="p-8 rounded-3xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-cyan-500/40 transition flex flex-col relative group">
-            <div className="h-14 w-14 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-display font-black text-xl mb-6 group-hover:scale-105 transition">
+            <div className="h-14 w-14 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-display font-bold text-xl mb-6 group-hover:scale-105 transition">
               03
             </div>
             <h3 className="text-lg font-display font-bold text-slate-900 dark:text-white">
@@ -289,7 +289,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
         <div className="p-6 sm:p-10 rounded-3xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-xl backdrop-blur-xl">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>
-              <h3 className="text-2xl sm:text-3xl font-display font-black text-slate-900 dark:text-white">
+              <h3 className="text-2xl sm:text-3xl font-display font-bold text-slate-900 dark:text-white">
                 Solar hubs
               </h3>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -358,7 +358,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
                     </div>
 
                     <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800/80">
-                      <div className="flex items-center justify-between text-xs font-mono">
+                      <div className="flex items-center justify-between text-xs tabular-nums">
                         <span className="text-slate-500">Capacity</span>
                         <span className="font-bold text-slate-900 dark:text-white">{st.capacityKwh} kWh</span>
                       </div>
@@ -366,7 +366,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
                       <div>
                         <div className="flex items-center justify-between text-xs mb-1">
                           <span className="text-slate-500">Battery slots</span>
-                          <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{freeSlots} / {totalSlots} free</span>
+                          <span className="tabular-nums font-bold text-amber-600 dark:text-amber-400">{freeSlots} / {totalSlots} free</span>
                         </div>
                         <div
                           className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden"
@@ -400,7 +400,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
               <div className="h-12 w-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-6">
                 <Sun className="h-6 w-6" />
               </div>
-              <h3 className="text-2xl font-display font-black text-slate-900 dark:text-white">
+              <h3 className="text-2xl font-display font-bold text-slate-900 dark:text-white">
                 For rooftop solar prosumers
               </h3>
               <p className="text-sm text-slate-600 dark:text-slate-300 mt-3 leading-relaxed">
@@ -438,7 +438,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
               <div className="h-12 w-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-6">
                 <ShieldCheck className="h-6 w-6" />
               </div>
-              <h3 className="text-2xl font-display font-black text-slate-900 dark:text-white">
+              <h3 className="text-2xl font-display font-bold text-slate-900 dark:text-white">
                 For Grid Operators &amp; Backoffice
               </h3>
               <p className="text-sm text-slate-600 dark:text-slate-300 mt-3 leading-relaxed">
@@ -476,7 +476,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
       <section id="mobile-app" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900 border border-slate-800 text-white shadow-2xl flex flex-col lg:flex-row items-center justify-between gap-10">
           <div className="max-w-xl space-y-4">
-            <h2 className="text-3xl sm:text-4xl font-display font-black text-white">
+            <h2 className="text-3xl sm:text-4xl font-display font-bold text-white">
               The Solvance Android app
             </h2>
             <p className="text-sm text-slate-300 leading-relaxed">
@@ -515,7 +515,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
               className="h-8 w-auto object-contain"
             />
             <div>
-              <p className="font-display font-black text-sm text-slate-900 dark:text-white">SOLVANCE</p>
+              <p className="font-display font-extrabold text-sm text-slate-900 dark:text-white">SOLVANCE</p>
               <p className="text-[11px] text-slate-500">Smart Solar Microgrid Trading</p>
             </div>
           </div>
@@ -551,7 +551,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
         <div className="space-y-5 text-xs">
           <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
             The Prosumer app is not on Google Play. It is built from the{' '}
-            <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono text-amber-600 dark:text-amber-400">mobile-client/</code>{' '}
+            <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 tabular-nums text-amber-600 dark:text-amber-400">mobile-client/</code>{' '}
             folder of the project with Android Studio, and runs on an Android phone or emulator.
           </p>
 

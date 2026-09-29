@@ -658,7 +658,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
       {/* Top Header & Operator Profile */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-display font-bold text-slate-900 dark:text-white tracking-tight">
             Grid Operator Dashboard
           </h1>
           <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 font-medium flex flex-wrap items-center gap-2">
@@ -697,8 +697,8 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-5 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Reservation Queue</p>
-            <p className="text-2xl font-display font-black text-amber-600 dark:text-amber-400 mt-1">
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Reservation Queue</p>
+            <p className="text-2xl font-display font-bold text-amber-600 dark:text-amber-400 mt-1">
               {kpis.queue} Reservations
             </p>
             <p className="text-[11px] text-slate-400 mt-0.5">Pending &amp; approved, all stations</p>
@@ -710,8 +710,8 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
 
         <div className="p-5 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Verified Trades</p>
-            <p className="text-2xl font-display font-black text-emerald-600 dark:text-emerald-400 mt-1">
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Verified Trades</p>
+            <p className="text-2xl font-display font-bold text-emerald-600 dark:text-emerald-400 mt-1">
               {kpis.verified} Completed
             </p>
             <p className="text-[11px] text-slate-400 mt-0.5">Verified by QR scan</p>
@@ -723,8 +723,8 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
 
         <div className="p-5 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Battery Capacity</p>
-            <p className="text-2xl font-display font-black text-cyan-600 dark:text-cyan-400 mt-1">
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Battery Capacity</p>
+            <p className="text-2xl font-display font-bold text-cyan-600 dark:text-cyan-400 mt-1">
               {kpis.totalBatteryCapacity} Slots Free
             </p>
             <p className="text-[11px] text-slate-400 mt-0.5">Across all active stations</p>
@@ -868,7 +868,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                 {isCameraActive ? (
                   <>
                     <div className="absolute left-8 right-8 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_12px_#22d3ee] animate-scan-laser pointer-events-none" />
-                    <div className="absolute bottom-3 bg-slate-950/80 px-3.5 py-1 rounded-full text-[11px] font-mono text-cyan-400 border border-cyan-500/30 backdrop-blur-xs flex items-center gap-2">
+                    <div className="absolute bottom-3 bg-slate-950/80 px-3.5 py-1 rounded-full text-[11px] tabular-nums text-cyan-400 border border-cyan-500/30 backdrop-blur-xs flex items-center gap-2">
                       <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                       <span>Scanning &bull; Hold the QR pass inside the frame</span>
                     </div>
@@ -884,7 +884,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                 ) : (
                   <div className="text-center p-4 space-y-2">
                     <QrCode className="h-12 w-12 text-slate-600 mx-auto" />
-                    <p className="text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">
+                    <p className="text-xs tabular-nums text-cyan-400 font-bold">
                       Camera Off
                     </p>
                     <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
@@ -905,7 +905,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2">
                 <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
                   <label htmlFor="approved-pass-select">Approved reservations</label>
-                  <span className="text-[11px] font-mono text-amber-600 dark:text-amber-400 font-bold">
+                  <span className="text-[11px] tabular-nums text-amber-600 dark:text-amber-400 font-bold">
                     {reservations.filter((r) => r.status === 'Approved').length} ready
                   </span>
                 </div>
@@ -1004,9 +1004,9 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 pt-1 font-mono text-[11px] bg-white/60 dark:bg-slate-950/60 p-3 rounded-xl border border-emerald-500/20">
-                  <div>Reservation #: <strong className="text-slate-900 dark:text-white">{verifiedResult.reservationNumber}</strong></div>
-                  <div>Prosumer NIC: <strong className="text-slate-900 dark:text-white">{verifiedResult.prosumerNic}</strong></div>
+                <div className="grid grid-cols-2 gap-2 pt-1 tabular-nums text-xs bg-white/60 dark:bg-slate-950/60 p-3 rounded-xl border border-emerald-500/20">
+                  <div>Reservation #: <strong className="font-mono text-slate-900 dark:text-white">{verifiedResult.reservationNumber}</strong></div>
+                  <div>Prosumer NIC: <strong className="font-mono text-slate-900 dark:text-white">{verifiedResult.prosumerNic}</strong></div>
                   <div>Energy: <strong className="text-emerald-600 dark:text-emerald-400">{verifiedResult.energyAmountKwh} kWh</strong></div>
                   <div>Station: <strong className="text-slate-900 dark:text-white">{verifiedResult.stationName}</strong></div>
                   <div>Status: <strong className="text-emerald-600 dark:text-emerald-400">Completed</strong></div>
@@ -1060,14 +1060,14 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
               {telemetry && (
                 <div className="grid grid-cols-2 gap-2.5 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-3.5">
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400 font-bold">Occupied Slots</p>
-                    <p className="text-base font-mono font-bold text-slate-900 dark:text-white mt-0.5">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-bold">Occupied Slots</p>
+                    <p className="text-base tabular-nums font-bold text-slate-900 dark:text-white mt-0.5">
                       {telemetry.occupiedBatterySlots} / {telemetry.totalBatterySlots}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400 font-bold">Occupancy</p>
-                    <p className="text-base font-mono font-bold text-cyan-600 dark:text-cyan-400 mt-0.5">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-bold">Occupancy</p>
+                    <p className="text-base tabular-nums font-bold text-cyan-600 dark:text-cyan-400 mt-0.5">
                       {telemetry.batteryOccupancyPercent.toFixed(1)}%
                     </p>
                   </div>
@@ -1080,11 +1080,11 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                   <span className="text-slate-500 dark:text-slate-400">Free slots</span>
                   <span className="flex items-center gap-2">
                     {slotsDirty && (
-                      <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase tracking-wide">
+                      <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-bold">
                         Unsaved
                       </span>
                     )}
-                    <span className="text-amber-600 dark:text-amber-400 font-mono text-sm">
+                    <span className="text-amber-600 dark:text-amber-400 tabular-nums text-sm">
                       {availableSlots} of {totalSlots} free
                     </span>
                   </span>
@@ -1100,7 +1100,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                   className="w-full accent-amber-500 cursor-pointer h-2 bg-slate-200 dark:bg-slate-800 rounded-lg"
                 />
 
-                <div className="flex justify-between text-[11px] text-slate-400 dark:text-slate-500 font-mono">
+                <div className="flex justify-between text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
                   <span>0 (full)</span>
                   <span>{totalSlots} (all free)</span>
                 </div>
@@ -1123,7 +1123,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                   value={availableSlots}
                   onChange={(e) => editAvailableSlots(parseInt(e.target.value, 10))}
                   aria-label="Available battery slots"
-                  className="w-20 text-center py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white"
+                  className="w-20 text-center py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs tabular-nums font-bold text-slate-900 dark:text-white"
                 />
 
                 <button
@@ -1210,7 +1210,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                         : 'bg-slate-100 dark:bg-slate-950/60 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'
                     }`}
                   >
-                    {status} <span className="opacity-70 font-mono">({statusCounts[status] || 0})</span>
+                    {status} <span className="opacity-70 tabular-nums">({statusCounts[status] || 0})</span>
                   </button>
                 ))}
               </div>
@@ -1229,8 +1229,8 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
           ) : (
             <>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800/80 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[11px] whitespace-nowrap">
+              <table className="w-full text-left text-[13px]">
+                <thead className="bg-slate-50 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800/80 text-slate-500 dark:text-slate-400 font-bold text-xs whitespace-nowrap">
                   <tr>
                     <th className="px-5 py-4">Reservation #</th>
                     <th className="px-5 py-4">Prosumer NIC</th>
@@ -1259,7 +1259,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                           <div className="min-w-[180px] font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                             <span>{r.stationName}</span>
                             {!isMatchingActiveStation && (
-                              <span className="shrink-0 whitespace-nowrap text-[10px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-500" title="Reservation is for a different hub than your operating hub">
+                              <span className="shrink-0 whitespace-nowrap text-[11px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-500" title="Reservation is for a different hub than your operating hub">
                                 Other Hub
                               </span>
                             )}
@@ -1269,14 +1269,14 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                           </div>
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap">
-                          <div className="font-mono text-[11px] text-slate-600 dark:text-slate-300">
+                          <div className="tabular-nums text-[11px] text-slate-600 dark:text-slate-300">
                             {formatSchedule(r.scheduledDateTime)}
                           </div>
                           {/* The 12-hour rule only matters while a booking can still change */}
                           {isActive && (
                             <div className="mt-1">
                               <span
-                                className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-semibold border ${
+                                className={`text-[11px] tabular-nums px-1.5 py-0.5 rounded font-semibold border ${
                                   notice.isPast
                                     ? 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20'
                                     : notice.isLocked
@@ -1361,12 +1361,12 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                             )}
                             {/* Status column already says Completed; nothing left to do */}
                             {r.status === 'Completed' && (
-                              <span className="text-slate-400 dark:text-slate-600 font-mono text-[11px]" aria-label="No actions">
+                              <span className="text-slate-400 dark:text-slate-600 tabular-nums text-[11px]" aria-label="No actions">
                                 &mdash;
                               </span>
                             )}
                             {r.status === 'Cancelled' && (
-                              <span className="inline-block max-w-[240px] whitespace-normal text-right text-slate-500 dark:text-slate-500 font-mono text-[11px]">
+                              <span className="inline-block max-w-[240px] whitespace-normal text-right text-slate-500 dark:text-slate-500 tabular-nums text-[11px]">
                                 Reason: {r.cancellationReason || 'Not recorded'}
                               </span>
                             )}
@@ -1457,7 +1457,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
 
               <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-2.5">
                 <span className="text-slate-500 dark:text-slate-400">Scheduled Time:</span>
-                <span className="font-mono text-slate-700 dark:text-slate-300">
+                <span className="tabular-nums text-slate-700 dark:text-slate-300">
                   {formatSchedule(inspectingPass.scheduledDateTime)}
                 </span>
               </div>
@@ -1477,8 +1477,8 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
             </div>
 
             {inspectingPass.qrCodeToken && (
-              <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono text-[10px] break-all">
-                <span className="text-slate-400 font-sans block mb-0.5 uppercase tracking-wider font-bold text-[9px]">
+              <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono text-[11px] break-all">
+                <span className="text-slate-400 font-sans block mb-0.5 font-bold text-xs">
                   QR Token
                 </span>
                 <span className="text-cyan-600 dark:text-cyan-400 font-semibold">{inspectingPass.qrCodeToken}</span>
@@ -1550,7 +1550,7 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
                   className="h-48 w-48 mx-auto object-contain"
                 />
               ) : (
-                <div className="h-48 w-48 flex items-center justify-center text-slate-400 font-mono text-[11px]">
+                <div className="h-48 w-48 flex items-center justify-center text-slate-400 tabular-nums text-[11px]">
                   Rendering QR...
                 </div>
               )}
@@ -1566,19 +1566,19 @@ export default function OperatorDashboard({ user, theme, activeTab }) {
               <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-slate-500 dark:text-slate-400 text-[11px] pt-1">
                 <span>NIC: <strong className="text-slate-800 dark:text-white font-mono">{approvedPassData.prosumerNic}</strong></span>
                 <span>&bull;</span>
-                <span>Energy: <strong className="text-amber-600 dark:text-amber-400 font-mono">{approvedPassData.energyAmountKwh} kWh</strong></span>
+                <span>Energy: <strong className="text-amber-600 dark:text-amber-400 tabular-nums">{approvedPassData.energyAmountKwh} kWh</strong></span>
                 <span>&bull;</span>
                 <span>Type: <strong className="text-cyan-600 dark:text-cyan-400">{approvedPassData.tradeType}</strong></span>
               </div>
               {approvedPassData.scheduledDateTime && (
-                <p className="text-slate-400 font-mono text-[10px] pt-0.5">
+                <p className="text-slate-400 tabular-nums text-[11px] pt-0.5">
                   Scheduled: {formatSchedule(approvedPassData.scheduledDateTime)}
                 </p>
               )}
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-left font-mono text-[10px] break-all">
-              <span className="text-slate-400 font-sans block mb-0.5 font-bold uppercase tracking-wider text-[9px]">QR Token</span>
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-left font-mono text-[11px] break-all">
+              <span className="text-slate-400 font-sans block mb-0.5 font-bold text-xs">QR Token</span>
               <span className="text-cyan-600 dark:text-cyan-400 font-semibold">{approvedPassData.qrCodeToken}</span>
             </div>
 

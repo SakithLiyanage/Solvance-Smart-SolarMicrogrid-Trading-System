@@ -90,7 +90,7 @@ export default function Navbar({ user, activeTab, setActiveTab, onLogout, theme,
               <span className="font-display font-extrabold text-lg sm:text-xl tracking-wider text-slate-900 dark:text-white">
                 SOLVANCE
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 hidden sm:inline-block">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 hidden sm:inline-block">
                 {isBackoffice ? 'Backoffice' : 'Grid Operator'}
               </span>
             </div>
@@ -141,7 +141,7 @@ export default function Navbar({ user, activeTab, setActiveTab, onLogout, theme,
                 <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
                   {user?.fullName || 'User'}
                 </p>
-                <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">
+                <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate">
                   {user?.nic}
                 </p>
               </div>
