@@ -44,6 +44,56 @@ namespace SolarMicrogridApi.Services
                 ?? (!string.IsNullOrEmpty(_settings.QrSecretSalt) ? _settings.QrSecretSalt : "EnterpriseMicrogridSecretSalt2026");
         }
 
+        // Booking days are counted in Sri Lanka time. Sri Lanka has no daylight saving, so a fixed
+        // +05:30 offset is a safe fallback when the host has no time-zone database.
+        private static readonly TimeZoneInfo BookingTimeZone = ResolveBookingTimeZone();
+
+        private static TimeZoneInfo ResolveBookingTimeZone()
+        {
+            foreach (var zoneId in new[] { "Asia/Colombo", "Sri Lanka Standard Time" })
+            {
+                try
+                {
+                    return TimeZoneInfo.FindSystemTimeZoneById(zoneId);
+                }
+                catch (TimeZoneNotFoundException) { }
+                catch (InvalidTimeZoneException) { }
+            }
+            return TimeZoneInfo.CreateCustomTimeZone("Sri Lanka", TimeSpan.FromHours(5.5), "Sri Lanka", "Sri Lanka");
+        }
+
+        /// <summary>
+        /// End of the booking window (exclusive, UTC): midnight after the last allowed calendar day,
+        /// Sri Lanka time. With 7 days, a booking made on the 1st can be scheduled until 23:59 on the 8th,
+        /// which matches the date pickers in the web and mobile clients.
+        /// </summary>
+        private static DateTime GetBookingWindowEndUtc(int maxDays)
+        {
+            var localToday = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, BookingTimeZone).Date;
+            var localWindowEnd = DateTime.SpecifyKind(localToday.AddDays(maxDays + 1), DateTimeKind.Unspecified);
+            return TimeZoneInfo.ConvertTimeToUtc(localWindowEnd, BookingTimeZone);
+        }
+
+        /// <summary>
+        /// A drop-off needs a free battery slot at the hub. Slots are only taken when the operator completes
+        /// the transfer, so approved-but-not-completed drop-offs already have a slot promised to them.
+        /// </summary>
+        private async Task EnsureDropOffSlotAvailableAsync(SolarStation station, string? excludeReservationId)
+        {
+            var promisedSlots = await _context.Reservations.CountDocumentsAsync(r =>
+                r.StationId == station.Id &&
+                r.Status == "Approved" &&
+                r.TradeType == "DropOff" &&
+                r.Id != excludeReservationId);
+
+            if (station.AvailableBatterySlots - promisedSlots <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"The solar hub '{station.Name}' has no free battery slot for this drop-off " +
+                    $"({station.AvailableBatterySlots} free, {promisedSlots} already promised to approved bookings).");
+            }
+        }
+
         public async Task<EnergyReservation> CreateReservationAsync(CreateReservationDto dto)
         {
             // Method: CreateReservationAsync - Validates 7-day scheduling constraint, verifies prosumer/station state, and creates booking.
@@ -52,9 +102,9 @@ namespace SolarMicrogridApi.Services
             var maxDays = _settings.MaxAdvanceBookingDays > 0 ? _settings.MaxAdvanceBookingDays : 7;
             var graceMinutes = _settings.GracePeriodMinutes >= 0 ? _settings.GracePeriodMinutes : 10;
 
-            // Business Rule: Scheduled within configurable advance days (default: 7 days, up to end of 7th calendar day)
-            var maxBookingWindowUtc = now.Date.AddDays(maxDays + 1).AddHours(14);
-            if (scheduledUtc < now.AddMinutes(-graceMinutes) || scheduledUtc > maxBookingWindowUtc)
+            // Business Rule: Scheduled within configurable advance days (default: 7 days, up to end of 7th calendar day, Sri Lanka time)
+            var maxBookingWindowUtc = GetBookingWindowEndUtc(maxDays);
+            if (scheduledUtc < now.AddMinutes(-graceMinutes) || scheduledUtc >= maxBookingWindowUtc)
             {
                 throw new ArgumentException($"Power trading reservations must be scheduled within {maxDays} days from today.");
             }
@@ -185,29 +235,78 @@ namespace SolarMicrogridApi.Services
                 throw new InvalidOperationException($"Modifications require at least {modNoticeHours} hours' notice. Only {hoursNotice:F1} hours remain before scheduled time.");
             }
 
-            // Business Rule: Updated schedule must also be within 7 days from now
+            // Business Rule: Updated schedule must also be within the 7-day booking window
             var now = DateTime.UtcNow;
-            var maxModWindowUtc = now.Date.AddDays(maxDays + 1).AddHours(14);
-            if (scheduledUtc < now.AddMinutes(-graceMinutes) || scheduledUtc > maxModWindowUtc)
+            var maxModWindowUtc = GetBookingWindowEndUtc(maxDays);
+            if (scheduledUtc < now.AddMinutes(-graceMinutes) || scheduledUtc >= maxModWindowUtc)
             {
                 throw new ArgumentException($"Updated reservation must be scheduled within {maxDays} days from today.");
             }
 
+            // Business Rule: the edited booking must pass the same hub checks as a new booking
+            if (dto.EnergyAmountKwh <= 0)
+            {
+                throw new ArgumentException("Energy quota must be greater than 0 kWh.");
+            }
+
+            var station = await _context.Stations.Find(s => s.Id == reservation.StationId).FirstOrDefaultAsync();
+            if (station == null)
+            {
+                throw new KeyNotFoundException("Microgrid solar station not found.");
+            }
+            if (!station.IsActive)
+            {
+                throw new InvalidOperationException("The requested solar hub is currently deactivated.");
+            }
+            if (dto.EnergyAmountKwh > station.CapacityKwh)
+            {
+                throw new ArgumentException($"Requested energy quota ({dto.EnergyAmountKwh} kWh) exceeds station total capacity ({station.CapacityKwh} kWh).");
+            }
+
+            // Switching to a drop-off needs a free battery slot (an approved booking must also respect slots promised to others)
+            if (dto.TradeType == "DropOff" && reservation.TradeType != "DropOff")
+            {
+                if (reservation.Status == "Approved")
+                {
+                    await EnsureDropOffSlotAvailableAsync(station, reservation.Id);
+                }
+                else if (station.AvailableBatterySlots <= 0)
+                {
+                    throw new InvalidOperationException($"The solar hub '{station.Name}' is currently at capacity with 0 available battery slots.");
+                }
+            }
+
+            var originalEnergyKwh = reservation.EnergyAmountKwh;
             var update = Builders<EnergyReservation>.Update
                 .Set(r => r.ScheduledDateTime, scheduledUtc)
                 .Set(r => r.EnergyAmountKwh, dto.EnergyAmountKwh)
                 .Set(r => r.TradeType, dto.TradeType)
                 .Set(r => r.UpdatedAt, DateTime.UtcNow);
 
-            // Refresh QR code token with new schedule
             reservation.ScheduledDateTime = scheduledUtc;
             reservation.EnergyAmountKwh = dto.EnergyAmountKwh;
             reservation.TradeType = dto.TradeType;
-            var newQr = GenerateSecureQrToken(reservation);
-            update = update.Set(r => r.QrCodeToken, newQr);
+
+            // Only an approved booking has a QR pass. Its signature covers the schedule and energy, so it must be
+            // re-issued (the prosumer's app shows the new pass after a refresh). Pending bookings get a token on approval.
+            if (reservation.Status == "Approved")
+            {
+                var newQr = GenerateSecureQrToken(reservation);
+                update = update.Set(r => r.QrCodeToken, newQr);
+                reservation.QrCodeToken = newQr;
+            }
 
             await _context.Reservations.UpdateOneAsync(r => r.Id == reservation.Id, update);
-            reservation.QrCodeToken = newQr;
+
+            // Keep the time slot's allocated energy in step, so a later cancellation releases the right amount
+            var energyDeltaKwh = dto.EnergyAmountKwh - originalEnergyKwh;
+            if (reservation.SlotReserved && !string.IsNullOrEmpty(reservation.SlotId) && energyDeltaKwh != 0)
+            {
+                await _context.Slots.UpdateOneAsync(
+                    s => s.Id == reservation.SlotId && s.StationId == reservation.StationId,
+                    Builders<EnergySlot>.Update.Inc(s => s.AllocatedKwh, energyDeltaKwh));
+            }
+
             return reservation;
         }
 
@@ -269,6 +368,35 @@ namespace SolarMicrogridApi.Services
             {
                 throw new InvalidOperationException(
                     $"Only pending reservations can be approved. Current status is '{reservation.Status}'.");
+            }
+
+            // Business Rule: an appointment that has already gone by can only be cancelled, not approved
+            var graceMinutes = _settings.GracePeriodMinutes >= 0 ? _settings.GracePeriodMinutes : 10;
+            if (reservation.ScheduledDateTime.ToUniversalTime() < DateTime.UtcNow.AddMinutes(-graceMinutes))
+            {
+                throw new InvalidOperationException("This booking's scheduled time has already passed. Cancel it instead of approving it.");
+            }
+
+            // Re-check the prosumer and the hub: either may have changed since the booking was made
+            var prosumer = await _context.Users.Find(u => u.Nic == reservation.ProsumerNic).FirstOrDefaultAsync();
+            if (prosumer == null || prosumer.Status != "Active")
+            {
+                throw new InvalidOperationException(
+                    $"Cannot approve: the prosumer account is '{prosumer?.Status ?? "missing"}'. Only Active accounts can trade energy.");
+            }
+
+            var station = await _context.Stations.Find(s => s.Id == reservation.StationId).FirstOrDefaultAsync();
+            if (station == null)
+            {
+                throw new KeyNotFoundException("Microgrid solar station not found.");
+            }
+            if (!station.IsActive)
+            {
+                throw new InvalidOperationException($"Cannot approve: the solar hub '{station.Name}' is deactivated.");
+            }
+            if (reservation.TradeType == "DropOff")
+            {
+                await EnsureDropOffSlotAvailableAsync(station, reservation.Id);
             }
 
             var qrToken = GenerateSecureQrToken(reservation);
