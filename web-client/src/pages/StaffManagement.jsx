@@ -223,7 +223,8 @@ export default function StaffManagement({ theme, currentUser }) {
     try {
       await api.post(`/users/${resettingStaff.nic}/reset-password`, { 
         newPassword,
-        confirmPassword 
+        confirmPassword,
+        requirePasswordChange: requireNextLoginChange
       });
       notify(`Password for ${resettingStaff.fullName} (${resettingStaff.nic}) successfully updated.`, 'success');
       setShowResetModal(false);
