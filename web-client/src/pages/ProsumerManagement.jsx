@@ -400,7 +400,7 @@ export default function ProsumerManagement({ theme }) {
           <div className="mt-2 text-2xl font-display font-extrabold text-emerald-600 dark:text-emerald-400">
             {activeCount}
           </div>
-          <span className="text-[11px] text-slate-400">Can log in and book energy</span>
+          <span className="text-[11px] text-slate-400">Can log in and reserve energy</span>
         </div>
 
         <div className="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-xs">
@@ -678,11 +678,11 @@ export default function ProsumerManagement({ theme }) {
             <p className="text-slate-600 dark:text-slate-300">
               <strong className="text-slate-900 dark:text-white">{confirmDeactivate.fullName}</strong>{' '}
               (<span className="font-mono">{confirmDeactivate.nic}</span>) will be set to{' '}
-              <strong className="text-red-600 dark:text-red-400">Deactivated</strong>. They won't be able to log in or book energy until a
+              <strong className="text-red-600 dark:text-red-400">Deactivated</strong>. They won't be able to log in or reserve energy until a
               Backoffice officer reactivates the account.
             </p>
             <p className="text-slate-500 dark:text-slate-400">
-              This is blocked while the prosumer still has upcoming Pending or Approved bookings.
+              This is blocked while the prosumer still has upcoming Pending or Approved reservations.
             </p>
 
             {actionError && (

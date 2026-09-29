@@ -113,7 +113,7 @@ export default function App() {
           </div>
           <h1 className="font-display font-bold text-xl">This console is for staff</h1>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            The web console is used by Backoffice and Grid Operator staff. Prosumers manage their bookings in the Solvance Android app.
+            The web console is used by Backoffice and Grid Operator staff. Prosumers manage their reservations in the Solvance Android app.
           </p>
           <button
             type="button"

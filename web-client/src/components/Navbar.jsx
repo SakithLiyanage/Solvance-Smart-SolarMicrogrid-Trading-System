@@ -23,7 +23,7 @@ const BACKOFFICE_TABS = [
   { id: 'prosumers', label: 'Prosumers', icon: Users },
   { id: 'nodes', label: 'Solar Hubs', icon: Cpu },
   { id: 'staff', label: 'Staff & Operators', icon: Radio },
-  { id: 'bookings', label: 'Bookings', icon: CalendarClock }
+  { id: 'bookings', label: 'Reservations', icon: CalendarClock }
 ];
 
 export default function Navbar({ user, activeTab, setActiveTab, onLogout, theme, onToggleTheme }) {

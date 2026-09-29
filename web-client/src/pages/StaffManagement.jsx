@@ -785,7 +785,7 @@ export default function StaffManagement({ theme, currentUser }) {
         title="New Staff Account"
       >
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          Grid Operators get the operational tools (bookings, QR verification, battery slots). Backoffice Admins get full administration access.
+          Grid Operators get the operational tools (reservations, QR verification, battery slots). Backoffice Admins get full administration access.
         </p>
 
         {modalError && (
