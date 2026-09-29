@@ -387,7 +387,7 @@ export default function ProsumerManagement({ theme }) {
                 <th className="py-4 px-6 min-w-[200px] whitespace-nowrap">Solar Installation</th>
                 <th className="py-4 px-6 min-w-[200px] whitespace-nowrap">Contact Details</th>
                 <th className="py-4 px-6 min-w-[230px] whitespace-nowrap">Verification &amp; Status</th>
-                <th className="py-4 px-6 min-w-[230px] text-right whitespace-nowrap">Actions</th>
+                <th className="py-4 px-6 min-w-[270px] text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-slate-700 dark:text-slate-200">
@@ -506,7 +506,7 @@ export default function ProsumerManagement({ theme }) {
                         </div>
                       </td>
 
-                      <td className="py-4 px-6 text-right whitespace-nowrap">
+                      <td className="py-4 px-6 text-right whitespace-nowrap min-w-[270px]">
                         <div className="inline-flex items-center gap-2 justify-end">
                           <button
                             onClick={() => handleOpenKycDossier(u)}
@@ -919,462 +919,597 @@ export default function ProsumerManagement({ theme }) {
       </Modal>
 
       {/* Register Prosumer Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl space-y-6 my-8">
-            <div className="flex items-center justify-between">
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false);
+          setFormData(initialForm);
+        }}
+        maxWidth="max-w-2xl"
+        title="Onboard Microgrid Prosumer"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Prosumer account will enter <span className="font-bold text-amber-500">Pending</span> status awaiting Backoffice review and approval.
+          </p>
+
+          <form onSubmit={handleCreateProsumer} className="space-y-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <h3 className="text-xl font-display font-black text-slate-900 dark:text-white">
-                  Onboard Microgrid Prosumer
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Prosumer account will enter <span className="font-bold text-amber-500">Pending</span> status awaiting Backoffice review and approval.
-                </p>
-              </div>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateProsumer} className="space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Sri Lankan NIC (PK) *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 981234567V or 200012345678"
-                    value={formData.nic}
-                    onChange={(e) => setFormData({ ...formData, nic: e.target.value.toUpperCase() })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono uppercase focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Full Legal Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Sunil Shantha Perera"
-                    value={formData.fullName}
-                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Email Address *</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="prosumer@solarhub.lk"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Phone Number *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="+94 77 123 4567"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Installation Address</label>
-                <input
-                  type="text"
-                  placeholder="No. 45, Solar Avenue, Colombo 03"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Solar Array Peak (kW)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    placeholder="15.0"
-                    value={formData.solarCapacityKw}
-                    onChange={(e) => setFormData({ ...formData, solarCapacityKw: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Inverter Serial Identifier</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. INV-HUA-9988-LK"
-                    value={formData.inverterSerial}
-                    onChange={(e) => setFormData({ ...formData, inverterSerial: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Prosumer Portal Password *</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full pl-3 pr-10 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    title={showPassword ? "Hide password" : "Show password"}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-3.5 w-3.5 text-amber-500" />
-                    ) : (
-                      <Eye className="h-3.5 w-3.5" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Document Attachments Section */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 text-xs">
-                    <ShieldCheck className="h-4 w-4 text-amber-500" />
-                    <span>Identity Document Attachments</span>
-                  </span>
-                  <span className="text-[11px] text-slate-400 font-medium">Front copy required for verification</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Slot 1: NIC Front */}
-                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                        <CreditCard className="h-3.5 w-3.5 text-amber-500" />
-                        <span>1. NIC Front Side *</span>
-                      </span>
-                      {formData.nicDocumentBase64 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFile('nicDocumentBase64')}
-                          className="text-red-500 hover:text-red-400 text-[10px] flex items-center gap-0.5 cursor-pointer"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          <span>Clear</span>
-                        </button>
-                      )}
-                    </div>
-
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileUpload(e, 'nicDocumentBase64')}
-                      className="block w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 cursor-pointer"
-                    />
-
-                    {formData.nicDocumentBase64 && (
-                      <div className="mt-1 p-1.5 rounded-lg bg-slate-950 border border-slate-800 flex items-center gap-2">
-                        <img
-                          src={formData.nicDocumentBase64}
-                          alt="NIC Front Preview"
-                          className="h-10 w-16 object-contain rounded bg-black"
-                        />
-                        <div>
-                          <span className="text-emerald-400 font-bold text-[10px] flex items-center gap-1">
-                            <CheckCircle2 className="h-3 w-3 shrink-0" />
-                            <span>Front Ready</span>
-                          </span>
-                          <span className="text-slate-400 text-[9px]">Photo &amp; Name verified</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Slot 2: NIC Back */}
-                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                        <Layers className="h-3.5 w-3.5 text-amber-500" />
-                        <span>2. NIC Back Side *</span>
-                      </span>
-                      {formData.nicBackDocumentBase64 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFile('nicBackDocumentBase64')}
-                          className="text-red-500 hover:text-red-400 text-[10px] flex items-center gap-0.5 cursor-pointer"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          <span>Clear</span>
-                        </button>
-                      )}
-                    </div>
-
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileUpload(e, 'nicBackDocumentBase64')}
-                      className="block w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 cursor-pointer"
-                    />
-
-                    {formData.nicBackDocumentBase64 && (
-                      <div className="mt-1 p-1.5 rounded-lg bg-slate-950 border border-slate-800 flex items-center gap-2">
-                        <img
-                          src={formData.nicBackDocumentBase64}
-                          alt="NIC Back Preview"
-                          className="h-10 w-16 object-contain rounded bg-black"
-                        />
-                        <div>
-                          <span className="text-emerald-400 font-bold text-[10px] flex items-center gap-1">
-                            <CheckCircle2 className="h-3 w-3 shrink-0" />
-                            <span>Back Ready</span>
-                          </span>
-                          <span className="text-slate-400 text-[9px]">Address &amp; Barcode verified</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Slot 3: Utility Bill */}
-                <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                      <FileText className="h-3.5 w-3.5 text-amber-500" />
-                      <span>3. CEB / LECO Electricity Grid Utility Bill (Optional)</span>
-                    </span>
-                    {formData.utilityBillBase64 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveFile('utilityBillBase64')}
-                        className="text-red-500 hover:text-red-400 text-[10px] flex items-center gap-0.5 cursor-pointer"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                        <span>Clear</span>
-                      </button>
-                    )}
-                  </div>
-
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleFileUpload(e, 'utilityBillBase64')}
-                    className="block w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 cursor-pointer"
-                  />
-
-                  {formData.utilityBillBase64 && (
-                    <div className="mt-1 p-1.5 rounded-lg bg-slate-950 border border-slate-800 flex items-center gap-2">
-                      <img
-                        src={formData.utilityBillBase64}
-                        alt="Utility Bill Preview"
-                        className="h-10 w-16 object-contain rounded bg-black"
-                      />
-                      <div>
-                        <span className="text-cyan-400 font-bold text-[10px] flex items-center gap-1">
-                          <CheckCircle2 className="h-3 w-3 shrink-0" />
-                          <span>Grid Bill Attached</span>
-                        </span>
-                        <span className="text-slate-400 text-[9px]">Premises utility interconnect</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-500/20 disabled:opacity-50 cursor-pointer"
-                >
-                  {submitting ? 'Registering...' : 'Register Prosumer Account'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Prosumer Modal */}
-      {showEditModal && editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl space-y-6 my-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-display font-black text-slate-900 dark:text-white">
-                  Update Prosumer Profile
-                </h3>
-                <p className="text-xs font-mono text-amber-600 dark:text-amber-400 mt-0.5">
-                  NIC: {editingUser.nic}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleUpdateProsumer} className="space-y-4 text-xs">
-              <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Full Legal Name</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                  National Identity Card (NIC) *
+                </label>
                 <input
                   type="text"
                   required
+                  placeholder="e.g. 981234567V or 200012345678"
+                  value={formData.nic}
+                  onChange={(e) => setFormData({ ...formData, nic: e.target.value.toUpperCase() })}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono uppercase focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                />
+                {formData.nic.length > 0 && (() => {
+                  const parsed = parseSriLankanNic(formData.nic);
+                  if (parsed.isValid) {
+                    return (
+                      <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mt-1 flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3 shrink-0" />
+                        <span>{parsed.format} &bull; {parsed.gender} &bull; Born {parsed.birthYear} ({parsed.estimatedAge} yrs)</span>
+                      </p>
+                    );
+                  }
+                  return (
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Format: 9 digits + V/X (e.g. 981234567V) or 12 digits (e.g. 200012345678)
+                    </p>
+                  );
+                })()}
+              </div>
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                  Full Legal Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Sunil Shantha Perera"
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                 />
               </div>
+            </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Email Address</label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Phone Number</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                  />
-                </div>
-              </div>
-
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Installation Address</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                  Email Address *
+                </label>
                 <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  type="email"
+                  required
+                  placeholder="prosumer@solarhub.lk"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                 />
               </div>
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                  Phone Number *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="+94 77 123 4567"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                />
+              </div>
+            </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Solar Capacity (kW)</label>
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                Installation Premises Address
+              </label>
+              <input
+                type="text"
+                placeholder="No. 45, Solar Avenue, Colombo 03"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                  Solar Array Peak Capacity *
+                </label>
+                <div className="relative">
                   <input
                     type="number"
                     step="0.1"
-                    min="0"
+                    min="0.5"
+                    max="1000"
+                    required
+                    placeholder="15.0"
                     value={formData.solarCapacityKw}
                     onChange={(e) => setFormData({ ...formData, solarCapacityKw: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                    className="w-full pl-3 pr-10 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                   />
-                </div>
-                <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Inverter Serial</label>
-                  <input
-                    type="text"
-                    value={formData.inverterSerial}
-                    onChange={(e) => setFormData({ ...formData, inverterSerial: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none">
+                    kW
+                  </span>
                 </div>
               </div>
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                  Inverter Serial Identifier
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. INV-HUA-9988-LK"
+                  value={formData.inverterSerial}
+                  onChange={(e) => setFormData({ ...formData, inverterSerial: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                />
+              </div>
+            </div>
 
-              {/* Dual-Slot KYC Attachments in Edit Modal */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 space-y-3">
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                Prosumer Portal Password *
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full pl-3 pr-10 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  title={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-3.5 w-3.5 text-amber-500" />
+                  ) : (
+                    <Eye className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Document Attachments Section */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
                 <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 text-xs">
                   <ShieldCheck className="h-4 w-4 text-amber-500" />
-                  <span>Update Verified Identity &amp; Grid Documents</span>
+                  <span>Identity Document Attachments</span>
                 </span>
+                <span className="text-[11px] text-slate-400 font-medium">Front copy required for verification</span>
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
-                    <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300 block">
-                      NIC Front Side Document
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Slot 1: NIC Front */}
+                <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <CreditCard className="h-3.5 w-3.5 text-amber-500" />
+                      <span>1. NIC Front Side *</span>
                     </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileUpload(e, 'nicDocumentBase64')}
-                      className="block w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 cursor-pointer"
-                    />
                     {formData.nicDocumentBase64 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFile('nicDocumentBase64')}
+                        className="text-red-500 hover:text-red-400 text-[10px] flex items-center gap-0.5 cursor-pointer font-medium"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        <span>Remove</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {formData.nicDocumentBase64 ? (
+                    <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center gap-2.5">
                       <img
                         src={formData.nicDocumentBase64}
                         alt="NIC Front"
-                        className="h-10 w-16 object-contain rounded bg-black border border-slate-700"
+                        className="h-10 w-16 object-cover rounded-lg border border-slate-300 dark:border-slate-700 shrink-0"
                       />
+                      <div className="min-w-0">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px] flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3 shrink-0" />
+                          <span>Front Copy Attached</span>
+                        </span>
+                        <span className="text-slate-400 text-[9px] block truncate">Ready for verification</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500/60 dark:hover:border-amber-500/60 bg-slate-50/50 dark:bg-slate-950/40 hover:bg-amber-500/5 transition cursor-pointer group">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileUpload(e, 'nicDocumentBase64')}
+                        className="hidden"
+                      />
+                      <Upload className="h-4 w-4 text-slate-400 group-hover:text-amber-500 transition mb-1" />
+                      <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 group-hover:text-amber-600 dark:group-hover:text-amber-400">
+                        Select Front Document
+                      </span>
+                      <span className="text-[10px] text-slate-400">JPG, PNG up to 2MB</span>
+                    </label>
+                  )}
+                </div>
+
+                {/* Slot 2: NIC Back */}
+                <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <Layers className="h-3.5 w-3.5 text-amber-500" />
+                      <span>2. NIC Reverse Side</span>
+                    </span>
+                    {formData.nicBackDocumentBase64 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFile('nicBackDocumentBase64')}
+                        className="text-red-500 hover:text-red-400 text-[10px] flex items-center gap-0.5 cursor-pointer font-medium"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        <span>Remove</span>
+                      </button>
                     )}
                   </div>
 
-                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
-                    <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300 block">
-                      NIC Back Side Document
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileUpload(e, 'nicBackDocumentBase64')}
-                      className="block w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 cursor-pointer"
-                    />
-                    {formData.nicBackDocumentBase64 && (
+                  {formData.nicBackDocumentBase64 ? (
+                    <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center gap-2.5">
                       <img
                         src={formData.nicBackDocumentBase64}
                         alt="NIC Back"
-                        className="h-10 w-16 object-contain rounded bg-black border border-slate-700"
+                        className="h-10 w-16 object-cover rounded-lg border border-slate-300 dark:border-slate-700 shrink-0"
                       />
-                    )}
-                  </div>
+                      <div className="min-w-0">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px] flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3 shrink-0" />
+                          <span>Reverse Copy Attached</span>
+                        </span>
+                        <span className="text-slate-400 text-[9px] block truncate">Address &amp; record proof</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500/60 dark:hover:border-amber-500/60 bg-slate-50/50 dark:bg-slate-950/40 hover:bg-amber-500/5 transition cursor-pointer group">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileUpload(e, 'nicBackDocumentBase64')}
+                        className="hidden"
+                      />
+                      <Upload className="h-4 w-4 text-slate-400 group-hover:text-amber-500 transition mb-1" />
+                      <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 group-hover:text-amber-600 dark:group-hover:text-amber-400">
+                        Select Reverse Document
+                      </span>
+                      <span className="text-[10px] text-slate-400">JPG, PNG up to 2MB</span>
+                    </label>
+                  )}
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md disabled:opacity-50 cursor-pointer"
-                >
-                  {submitting ? 'Saving...' : 'Save Profile Changes'}
-                </button>
+              {/* Slot 3: Utility Bill */}
+              <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5 text-amber-500" />
+                    <span>3. CEB / LECO Electricity Grid Utility Bill (Optional)</span>
+                  </span>
+                  {formData.utilityBillBase64 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFile('utilityBillBase64')}
+                      className="text-red-500 hover:text-red-400 text-[10px] flex items-center gap-0.5 cursor-pointer font-medium"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      <span>Remove</span>
+                    </button>
+                  )}
+                </div>
+
+                {formData.utilityBillBase64 ? (
+                  <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center gap-2.5">
+                    <img
+                      src={formData.utilityBillBase64}
+                      alt="Utility Bill"
+                      className="h-10 w-16 object-cover rounded-lg border border-slate-300 dark:border-slate-700 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <span className="text-cyan-600 dark:text-cyan-400 font-bold text-[10px] flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3 shrink-0" />
+                        <span>Grid Interconnect Bill Attached</span>
+                      </span>
+                      <span className="text-slate-400 text-[9px] block truncate">Premises utility interconnect</span>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500/60 dark:hover:border-amber-500/60 bg-slate-50/50 dark:bg-slate-950/40 hover:bg-amber-500/5 transition cursor-pointer group">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleFileUpload(e, 'utilityBillBase64')}
+                      className="hidden"
+                    />
+                    <Upload className="h-4 w-4 text-slate-400 group-hover:text-amber-500 transition mb-1" />
+                    <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 group-hover:text-amber-600 dark:group-hover:text-amber-400">
+                      Select Utility Bill Proof
+                    </span>
+                    <span className="text-[10px] text-slate-400">JPG, PNG up to 2MB</span>
+                  </label>
+                )}
               </div>
-            </form>
-          </div>
+            </div>
+
+            {/* Sticky Actions Footer */}
+            <div className="sticky bottom-0 -mx-6 -mb-6 px-6 py-3.5 bg-slate-50 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3 z-10">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setFormData(initialForm);
+                }}
+                className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800 font-bold transition cursor-pointer text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-500/20 disabled:opacity-50 transition active:scale-95 cursor-pointer text-xs"
+              >
+                {submitting ? 'Registering...' : 'Register Prosumer Account'}
+              </button>
+            </div>
+          </form>
         </div>
-      )}
+      </Modal>
+
+      {/* Edit Prosumer Modal */}
+      <Modal
+        isOpen={showEditModal && !!editingUser}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingUser(null);
+        }}
+        maxWidth="max-w-2xl"
+        title="Update Prosumer Profile"
+      >
+        {editingUser && (
+          <form onSubmit={handleUpdateProsumer} className="space-y-4 text-xs">
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-slate-400 block font-medium">NIC Natural Key</span>
+                <span className="font-mono font-bold text-amber-600 dark:text-amber-400 text-sm">{editingUser.nic}</span>
+              </div>
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                editingUser.status === 'Active'
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                  : editingUser.status === 'Pending'
+                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                  : 'bg-red-500/15 text-red-700 dark:text-red-300'
+              }`}>
+                {editingUser.status}
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Full Legal Name *</label>
+              <input
+                type="text"
+                required
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Email Address *</label>
+                <input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Phone Number *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Installation Premises Address</label>
+              <input
+                type="text"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Solar Capacity (kW) *</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0.5"
+                    max="1000"
+                    required
+                    value={formData.solarCapacityKw}
+                    onChange={(e) => setFormData({ ...formData, solarCapacityKw: e.target.value })}
+                    className="w-full pl-3 pr-10 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none">
+                    kW
+                  </span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Inverter Serial Identifier</label>
+                <input
+                  type="text"
+                  value={formData.inverterSerial}
+                  onChange={(e) => setFormData({ ...formData, inverterSerial: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                />
+              </div>
+            </div>
+
+            {/* Document Updates */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 space-y-3">
+              <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 text-xs">
+                <ShieldCheck className="h-4 w-4 text-amber-500" />
+                <span>Identity Document Attachments</span>
+              </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <CreditCard className="h-3.5 w-3.5 text-amber-500" />
+                      <span>NIC Front Side Document</span>
+                    </span>
+                    {formData.nicDocumentBase64 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFile('nicDocumentBase64')}
+                        className="text-red-500 hover:text-red-400 text-[10px] flex items-center gap-0.5 cursor-pointer font-medium"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        <span>Remove</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {formData.nicDocumentBase64 ? (
+                    <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center gap-2.5">
+                      <img
+                        src={formData.nicDocumentBase64}
+                        alt="NIC Front"
+                        className="h-10 w-16 object-cover rounded-lg border border-slate-300 dark:border-slate-700 shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px] flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3 shrink-0" />
+                          <span>Front Copy Attached</span>
+                        </span>
+                        <span className="text-slate-400 text-[9px] block truncate">Document on file</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500/60 dark:hover:border-amber-500/60 bg-slate-50/50 dark:bg-slate-950/40 hover:bg-amber-500/5 transition cursor-pointer group">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileUpload(e, 'nicDocumentBase64')}
+                        className="hidden"
+                      />
+                      <Upload className="h-4 w-4 text-slate-400 group-hover:text-amber-500 transition mb-1" />
+                      <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 group-hover:text-amber-600 dark:group-hover:text-amber-400">
+                        Select Front Document
+                      </span>
+                      <span className="text-[10px] text-slate-400">JPG, PNG up to 2MB</span>
+                    </label>
+                  )}
+                </div>
+
+                <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <Layers className="h-3.5 w-3.5 text-amber-500" />
+                      <span>NIC Reverse Side Document</span>
+                    </span>
+                    {formData.nicBackDocumentBase64 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFile('nicBackDocumentBase64')}
+                        className="text-red-500 hover:text-red-400 text-[10px] flex items-center gap-0.5 cursor-pointer font-medium"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        <span>Remove</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {formData.nicBackDocumentBase64 ? (
+                    <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center gap-2.5">
+                      <img
+                        src={formData.nicBackDocumentBase64}
+                        alt="NIC Back"
+                        className="h-10 w-16 object-cover rounded-lg border border-slate-300 dark:border-slate-700 shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px] flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3 shrink-0" />
+                          <span>Reverse Copy Attached</span>
+                        </span>
+                        <span className="text-slate-400 text-[9px] block truncate">Document on file</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500/60 dark:hover:border-amber-500/60 bg-slate-50/50 dark:bg-slate-950/40 hover:bg-amber-500/5 transition cursor-pointer group">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileUpload(e, 'nicBackDocumentBase64')}
+                        className="hidden"
+                      />
+                      <Upload className="h-4 w-4 text-slate-400 group-hover:text-amber-500 transition mb-1" />
+                      <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 group-hover:text-amber-600 dark:group-hover:text-amber-400">
+                        Select Reverse Document
+                      </span>
+                      <span className="text-[10px] text-slate-400">JPG, PNG up to 2MB</span>
+                    </label>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Sticky Actions Footer */}
+            <div className="sticky bottom-0 -mx-6 -mb-6 px-6 py-3.5 bg-slate-50 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3 z-10">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingUser(null);
+                }}
+                className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800 font-bold transition cursor-pointer text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md disabled:opacity-50 transition active:scale-95 cursor-pointer text-xs"
+              >
+                {submitting ? 'Saving...' : 'Save Profile Changes'}
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
 
     </div>
   );
