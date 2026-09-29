@@ -219,7 +219,7 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
 
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div>
-                <label htmlFor="login-identifier" className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+                <label htmlFor="login-identifier" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   NIC, username or email
                 </label>
                 <div className="relative">
@@ -240,7 +240,7 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
               </div>
 
               <div>
-                <label htmlFor="login-password" className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+                <label htmlFor="login-password" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Password
                 </label>
                 <div className="relative">
@@ -321,7 +321,7 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="At least 8 characters, with letters and numbers"
-                className="w-full pl-3 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-amber-500/50"
+                className="w-full pl-3 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white tabular-nums focus:ring-2 focus:ring-amber-500/50"
               />
               <button
                 type="button"
@@ -353,7 +353,7 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Re-enter the new password"
-                className="w-full pl-3 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-amber-500/50"
+                className="w-full pl-3 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white tabular-nums focus:ring-2 focus:ring-amber-500/50"
               />
               <button
                 type="button"
