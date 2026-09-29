@@ -17,14 +17,17 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Calendar, Clock, CheckCircle2, XCircle, AlertTriangle, Search,
   Filter, Plus, RefreshCw, Zap, BatteryCharging, ArrowUpDown,
-  ShieldCheck, AlertCircle, ShieldAlert, Check, X, Eye, FileText
+  ShieldCheck, AlertCircle, ShieldAlert, Check, X, Eye, FileText,
+  User, Users, QrCode, Phone, Mail, Copy
 } from 'lucide-react';
+import QRCode from 'qrcode';
 import api from '../api/client';
 import Modal from '../components/Modal';
 
 export default function ReservationManagement({ theme }) {
   const [reservations, setReservations] = useState([]);
   const [stations, setStations] = useState([]);
+  const [prosumers, setProsumers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Filters
@@ -38,6 +41,10 @@ export default function ReservationManagement({ theme }) {
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isPassModalOpen, setIsPassModalOpen] = useState(false);
+  const [viewingRes, setViewingRes] = useState(null);
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [copiedRes, setCopiedRes] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState({ text: '', type: '' });
@@ -54,17 +61,30 @@ export default function ReservationManagement({ theme }) {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [resResponse, stationsResponse] = await Promise.all([
+      const [resResponse, stationsResponse, prosumersResponse] = await Promise.all([
         api.get('/reservations'),
-        api.get('/stations')
+        api.get('/stations'),
+        api.get('/users?role=Prosumer&status=Active')
       ]);
-      setReservations(resResponse.data || []);
-      setStations(stationsResponse.data || []);
-      if (stationsResponse.data?.length > 0 && !createForm.stationId) {
-        setCreateForm(prev => ({ ...prev, stationId: stationsResponse.data[0].id }));
-      }
+      const resData = resResponse.data || [];
+      const stationList = stationsResponse.data || [];
+      const prosumerList = prosumersResponse.data || [];
+
+      setReservations(resData);
+      setStations(stationList);
+      setProsumers(prosumerList);
+
+      // Smart default: prioritize active station with free battery slots
+      const availableStation = stationList.find(s => s.isActive && s.availableBatterySlots > 0) || stationList[0];
+      const defaultProsumer = prosumerList[0]?.nic || '';
+
+      setCreateForm(prev => ({
+        ...prev,
+        stationId: prev.stationId || availableStation?.id || '',
+        prosumerNic: prev.prosumerNic || defaultProsumer
+      }));
     } catch (err) {
-      console.error('Failed to load reservations or stations', err);
+      console.error('Failed to load reservations, stations, or prosumers', err);
       showFeedback('Failed to synchronize reservations data.', 'error');
     } finally {
       setLoading(false);
@@ -182,9 +202,52 @@ export default function ReservationManagement({ theme }) {
     }
   };
 
+  // Selected Prosumer & Station helpers for reactive capacity & rule calculation
+  const selectedProsumer = useMemo(() => {
+    return prosumers.find(p => p.nic === createForm.prosumerNic) || null;
+  }, [prosumers, createForm.prosumerNic]);
+
+  const selectedStation = useMemo(() => {
+    return stations.find(s => s.id === createForm.stationId) || null;
+  }, [stations, createForm.stationId]);
+
+  const isStationFullForDropOff = useMemo(() => {
+    return createForm.tradeType === 'DropOff' && selectedStation && selectedStation.availableBatterySlots <= 0;
+  }, [createForm.tradeType, selectedStation]);
+
+  // View Digital Pass Modal Handler
+  const handleOpenPassModal = async (res) => {
+    setViewingRes(res);
+    setIsPassModalOpen(true);
+    setCopiedRes(false);
+    try {
+      const token = res.qrCodeToken || res.reservationNumber;
+      const url = await QRCode.toDataURL(token, {
+        width: 256,
+        margin: 2,
+        color: {
+          dark: '#0f172a',
+          light: '#ffffff'
+        }
+      });
+      setQrDataUrl(url);
+    } catch (err) {
+      console.error('Failed to generate QR code', err);
+      setQrDataUrl('');
+    }
+  };
+
   // Create Reservation Handler
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
+    if (isStationFullForDropOff) {
+      showFeedback(`Selected hub '${selectedStation?.name}' has 0 available slots. Choose another hub.`, 'error');
+      return;
+    }
+    if (!createForm.prosumerNic) {
+      showFeedback('Please select an active verified prosumer.', 'error');
+      return;
+    }
     try {
       setActionLoading(true);
       const isoUtc = new Date(createForm.scheduledDateTime).toISOString();
@@ -197,9 +260,10 @@ export default function ReservationManagement({ theme }) {
       });
       showFeedback('Reservation created successfully under 7-day rule constraint.');
       setIsCreateModalOpen(false);
+      const availableStation = stations.find(s => s.isActive && s.availableBatterySlots > 0) || stations[0];
       setCreateForm({
-        prosumerNic: '',
-        stationId: stations[0]?.id || '',
+        prosumerNic: prosumers[0]?.nic || '',
+        stationId: availableStation?.id || '',
         scheduledDateTime: '',
         energyAmountKwh: 15,
         tradeType: 'DropOff'
@@ -479,6 +543,14 @@ export default function ReservationManagement({ theme }) {
                       {/* Actions */}
                       <td className="py-4 px-4 sm:px-6 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleOpenPassModal(res)}
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[11px] transition active:scale-95 cursor-pointer"
+                            title="View Full Details & Digital Energy Pass"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </button>
+
                           {isPending && (
                             <button
                               onClick={() => { setSelectedRes(res); setIsApproveModalOpen(true); }}
@@ -594,22 +666,77 @@ export default function ReservationManagement({ theme }) {
         title="Schedule Energy Reservation (7-Day Horizon)"
       >
         <form onSubmit={handleCreateSubmit} className="space-y-4">
-          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-xs font-semibold">
-            7-Day Booking Window: Schedule must fall between today and {maxDateObj.toLocaleDateString()}.
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-xs font-semibold flex items-center justify-between">
+            <span>7-Day Booking Horizon: Schedule must fall between today and {maxDateObj.toLocaleDateString()}.</span>
+            <span className="text-[10px] uppercase tracking-wider font-bold bg-amber-500/20 px-2 py-0.5 rounded-md">Policy Guard</span>
           </div>
 
+          {/* Prosumer Selector */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Prosumer National Identity Card (NIC)
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. 199812345678"
-              value={createForm.prosumerNic}
-              onChange={(e) => setCreateForm({ ...createForm, prosumerNic: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
-            />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Verified Active Prosumer
+              </label>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                {prosumers.length} Active {prosumers.length === 1 ? 'Account' : 'Accounts'}
+              </span>
+            </div>
+
+            {prosumers.length > 0 ? (
+              <select
+                required
+                value={createForm.prosumerNic}
+                onChange={(e) => setCreateForm({ ...createForm, prosumerNic: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white"
+              >
+                <option value="">-- Select Active Verified Prosumer --</option>
+                {prosumers.map(p => (
+                  <option key={p.nic} value={p.nic}>
+                    {p.fullName} ({p.nic}) — {p.solarCapacityKw} kW Array
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs">
+                No active verified prosumers found. Prosumers must complete KYC verification before bookings can be scheduled.
+              </div>
+            )}
+
+            {/* Selected Prosumer Summary Card */}
+            {selectedProsumer && (
+              <div className="mt-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 text-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5 text-amber-500" />
+                    <span>{selectedProsumer.fullName}</span>
+                    <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">({selectedProsumer.nic})</span>
+                  </div>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                    <ShieldCheck className="h-3 w-3" />
+                    Active &amp; KYC Approved
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[11px] pt-1.5 border-t border-slate-200 dark:border-slate-800/80">
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400">Solar Capacity:</span>{' '}
+                    <span className="font-bold text-amber-600 dark:text-amber-400">{selectedProsumer.solarCapacityKw} kW</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400">Inverter:</span>{' '}
+                    <span className="font-mono text-slate-700 dark:text-slate-300">{selectedProsumer.inverterSerial || 'Standard Grid-Tie'}</span>
+                  </div>
+                  <div className="col-span-2 flex items-center justify-between text-slate-600 dark:text-slate-400">
+                    <span>
+                      <span className="font-medium text-slate-500">Contact:</span> {selectedProsumer.phone || selectedProsumer.email}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      Rec. daily quota: ~{(selectedProsumer.solarCapacityKw * 4.5).toFixed(1)} kWh
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -622,9 +749,14 @@ export default function ReservationManagement({ theme }) {
                 onChange={(e) => setCreateForm({ ...createForm, stationId: e.target.value })}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white"
               >
-                {stations.map(s => (
-                  <option key={s.id} value={s.id}>{s.name} ({s.availableBatterySlots} slots free)</option>
-                ))}
+                {stations.map(s => {
+                  const isFull = createForm.tradeType === 'DropOff' && s.availableBatterySlots <= 0;
+                  return (
+                    <option key={s.id} value={s.id} disabled={isFull}>
+                      {s.name} ({s.availableBatterySlots} slots free {isFull ? '— FULL' : ''})
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -634,7 +766,20 @@ export default function ReservationManagement({ theme }) {
               </label>
               <select
                 value={createForm.tradeType}
-                onChange={(e) => setCreateForm({ ...createForm, tradeType: e.target.value })}
+                onChange={(e) => {
+                  const nextTrade = e.target.value;
+                  setCreateForm(prev => {
+                    const next = { ...prev, tradeType: nextTrade };
+                    if (nextTrade === 'DropOff') {
+                      const cur = stations.find(s => s.id === prev.stationId);
+                      if (cur && cur.availableBatterySlots <= 0) {
+                        const openStation = stations.find(s => s.isActive && s.availableBatterySlots > 0);
+                        if (openStation) next.stationId = openStation.id;
+                      }
+                    }
+                    return next;
+                  });
+                }}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white"
               >
                 <option value="DropOff">DropOff (Discharge Battery / Sell)</option>
@@ -642,6 +787,19 @@ export default function ReservationManagement({ theme }) {
               </select>
             </div>
           </div>
+
+          {/* Station Capacity Warning if 0 slots free for DropOff */}
+          {isStationFullForDropOff && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">Solar Hub Battery Bay Full</p>
+                <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5">
+                  "{selectedStation?.name}" currently has 0 available battery slots. Drop-off (selling) reservations cannot be scheduled at this hub until bays are cleared.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -660,14 +818,32 @@ export default function ReservationManagement({ theme }) {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Energy Quota (kWh)
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Energy Quota (kWh)
+                </label>
+                <div className="flex items-center gap-1">
+                  {[5, 10, 15, 25].map(val => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setCreateForm({ ...createForm, energyAmountKwh: val })}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${
+                        +createForm.energyAmountKwh === val
+                          ? 'bg-amber-500 text-slate-950'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {val}k
+                    </button>
+                  ))}
+                </div>
+              </div>
               <input
                 type="number"
                 step="0.1"
                 min="1"
-                max="500"
+                max={selectedStation?.capacityKwh || 500}
                 required
                 value={createForm.energyAmountKwh}
                 onChange={(e) => setCreateForm({ ...createForm, energyAmountKwh: e.target.value })}
@@ -675,6 +851,16 @@ export default function ReservationManagement({ theme }) {
               />
             </div>
           </div>
+
+          {/* Quota advisory if exceeding prosumer capacity */}
+          {selectedProsumer && +createForm.energyAmountKwh > (selectedProsumer.solarCapacityKw * 10) && (
+            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-[11px] flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
+              <span>
+                Entered quota ({createForm.energyAmountKwh} kWh) exceeds standard single-day output of a {selectedProsumer.solarCapacityKw} kW array (~{(selectedProsumer.solarCapacityKw * 5).toFixed(0)} kWh).
+              </span>
+            </div>
+          )}
 
           <div className="flex items-center justify-end gap-2 pt-2">
             <button
@@ -686,13 +872,141 @@ export default function ReservationManagement({ theme }) {
             </button>
             <button
               type="submit"
-              disabled={actionLoading}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 text-xs font-bold shadow-sm"
+              disabled={actionLoading || isStationFullForDropOff || !createForm.prosumerNic || !createForm.stationId || !createForm.scheduledDateTime}
+              className={`px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-all ${
+                actionLoading || isStationFullForDropOff || !createForm.prosumerNic || !createForm.stationId || !createForm.scheduledDateTime
+                  ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 hover:brightness-105 active:scale-95'
+              }`}
             >
-              {actionLoading ? 'Scheduling...' : 'Confirm Booking'}
+              {actionLoading ? 'Scheduling...' : isStationFullForDropOff ? 'Hub Bay Full' : 'Confirm Booking'}
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal: View Digital Energy Pass / Details */}
+      <Modal
+        isOpen={isPassModalOpen}
+        onClose={() => setIsPassModalOpen(false)}
+        title="Digital Energy Reservation Pass"
+      >
+        {viewingRes && (
+          <div className="space-y-4">
+            {/* Top Pass Card */}
+            <div className="relative rounded-2xl bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 border border-slate-200 dark:border-slate-800 p-5 overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
+                    <Zap className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-wider text-slate-400 font-bold">Trading Pass</div>
+                    <div className="font-mono text-sm font-bold text-slate-900 dark:text-white">
+                      {viewingRes.reservationNumber}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                    viewingRes.status === 'Approved'
+                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                      : viewingRes.status === 'Pending'
+                      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                      : viewingRes.status === 'Completed'
+                      ? 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30'
+                      : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                  }`}>
+                    {viewingRes.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* QR Code graphic if Approved or Completed */}
+              {qrDataUrl ? (
+                <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 mb-4 shadow-inner">
+                  <img src={qrDataUrl} alt="Reservation QR" className="w-44 h-44 object-contain" />
+                  <p className="font-mono text-[10px] text-slate-500 mt-2 flex items-center gap-1">
+                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                    Cryptographic Station Token: {viewingRes.qrCodeToken ? 'Verified Active' : 'Fallback Res ID'}
+                  </p>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-xs mb-4 text-center">
+                  QR Pass is generated automatically once the reservation is approved by Backoffice.
+                </div>
+              )}
+
+              {/* Key Pass Details Grid */}
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] uppercase text-slate-400 block font-semibold">Prosumer NIC</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white">{viewingRes.prosumerNic}</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] uppercase text-slate-400 block font-semibold">Trade Direction</span>
+                  <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1">
+                    {viewingRes.tradeType === 'DropOff' ? (
+                      <>
+                        <Zap className="h-3 w-3 text-amber-500" />
+                        DropOff (Sell)
+                      </>
+                    ) : (
+                      <>
+                        <BatteryCharging className="h-3 w-3 text-emerald-500" />
+                        PickUp (Buy)
+                      </>
+                    )}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] uppercase text-slate-400 block font-semibold">Energy Quota</span>
+                  <span className="font-bold text-amber-600 dark:text-amber-400 text-sm">
+                    {viewingRes.energyAmountKwh} kWh
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] uppercase text-slate-400 block font-semibold">Microgrid Hub</span>
+                  <span className="font-bold text-slate-900 dark:text-white truncate block">
+                    {viewingRes.stationName || 'Colombo Central Solar Hub'}
+                  </span>
+                </div>
+                <div className="col-span-2 p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] uppercase text-slate-400 block font-semibold">Scheduled Appointment</span>
+                  <span className="font-mono text-slate-900 dark:text-white">
+                    {viewingRes.scheduledDateTime ? new Date(viewingRes.scheduledDateTime).toLocaleString() : 'N/A'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(viewingRes.reservationNumber);
+                  setCopiedRes(true);
+                  setTimeout(() => setCopiedRes(false), 2000);
+                }}
+                className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+              >
+                {copiedRes ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                <span>{copiedRes ? 'Copied Res #' : 'Copy Res #'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsPassModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold transition"
+              >
+                Close Pass
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
