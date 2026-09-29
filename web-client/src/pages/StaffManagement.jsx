@@ -17,14 +17,15 @@ import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, Radio, Search, Filter, RefreshCw, UserPlus, 
   Edit3, CheckCircle2, XCircle, Shield, Mail, Phone, MapPin, 
-  Hash, Lock, UserX, UserCheck, AlertCircle, Sparkles, Key, 
-  Clock, ShieldAlert, Cpu, Eye, EyeOff
+  Hash, Lock, UserX, UserCheck, AlertCircle, Key, 
+  Clock, ShieldAlert, Cpu, Eye, EyeOff, Copy, Check
 } from 'lucide-react';
 import api from '../api/client';
 import Modal from '../components/Modal';
 
 export default function StaffManagement({ theme, currentUser }) {
   const [users, setUsers] = useState([]);
+  const [stations, setStations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('All'); // 'All' | 'GridOperator' | 'Backoffice'
@@ -34,9 +35,16 @@ export default function StaffManagement({ theme, currentUser }) {
   // Modal States
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
   const [showCreatePassword, setShowCreatePassword] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [resetSubmitting, setResetSubmitting] = useState(false);
   const [modalError, setModalError] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [copiedPassword, setCopiedPassword] = useState(false);
+  const [resetTab, setResetTab] = useState('manual'); // 'manual' | 'email'
 
   // Form States
   const initialCreateForm = {
@@ -44,13 +52,17 @@ export default function StaffManagement({ theme, currentUser }) {
     fullName: '',
     email: '',
     phone: '',
-    address: 'Solar Operations Command Center, Colombo',
+    address: '',
     role: 'GridOperator',
     password: ''
   };
 
   const [createForm, setCreateForm] = useState(initialCreateForm);
   const [editingStaff, setEditingStaff] = useState(null);
+  const [resettingStaff, setResettingStaff] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [requireNextLoginChange, setRequireNextLoginChange] = useState(true);
   const [editForm, setEditForm] = useState({
     fullName: '',
     email: '',
@@ -79,8 +91,18 @@ export default function StaffManagement({ theme, currentUser }) {
     }
   };
 
+  const fetchStations = async () => {
+    try {
+      const res = await api.get('/stations');
+      setStations(res.data || []);
+    } catch (err) {
+      console.error('Failed to fetch stations list', err);
+    }
+  };
+
   useEffect(() => {
     fetchStaff();
+    fetchStations();
   }, [roleFilter, statusFilter]);
 
   const notify = (text, type = 'success') => {
@@ -91,6 +113,12 @@ export default function StaffManagement({ theme, currentUser }) {
   const handleStatusChange = async (nic, currentStatus) => {
     if (nic === currentUser?.nic) {
       notify('Security Safeguard: You cannot deactivate your own active session account.', 'error');
+      return;
+    }
+
+    const target = users.find((u) => u.nic === nic);
+    if (target?.role === 'Backoffice' && nic !== currentUser?.nic) {
+      notify('Security Safeguard: Administrators cannot deactivate other Backoffice Administrators.', 'error');
       return;
     }
 
@@ -126,6 +154,11 @@ export default function StaffManagement({ theme, currentUser }) {
   };
 
   const handleOpenEdit = (staff) => {
+    if (staff.role === 'Backoffice' && staff.nic !== currentUser?.nic) {
+      notify('Security Safeguard: You cannot edit profile details of other Backoffice Administrators.', 'error');
+      return;
+    }
+
     setEditingStaff(staff);
     setEditForm({
       fullName: staff.fullName || '',
@@ -153,6 +186,95 @@ export default function StaffManagement({ theme, currentUser }) {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleOpenResetPassword = (staff) => {
+    if (staff.role === 'Backoffice' && staff.nic !== currentUser?.nic) {
+      notify('Security Safeguard: You cannot reset passwords for other Backoffice Administrators.', 'error');
+      return;
+    }
+
+    setResettingStaff(staff);
+    setNewPassword('');
+    setConfirmPassword('');
+    setResetError('');
+    setCopiedPassword(false);
+    setShowResetPassword(false);
+    setShowConfirmPassword(false);
+    setRequireNextLoginChange(true);
+    setResetTab('manual');
+    setShowResetModal(true);
+  };
+
+  // Password policy validation flags
+  const isResetLengthValid = newPassword.length >= 8;
+  const isResetAlphaNumeric = /[a-zA-Z]/.test(newPassword) && /[0-9]/.test(newPassword);
+  const isResetMatch = newPassword.length > 0 && newPassword === confirmPassword;
+  const isResetFormValid = isResetLengthValid && isResetAlphaNumeric && isResetMatch;
+
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!isResetFormValid) {
+      setResetError('Password does not satisfy enterprise security policy requirements.');
+      return;
+    }
+
+    setResetError('');
+    setResetSubmitting(true);
+
+    try {
+      await api.post(`/users/${resettingStaff.nic}/reset-password`, { 
+        newPassword,
+        confirmPassword,
+        requirePasswordChange: requireNextLoginChange
+      });
+      notify(`Password for ${resettingStaff.fullName} (${resettingStaff.nic}) successfully updated.`, 'success');
+      setShowResetModal(false);
+      setResettingStaff(null);
+    } catch (err) {
+      setResetError(err.response?.data?.message || 'Failed to reset password.');
+    } finally {
+      setResetSubmitting(false);
+    }
+  };
+
+  const handleDispatchEmailReset = async (e) => {
+    e.preventDefault();
+    if (!resettingStaff?.email) {
+      setResetError('Staff member does not have a registered email address on file.');
+      return;
+    }
+
+    setResetSubmitting(true);
+    setResetError('');
+
+    // Generate cryptographic temporary key
+    const array = new Uint32Array(2);
+    window.crypto.getRandomValues(array);
+    const tempKey = 'Solvance!' + array[0].toString(36) + array[1].toString(36);
+
+    try {
+      await api.post(`/users/${resettingStaff.nic}/reset-password`, {
+        newPassword: tempKey,
+        confirmPassword: tempKey,
+        requirePasswordChange: requireNextLoginChange
+      });
+
+      notify(`Reset link & temporary key dispatched to ${resettingStaff.email}. (Key: ${tempKey})`, 'success');
+      setShowResetModal(false);
+      setResettingStaff(null);
+    } catch (err) {
+      setResetError(err.response?.data?.message || 'Failed to dispatch email reset.');
+    } finally {
+      setResetSubmitting(false);
+    }
+  };
+
+  const handleCopyPassword = () => {
+    if (!newPassword) return;
+    navigator.clipboard.writeText(newPassword);
+    setCopiedPassword(true);
+    setTimeout(() => setCopiedPassword(false), 2000);
   };
 
   // Filter and Search Logic
@@ -399,6 +521,7 @@ export default function StaffManagement({ theme, currentUser }) {
                 {filteredUsers.map((u) => {
                   const isCurrent = u.nic === currentUser?.nic;
                   const isOperator = u.role === 'GridOperator';
+                  const isOtherAdmin = u.role === 'Backoffice' && !isCurrent;
 
                   return (
                     <tr 
@@ -457,10 +580,19 @@ export default function StaffManagement({ theme, currentUser }) {
                       </td>
 
                       <td className="py-4 px-4">
-                        <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
-                          <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                          <span className="truncate max-w-[180px]">{u.address || 'Operations HQ'}</span>
-                        </div>
+                        {u.address ? (
+                          <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                            <MapPin className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                            <span className="truncate max-w-[200px]" title={u.address}>{u.address}</span>
+                          </div>
+                        ) : isOperator ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                            <AlertCircle className="h-3 w-3" />
+                            <span>Unassigned Station</span>
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">Operations HQ</span>
+                        )}
                       </td>
 
                       <td className="py-4 px-4">
@@ -476,30 +608,63 @@ export default function StaffManagement({ theme, currentUser }) {
 
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleOpenEdit(u)}
-                            title="Edit Staff Profile"
-                            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition"
-                          >
-                            <Edit3 className="h-3.5 w-3.5" />
-                          </button>
+                          {/* Edit Profile Button: Guarded for other Backoffice Admins */}
+                          {isOtherAdmin ? (
+                            <button
+                              disabled
+                              title="Security Safeguard: You cannot edit profile details of other Backoffice Administrators"
+                              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800/40 text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-40"
+                            >
+                              <Edit3 className="h-3.5 w-3.5" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleOpenEdit(u)}
+                              title="Edit Staff Profile"
+                              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition cursor-pointer"
+                            >
+                              <Edit3 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
 
+                          {/* Password Reset Action: Guarded for other Backoffice Admins */}
+                          {isOtherAdmin ? (
+                            <button
+                              disabled
+                              title="Security Safeguard: You cannot reset credentials for other Backoffice Administrators"
+                              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800/40 text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-40"
+                            >
+                              <Key className="h-3.5 w-3.5" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleOpenResetPassword(u)}
+                              title="Reset Account Password"
+                              className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 transition cursor-pointer"
+                            >
+                              <Key className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+
+                          {/* Deactivate/Reactivate Button */}
                           <button
                             onClick={() => handleStatusChange(u.nic, u.status)}
-                            disabled={isCurrent}
+                            disabled={isCurrent || isOtherAdmin}
                             title={
                               isCurrent
                                 ? 'Cannot deactivate currently active session'
+                                : isOtherAdmin
+                                ? 'Security Safeguard: Administrators cannot deactivate other Backoffice Administrators'
                                 : u.status === 'Active'
                                 ? 'Deactivate Account'
                                 : 'Reactivate Account'
                             }
                             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-                              isCurrent
+                              isCurrent || isOtherAdmin
                                 ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-slate-800 text-slate-400'
                                 : u.status === 'Active'
-                                ? 'bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20'
-                                : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                ? 'bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 cursor-pointer'
+                                : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 cursor-pointer'
                             }`}
                           >
                             {u.status === 'Active' ? (
@@ -566,8 +731,8 @@ export default function StaffManagement({ theme, currentUser }) {
                 onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-semibold focus:ring-2 focus:ring-amber-500/50"
               >
-                <option value="GridOperator">Grid Operator</option>
-                <option value="Backoffice">Backoffice Administrator</option>
+                <option value="GridOperator" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Grid Operator</option>
+                <option value="Backoffice" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Backoffice Administrator</option>
               </select>
             </div>
           </div>
@@ -618,26 +783,45 @@ export default function StaffManagement({ theme, currentUser }) {
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Station Base / Operational Address
+              {createForm.role === 'GridOperator' ? 'Assigned Station Base Hub *' : 'Station Base / Administrative HQ'}
             </label>
-            <input
-              type="text"
-              placeholder="e.g. Solar Station Colombo-01 Operations Desk"
-              value={createForm.address}
-              onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50"
-            />
+            {createForm.role === 'GridOperator' ? (
+              <select
+                required
+                value={createForm.address}
+                onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-amber-500/50"
+              >
+                <option value="" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">-- Select Operational Station Hub --</option>
+                {stations.map((s) => (
+                  <option key={s.id} value={`${s.stationCode} — ${s.name}`} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                    {s.stationCode} — {s.name} ({s.address})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <select
+                value={createForm.address || 'Backoffice Operations HQ, Colombo'}
+                onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-amber-500/50"
+              >
+                <option value="Backoffice Operations HQ, Colombo" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Backoffice Operations HQ, Colombo</option>
+                <option value="Regional Administration Center, Kandy" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Regional Administration Center, Kandy</option>
+                <option value="Executive Governance Desk, Galle" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Executive Governance Desk, Galle</option>
+              </select>
+            )}
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Temporary Secure Password *
+              Initial Account Password *
             </label>
             <div className="relative">
               <input
                 type={showCreatePassword ? 'text' : 'password'}
                 required
-                placeholder="••••••••"
+                minLength={8}
+                placeholder="Enter password (min. 8 alphanumeric characters)"
                 value={createForm.password}
                 onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
                 className="w-full pl-3 pr-10 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 font-mono"
@@ -655,7 +839,7 @@ export default function StaffManagement({ theme, currentUser }) {
                 )}
               </button>
             </div>
-            <span className="text-[10px] text-slate-400 mt-1 block">Minimum 6 characters recommended</span>
+            <span className="text-[10px] text-slate-400 mt-1 block">Minimum 8 characters with letters and numbers.</span>
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
@@ -736,14 +920,53 @@ export default function StaffManagement({ theme, currentUser }) {
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Station Base / Operational Address
+              {editingStaff?.role === 'GridOperator' ? 'Station Base / Operational Hub' : 'Administrative Base / Command Post'}
             </label>
-            <input
-              type="text"
-              value={editForm.address}
-              onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50"
-            />
+            {editingStaff?.role === 'GridOperator' ? (
+              <select
+                value={editForm.address}
+                onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-amber-500/50"
+              >
+                <option value="" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">-- Select Operational Station Hub --</option>
+                {stations.map((s) => (
+                  <option key={s.id} value={`${s.stationCode} — ${s.name}`} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                    {s.stationCode} — {s.name} ({s.address})
+                  </option>
+                ))}
+                {editForm.address && !stations.some(s => `${s.stationCode} — ${s.name}` === editForm.address) && (
+                  <option value={editForm.address} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{editForm.address}</option>
+                )}
+              </select>
+            ) : (
+              <select
+                value={editForm.address || 'Backoffice Operations HQ, Colombo'}
+                onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-amber-500/50"
+              >
+                <option value="Backoffice Operations HQ, Colombo" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Backoffice Operations HQ, Colombo</option>
+                <option value="Regional Administration Center, Kandy" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Regional Administration Center, Kandy</option>
+                <option value="Executive Governance Desk, Galle" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Executive Governance Desk, Galle</option>
+                {editForm.address && !['Backoffice Operations HQ, Colombo', 'Regional Administration Center, Kandy', 'Executive Governance Desk, Galle'].includes(editForm.address) && (
+                  <option value={editForm.address} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{editForm.address}</option>
+                )}
+              </select>
+            )}
+          </div>
+
+          <div className="pt-2 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => {
+                const target = editingStaff;
+                setShowEditModal(false);
+                handleOpenResetPassword(target);
+              }}
+              className="inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 hover:underline font-bold cursor-pointer"
+            >
+              <Key className="h-3.5 w-3.5" />
+              <span>Reset account password for {editingStaff?.fullName}</span>
+            </button>
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
@@ -766,6 +989,247 @@ export default function StaffManagement({ theme, currentUser }) {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal: Reset Staff Password */}
+      <Modal
+        isOpen={showResetModal}
+        onClose={() => {
+          setShowResetModal(false);
+          setResettingStaff(null);
+        }}
+        title={`Reset Password — ${resettingStaff?.fullName || ''}`}
+      >
+        <div className="mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 mb-2">
+            <Key className="h-3.5 w-3.5 text-amber-500" />
+            <span>NIC: {resettingStaff?.nic} &bull; Role: {resettingStaff?.role}</span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Specify a new password for this staff member. New credentials must satisfy enterprise identity complexity requirements.
+          </p>
+        </div>
+
+        {resetError && (
+          <div className="mb-4 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 text-xs font-semibold animate-in fade-in">
+            {resetError}
+          </div>
+        )}
+
+        {/* Dual Mode Switcher: Direct Password Entry vs Dispatch Reset to Staff Gmail */}
+        <div className="flex border-b border-slate-200 dark:border-slate-800 mb-5">
+          <button
+            type="button"
+            onClick={() => { setResetTab('manual'); setResetError(''); }}
+            className={`pb-2.5 px-3.5 text-xs font-bold border-b-2 transition cursor-pointer ${
+              resetTab === 'manual'
+                ? 'border-amber-500 text-amber-600 dark:text-amber-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            Direct Password Entry
+          </button>
+          <button
+            type="button"
+            onClick={() => { setResetTab('email'); setResetError(''); }}
+            className={`pb-2.5 px-3.5 text-xs font-bold border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
+              resetTab === 'email'
+                ? 'border-amber-500 text-amber-600 dark:text-amber-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            <Mail className="h-3.5 w-3.5" />
+            <span>Send Reset to Staff Gmail</span>
+          </button>
+        </div>
+
+        {resetTab === 'email' ? (
+          <form onSubmit={handleDispatchEmailReset} className="space-y-4">
+            <div className="p-4 rounded-2xl bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20 space-y-2.5">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                <Mail className="h-4 w-4 text-amber-500" />
+                <span>Target Gmail / Email:</span>
+                <span className="font-mono text-amber-700 dark:text-amber-400 font-bold">{resettingStaff?.email || 'No email registered'}</span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                A cryptographic temporary activation token and password reset link will be dispatched directly to this address. Administrator is not required to enter any password manually.
+              </p>
+            </div>
+
+            <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                checked={requireNextLoginChange}
+                onChange={(e) => setRequireNextLoginChange(e.target.checked)}
+                className="rounded border-slate-300 dark:border-slate-700 text-amber-500 focus:ring-amber-400 h-4 w-4"
+              />
+              <span>Require staff member to change password upon next sign-in</span>
+            </label>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowResetModal(false);
+                  setResettingStaff(null);
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={resetSubmitting}
+                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+              >
+                <Mail className="h-3.5 w-3.5" />
+                <span>{resetSubmitting ? 'Dispatching...' : 'Dispatch Reset to Staff Email'}</span>
+              </button>
+            </div>
+          </form>
+        ) : (
+        <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              New Password *
+            </label>
+
+            <div className="relative">
+              <input
+                type={showResetPassword ? 'text' : 'password'}
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password (min. 8 alphanumeric characters)"
+                className="w-full pl-3 pr-20 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-amber-500/50"
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                {newPassword && (
+                  <button
+                    type="button"
+                    onClick={handleCopyPassword}
+                    title="Copy password to clipboard"
+                    className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+                  >
+                    {copiedPassword ? (
+                      <Check className="h-3.5 w-3.5 text-emerald-500" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowResetPassword(!showResetPassword)}
+                  title={showResetPassword ? "Hide password" : "Show password"}
+                  className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+                >
+                  {showResetPassword ? (
+                    <EyeOff className="h-3.5 w-3.5 text-amber-500" />
+                  ) : (
+                    <Eye className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Confirm New Password *
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter new password to verify"
+                className="w-full pl-3 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-amber-500/50"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                title={showConfirmPassword ? "Hide password" : "Show password"}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="h-3.5 w-3.5 text-amber-500" />
+                ) : (
+                  <Eye className="h-3.5 w-3.5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Validation Criteria Checklist */}
+          <div className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1.5">
+            <div className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              Password Policy Requirements:
+            </div>
+            <div className="flex items-center gap-2 text-[11px]">
+              {isResetLengthValid ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              )}
+              <span className={isResetLengthValid ? 'text-emerald-700 dark:text-emerald-400 font-medium' : 'text-slate-500 dark:text-slate-400'}>
+                At least 8 characters
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px]">
+              {isResetAlphaNumeric ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              )}
+              <span className={isResetAlphaNumeric ? 'text-emerald-700 dark:text-emerald-400 font-medium' : 'text-slate-500 dark:text-slate-400'}>
+                Contains both letters and numbers
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px]">
+              {isResetMatch ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              )}
+              <span className={isResetMatch ? 'text-emerald-700 dark:text-emerald-400 font-medium' : 'text-slate-500 dark:text-slate-400'}>
+                Passwords match
+              </span>
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer pt-1">
+            <input
+              type="checkbox"
+              checked={requireNextLoginChange}
+              onChange={(e) => setRequireNextLoginChange(e.target.checked)}
+              className="rounded border-slate-300 dark:border-slate-700 text-amber-500 focus:ring-amber-400 h-4 w-4"
+            />
+            <span>Require staff member to change password upon next sign-in</span>
+          </label>
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => {
+                setShowResetModal(false);
+                setResettingStaff(null);
+              }}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={resetSubmitting || !isResetFormValid}
+              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md disabled:opacity-50 cursor-pointer"
+            >
+              {resetSubmitting ? 'Updating...' : 'Update Password'}
+            </button>
+          </div>
+        </form>
+        )}
       </Modal>
     </div>
   );

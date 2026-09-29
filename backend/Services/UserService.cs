@@ -156,6 +156,7 @@ namespace SolarMicrogridApi.Services
                 Address = user.Address,
                 Role = user.Role,
                 Status = user.Status,
+                MustChangePassword = user.MustChangePassword,
                 SolarCapacityKw = user.SolarCapacityKw,
                 InverterSerial = user.InverterSerial
             };
@@ -343,6 +344,76 @@ namespace SolarMicrogridApi.Services
                 .Set(u => u.UpdatedAt, DateTime.UtcNow);
 
             var result = await _context.Users.UpdateOneAsync(u => u.Nic == nic, update);
+            return result.ModifiedCount > 0;
+        }
+
+        public async Task<bool> ResetPasswordAsync(string nic, string newPassword, string requesterRole, string requesterNic, bool requirePasswordChange = false)
+        {
+            // Method: ResetPasswordAsync - Securely updates user password hash with authorization safeguard and mandatory reset flag.
+            var user = await _context.Users.Find(u => u.Nic == nic).FirstOrDefaultAsync();
+            if (user == null)
+            {
+                return false;
+            }
+
+            // Security Rule: Backoffice officers cannot reset passwords for other Backoffice officers
+            if (user.Role == "Backoffice" && user.Nic != requesterNic)
+            {
+                throw new UnauthorizedAccessException("Security policy violation: Administrators cannot reset credentials of other Backoffice Administrators.");
+            }
+
+            if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 8)
+            {
+                throw new ArgumentException("Password must contain at least 8 characters.");
+            }
+
+            if (!newPassword.Any(char.IsLetter) || !newPassword.Any(char.IsDigit))
+            {
+                throw new ArgumentException("Password must contain at least one letter and one number.");
+            }
+
+            var filter = Builders<User>.Filter.Eq(u => u.Nic, nic);
+            var update = Builders<User>.Update
+                .Set(u => u.PasswordHash, BCrypt.Net.BCrypt.HashPassword(newPassword))
+                .Set(u => u.MustChangePassword, requirePasswordChange)
+                .Set(u => u.FailedLoginAttempts, 0)
+                .Set(u => u.LockoutEnd, null)
+                .Set(u => u.UpdatedAt, DateTime.UtcNow);
+
+            var result = await _context.Users.UpdateOneAsync(filter, update);
+            return result.ModifiedCount > 0;
+        }
+
+        public async Task<bool> ChangePasswordAsync(string nic, string currentPassword, string newPassword)
+        {
+            // Method: ChangePasswordAsync - Verifies active credentials and updates to new user-chosen password, clearing MustChangePassword flag.
+            var user = await _context.Users.Find(u => u.Nic == nic).FirstOrDefaultAsync();
+            if (user == null) return false;
+
+            if (!BCrypt.Net.BCrypt.Verify(currentPassword, user.PasswordHash))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 8)
+            {
+                throw new ArgumentException("Password must contain at least 8 characters.");
+            }
+
+            if (!newPassword.Any(char.IsLetter) || !newPassword.Any(char.IsDigit))
+            {
+                throw new ArgumentException("Password must contain at least one letter and one number.");
+            }
+
+            var filter = Builders<User>.Filter.Eq(u => u.Nic, nic);
+            var update = Builders<User>.Update
+                .Set(u => u.PasswordHash, BCrypt.Net.BCrypt.HashPassword(newPassword))
+                .Set(u => u.MustChangePassword, false)
+                .Set(u => u.FailedLoginAttempts, 0)
+                .Set(u => u.LockoutEnd, null)
+                .Set(u => u.UpdatedAt, DateTime.UtcNow);
+
+            var result = await _context.Users.UpdateOneAsync(filter, update);
             return result.ModifiedCount > 0;
         }
     }

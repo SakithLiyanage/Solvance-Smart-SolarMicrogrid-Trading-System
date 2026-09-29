@@ -17,14 +17,17 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Calendar, Clock, CheckCircle2, XCircle, AlertTriangle, Search,
   Filter, Plus, RefreshCw, Zap, BatteryCharging, ArrowUpDown,
-  ShieldCheck, AlertCircle, ShieldAlert, Check, X, Eye, FileText
+  ShieldCheck, AlertCircle, ShieldAlert, Check, X, Eye, FileText,
+  User, Users, QrCode, Phone, Mail, Copy
 } from 'lucide-react';
+import QRCode from 'qrcode';
 import api from '../api/client';
 import Modal from '../components/Modal';
 
 export default function ReservationManagement({ theme }) {
   const [reservations, setReservations] = useState([]);
   const [stations, setStations] = useState([]);
+  const [prosumers, setProsumers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Filters
@@ -38,6 +41,15 @@ export default function ReservationManagement({ theme }) {
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isPassModalOpen, setIsPassModalOpen] = useState(false);
+  const [isAuditDrawerOpen, setIsAuditDrawerOpen] = useState(false);
+  const [viewingRes, setViewingRes] = useState(null);
+  const [auditRes, setAuditRes] = useState(null);
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [copiedRes, setCopiedRes] = useState(false);
+  const [copiedToken, setCopiedToken] = useState(false);
+  const [rejectMode, setRejectMode] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
   const [cancelReason, setCancelReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState({ text: '', type: '' });
@@ -54,17 +66,30 @@ export default function ReservationManagement({ theme }) {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [resResponse, stationsResponse] = await Promise.all([
+      const [resResponse, stationsResponse, prosumersResponse] = await Promise.all([
         api.get('/reservations'),
-        api.get('/stations')
+        api.get('/stations'),
+        api.get('/users?role=Prosumer&status=Active')
       ]);
-      setReservations(resResponse.data || []);
-      setStations(stationsResponse.data || []);
-      if (stationsResponse.data?.length > 0 && !createForm.stationId) {
-        setCreateForm(prev => ({ ...prev, stationId: stationsResponse.data[0].id }));
-      }
+      const resData = resResponse.data || [];
+      const stationList = stationsResponse.data || [];
+      const prosumerList = prosumersResponse.data || [];
+
+      setReservations(resData);
+      setStations(stationList);
+      setProsumers(prosumerList);
+
+      // Smart default: prioritize active station with free battery slots
+      const availableStation = stationList.find(s => s.isActive && s.availableBatterySlots > 0) || stationList[0];
+      const defaultProsumer = prosumerList[0]?.nic || '';
+
+      setCreateForm(prev => ({
+        ...prev,
+        stationId: prev.stationId || availableStation?.id || '',
+        prosumerNic: prev.prosumerNic || defaultProsumer
+      }));
     } catch (err) {
-      console.error('Failed to load reservations or stations', err);
+      console.error('Failed to load reservations, stations, or prosumers', err);
       showFeedback('Failed to synchronize reservations data.', 'error');
     } finally {
       setLoading(false);
@@ -182,9 +207,73 @@ export default function ReservationManagement({ theme }) {
     }
   };
 
+  // Reject Reservation Handler (Direct Reject inside Approval Modal)
+  const handleReject = async (customReason) => {
+    if (!selectedRes) return;
+    try {
+      setActionLoading(true);
+      const resReason = customReason || rejectReason || 'Rejected by Backoffice Administrator during approval review';
+      await api.post(`/reservations/${selectedRes.id || selectedRes.reservationNumber}/cancel`, {
+        reason: resReason
+      });
+      showFeedback(`Reservation ${selectedRes.reservationNumber} rejected & inventory released.`);
+      setIsApproveModalOpen(false);
+      setRejectMode(false);
+      setRejectReason('');
+      loadData();
+    } catch (err) {
+      showFeedback(err.response?.data?.message || 'Failed to reject reservation.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Selected Prosumer & Station helpers for reactive capacity & rule calculation
+  const selectedProsumer = useMemo(() => {
+    return prosumers.find(p => p.nic === createForm.prosumerNic) || null;
+  }, [prosumers, createForm.prosumerNic]);
+
+  const selectedStation = useMemo(() => {
+    return stations.find(s => s.id === createForm.stationId) || null;
+  }, [stations, createForm.stationId]);
+
+  const isStationFullForDropOff = useMemo(() => {
+    return createForm.tradeType === 'DropOff' && selectedStation && selectedStation.availableBatterySlots <= 0;
+  }, [createForm.tradeType, selectedStation]);
+
+  // View Digital Pass Modal Handler
+  const handleOpenPassModal = async (res) => {
+    setViewingRes(res);
+    setIsPassModalOpen(true);
+    setCopiedRes(false);
+    try {
+      const token = res.qrCodeToken || res.reservationNumber;
+      const url = await QRCode.toDataURL(token, {
+        width: 256,
+        margin: 2,
+        color: {
+          dark: '#0f172a',
+          light: '#ffffff'
+        }
+      });
+      setQrDataUrl(url);
+    } catch (err) {
+      console.error('Failed to generate QR code', err);
+      setQrDataUrl('');
+    }
+  };
+
   // Create Reservation Handler
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
+    if (isStationFullForDropOff) {
+      showFeedback(`Selected hub '${selectedStation?.name}' has 0 available slots. Choose another hub.`, 'error');
+      return;
+    }
+    if (!createForm.prosumerNic) {
+      showFeedback('Please select an active verified prosumer.', 'error');
+      return;
+    }
     try {
       setActionLoading(true);
       const isoUtc = new Date(createForm.scheduledDateTime).toISOString();
@@ -197,9 +286,10 @@ export default function ReservationManagement({ theme }) {
       });
       showFeedback('Reservation created successfully under 7-day rule constraint.');
       setIsCreateModalOpen(false);
+      const availableStation = stations.find(s => s.isActive && s.availableBatterySlots > 0) || stations[0];
       setCreateForm({
-        prosumerNic: '',
-        stationId: stations[0]?.id || '',
+        prosumerNic: prosumers[0]?.nic || '',
+        stationId: availableStation?.id || '',
         scheduledDateTime: '',
         energyAmountKwh: 15,
         tradeType: 'DropOff'
@@ -229,20 +319,20 @@ export default function ReservationManagement({ theme }) {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Header Banner */}
-      <div className="relative rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white p-6 sm:p-8 shadow-xl">
+      <div className="relative rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/80 backdrop-blur-xl p-6 sm:p-8 shadow-sm dark:shadow-xl transition-colors duration-300">
         <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 mb-3">
-              <Clock className="h-3.5 w-3.5 text-amber-400" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20 dark:border-amber-500/30 mb-3">
+              <Clock className="h-3.5 w-3.5 text-amber-500" />
               <span>7-Day Schedule &amp; 12-Hour Notice Engine</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-display font-black text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-display font-black text-slate-900 dark:text-white tracking-tight">
               Energy Trading Reservations &amp; Bookings Ledger
             </h1>
-            <p className="mt-1.5 text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed">
+            <p className="mt-1.5 text-slate-600 dark:text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed">
               Enforce enterprise booking policies: 7-day advance reservation windows, 12-hour cancellation notice locks, and cryptographic digital pass issuance.
             </p>
           </div>
@@ -251,14 +341,14 @@ export default function ReservationManagement({ theme }) {
             <button
               onClick={loadData}
               disabled={loading}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700 text-xs font-bold transition shadow-sm active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold transition shadow-xs active:scale-95 cursor-pointer"
             >
-              <RefreshCw className={`h-4 w-4 text-amber-400 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-4 w-4 text-amber-500 ${loading ? 'animate-spin' : ''}`} />
               <span>Sync Ledger</span>
             </button>
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 text-slate-950 text-xs font-bold shadow-lg shadow-amber-500/20 transition active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 text-slate-950 text-xs font-bold shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               <span>New Reservation</span>
@@ -478,17 +568,40 @@ export default function ReservationManagement({ theme }) {
 
                       {/* Actions */}
                       <td className="py-4 px-4 sm:px-6 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          {/* View Digital Pass button (for Viva demo & Operator QR testing) */}
+                          {(res.status === 'Approved' || res.status === 'Completed') && (
+                            <button
+                              onClick={() => handleOpenPassModal(res)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold text-[11px] transition shadow-xs active:scale-95 cursor-pointer"
+                              title="View Digital Energy Pass & QR Token"
+                            >
+                              <QrCode className="h-3 w-3 text-amber-500" />
+                              <span>View Pass</span>
+                            </button>
+                          )}
+
+                          {/* Audit Trail & History */}
+                          <button
+                            onClick={() => { setAuditRes(res); setIsAuditDrawerOpen(true); }}
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[11px] transition active:scale-95 cursor-pointer"
+                            title="Audit Trail, Operator Tag & History"
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                          </button>
+
+                          {/* Approve Action */}
                           {isPending && (
                             <button
-                              onClick={() => { setSelectedRes(res); setIsApproveModalOpen(true); }}
+                              onClick={() => { setSelectedRes(res); setRejectMode(false); setIsApproveModalOpen(true); }}
                               className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[11px] transition shadow-xs active:scale-95 cursor-pointer"
-                              title="Approve & Generate QR Pass"
+                              title="Review, Check Hub Slots & Approve"
                             >
                               Approve
                             </button>
                           )}
 
+                          {/* Cancel Action */}
                           {res.status !== 'Cancelled' && res.status !== 'Completed' && (
                             <button
                               onClick={() => { setSelectedRes(res); setIsCancelModalOpen(true); }}
@@ -509,40 +622,156 @@ export default function ReservationManagement({ theme }) {
         </div>
       </div>
 
-      {/* Modal: Approve Reservation */}
+      {/* Modal: Approve Reservation (Enriched with Station Free Slot Count & Direct Reject) */}
       <Modal
         isOpen={isApproveModalOpen}
-        onClose={() => setIsApproveModalOpen(false)}
+        onClose={() => { setIsApproveModalOpen(false); setRejectMode(false); }}
         title="Confirm Booking Approval"
       >
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          Approving this booking will allocate battery slot capacity and generate a cryptographically signed transaction QR code for the prosumer.
+          Approving this booking allocates battery slot capacity and generates a cryptographically signed transaction QR code for the prosumer.
         </p>
 
-        {selectedRes && (
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs space-y-1.5 mb-5">
-            <div><span className="font-bold">Reservation #:</span> {selectedRes.reservationNumber}</div>
-            <div><span className="font-bold">Prosumer NIC:</span> {selectedRes.prosumerNic}</div>
-            <div><span className="font-bold">Station:</span> {selectedRes.stationName}</div>
-            <div><span className="font-bold">Schedule:</span> {new Date(selectedRes.scheduledDateTime).toLocaleString()}</div>
-            <div><span className="font-bold">Energy Quota:</span> {selectedRes.energyAmountKwh} kWh ({selectedRes.tradeType})</div>
-          </div>
-        )}
+        {selectedRes && (() => {
+          const currentStation = stations.find(s => s.id === selectedRes.stationId || s.name === selectedRes.stationName);
+          const isDropOffAtFullStation = selectedRes.tradeType === 'DropOff' && currentStation && currentStation.availableBatterySlots <= 0;
 
-        <div className="flex items-center justify-end gap-2">
-          <button
-            onClick={() => setIsApproveModalOpen(false)}
-            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold"
-          >
-            Dismiss
-          </button>
-          <button
-            onClick={handleApprove}
-            disabled={actionLoading}
-            className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold shadow-sm"
-          >
-            {actionLoading ? 'Approving...' : 'Confirm & Issue QR Pass'}
-          </button>
+          return (
+            <div className="space-y-3 mb-5">
+              {/* Station Battery Bay Slot Status */}
+              <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/25 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <BatteryCharging className="h-4 w-4 text-cyan-500" />
+                  <div>
+                    <div className="font-semibold text-slate-900 dark:text-white">
+                      {selectedRes.stationName || currentStation?.name || 'Microgrid Hub'}
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Total Capacity: {currentStation?.capacityKwh || 500} kWh
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className={`font-mono font-bold text-xs ${
+                    (currentStation?.availableBatterySlots || 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                  }`}>
+                    {currentStation ? `${currentStation.availableBatterySlots} / ${currentStation.totalBatterySlots} free slots` : 'Slots Verified'}
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    {(currentStation?.availableBatterySlots || 0) > 0 ? 'Slots Available' : 'BAY AT CAPACITY'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Warning if 0 slots free for DropOff */}
+              {isDropOffAtFullStation && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold">Cannot Approve DropOff: Battery Bay Full</p>
+                    <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5">
+                      This solar hub currently has 0 available battery slots. Reject or cancel this booking, or advise prosumer to select another station.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Booking Summary Box */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-700 dark:text-slate-300">Reservation #:</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white">{selectedRes.reservationNumber}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-700 dark:text-slate-300">Prosumer NIC:</span>
+                  <span className="font-mono text-slate-900 dark:text-white">{selectedRes.prosumerNic}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-700 dark:text-slate-300">Schedule Time:</span>
+                  <span className="font-mono text-slate-900 dark:text-white">{new Date(selectedRes.scheduledDateTime).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-700 dark:text-slate-300">Energy Quota:</span>
+                  <span className="font-bold text-amber-600 dark:text-amber-400">{selectedRes.energyAmountKwh} kWh ({selectedRes.tradeType})</span>
+                </div>
+              </div>
+
+              {/* Inline Reject Form */}
+              {rejectMode && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 space-y-2 animate-in fade-in duration-200">
+                  <label className="block text-xs font-bold text-rose-700 dark:text-rose-300">
+                    Reason for Administrative Rejection
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="e.g. Station capacity full or prosumer request..."
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    className="w-full p-2.5 rounded-lg bg-white dark:bg-slate-950 border border-rose-300 dark:border-rose-800 text-xs text-slate-900 dark:text-white"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRejectMode(false)}
+                      className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleReject()}
+                      disabled={actionLoading}
+                      className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-xs cursor-pointer"
+                    >
+                      {actionLoading ? 'Rejecting...' : 'Confirm Rejection'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800">
+          <div>
+            {!rejectMode && (
+              <button
+                type="button"
+                onClick={() => setRejectMode(true)}
+                disabled={actionLoading}
+                className="px-3 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <XCircle className="h-3.5 w-3.5" />
+                <span>Reject Booking</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { setIsApproveModalOpen(false); setRejectMode(false); }}
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold cursor-pointer"
+            >
+              Dismiss
+            </button>
+            <button
+              onClick={handleApprove}
+              disabled={actionLoading || (() => {
+                const cur = stations.find(s => s.id === selectedRes?.stationId || s.name === selectedRes?.stationName);
+                return selectedRes?.tradeType === 'DropOff' && cur && cur.availableBatterySlots <= 0;
+              })()}
+              className={`px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition ${
+                (() => {
+                  const cur = stations.find(s => s.id === selectedRes?.stationId || s.name === selectedRes?.stationName);
+                  return selectedRes?.tradeType === 'DropOff' && cur && cur.availableBatterySlots <= 0;
+                })()
+                  ? 'bg-slate-300 dark:bg-slate-800 text-slate-500 dark:text-slate-600 cursor-not-allowed'
+                  : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 cursor-pointer active:scale-95'
+              }`}
+            >
+              {actionLoading ? 'Approving...' : 'Confirm & Issue QR Pass'}
+            </button>
+          </div>
         </div>
       </Modal>
 
@@ -594,22 +823,77 @@ export default function ReservationManagement({ theme }) {
         title="Schedule Energy Reservation (7-Day Horizon)"
       >
         <form onSubmit={handleCreateSubmit} className="space-y-4">
-          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-xs font-semibold">
-            7-Day Booking Window: Schedule must fall between today and {maxDateObj.toLocaleDateString()}.
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-xs font-semibold flex items-center justify-between">
+            <span>7-Day Booking Horizon: Schedule must fall between today and {maxDateObj.toLocaleDateString()}.</span>
+            <span className="text-[10px] uppercase tracking-wider font-bold bg-amber-500/20 px-2 py-0.5 rounded-md">Policy Guard</span>
           </div>
 
+          {/* Prosumer Selector */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Prosumer National Identity Card (NIC)
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. 199812345678"
-              value={createForm.prosumerNic}
-              onChange={(e) => setCreateForm({ ...createForm, prosumerNic: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
-            />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Verified Active Prosumer
+              </label>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                {prosumers.length} Active {prosumers.length === 1 ? 'Account' : 'Accounts'}
+              </span>
+            </div>
+
+            {prosumers.length > 0 ? (
+              <select
+                required
+                value={createForm.prosumerNic}
+                onChange={(e) => setCreateForm({ ...createForm, prosumerNic: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white"
+              >
+                <option value="">-- Select Active Verified Prosumer --</option>
+                {prosumers.map(p => (
+                  <option key={p.nic} value={p.nic}>
+                    {p.fullName} ({p.nic}) — {p.solarCapacityKw} kW Array
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs">
+                No active verified prosumers found. Prosumers must complete KYC verification before bookings can be scheduled.
+              </div>
+            )}
+
+            {/* Selected Prosumer Summary Card */}
+            {selectedProsumer && (
+              <div className="mt-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 text-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5 text-amber-500" />
+                    <span>{selectedProsumer.fullName}</span>
+                    <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">({selectedProsumer.nic})</span>
+                  </div>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                    <ShieldCheck className="h-3 w-3" />
+                    Active &amp; KYC Approved
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[11px] pt-1.5 border-t border-slate-200 dark:border-slate-800/80">
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400">Solar Capacity:</span>{' '}
+                    <span className="font-bold text-amber-600 dark:text-amber-400">{selectedProsumer.solarCapacityKw} kW</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400">Inverter:</span>{' '}
+                    <span className="font-mono text-slate-700 dark:text-slate-300">{selectedProsumer.inverterSerial || 'Standard Grid-Tie'}</span>
+                  </div>
+                  <div className="col-span-2 flex items-center justify-between text-slate-600 dark:text-slate-400">
+                    <span>
+                      <span className="font-medium text-slate-500">Contact:</span> {selectedProsumer.phone || selectedProsumer.email}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      Rec. daily quota: ~{(selectedProsumer.solarCapacityKw * 4.5).toFixed(1)} kWh
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -622,9 +906,14 @@ export default function ReservationManagement({ theme }) {
                 onChange={(e) => setCreateForm({ ...createForm, stationId: e.target.value })}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white"
               >
-                {stations.map(s => (
-                  <option key={s.id} value={s.id}>{s.name} ({s.availableBatterySlots} slots free)</option>
-                ))}
+                {stations.map(s => {
+                  const isFull = createForm.tradeType === 'DropOff' && s.availableBatterySlots <= 0;
+                  return (
+                    <option key={s.id} value={s.id} disabled={isFull}>
+                      {s.name} ({s.availableBatterySlots} slots free {isFull ? '— FULL' : ''})
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -634,7 +923,20 @@ export default function ReservationManagement({ theme }) {
               </label>
               <select
                 value={createForm.tradeType}
-                onChange={(e) => setCreateForm({ ...createForm, tradeType: e.target.value })}
+                onChange={(e) => {
+                  const nextTrade = e.target.value;
+                  setCreateForm(prev => {
+                    const next = { ...prev, tradeType: nextTrade };
+                    if (nextTrade === 'DropOff') {
+                      const cur = stations.find(s => s.id === prev.stationId);
+                      if (cur && cur.availableBatterySlots <= 0) {
+                        const openStation = stations.find(s => s.isActive && s.availableBatterySlots > 0);
+                        if (openStation) next.stationId = openStation.id;
+                      }
+                    }
+                    return next;
+                  });
+                }}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white"
               >
                 <option value="DropOff">DropOff (Discharge Battery / Sell)</option>
@@ -642,6 +944,19 @@ export default function ReservationManagement({ theme }) {
               </select>
             </div>
           </div>
+
+          {/* Station Capacity Warning if 0 slots free for DropOff */}
+          {isStationFullForDropOff && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">Solar Hub Battery Bay Full</p>
+                <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5">
+                  "{selectedStation?.name}" currently has 0 available battery slots. Drop-off (selling) reservations cannot be scheduled at this hub until bays are cleared.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -660,14 +975,32 @@ export default function ReservationManagement({ theme }) {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Energy Quota (kWh)
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Energy Quota (kWh)
+                </label>
+                <div className="flex items-center gap-1">
+                  {[5, 10, 15, 25].map(val => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setCreateForm({ ...createForm, energyAmountKwh: val })}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${
+                        +createForm.energyAmountKwh === val
+                          ? 'bg-amber-500 text-slate-950'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {val}k
+                    </button>
+                  ))}
+                </div>
+              </div>
               <input
                 type="number"
                 step="0.1"
                 min="1"
-                max="500"
+                max={selectedStation?.capacityKwh || 500}
                 required
                 value={createForm.energyAmountKwh}
                 onChange={(e) => setCreateForm({ ...createForm, energyAmountKwh: e.target.value })}
@@ -675,6 +1008,16 @@ export default function ReservationManagement({ theme }) {
               />
             </div>
           </div>
+
+          {/* Quota advisory if exceeding prosumer capacity */}
+          {selectedProsumer && +createForm.energyAmountKwh > (selectedProsumer.solarCapacityKw * 10) && (
+            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-[11px] flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
+              <span>
+                Entered quota ({createForm.energyAmountKwh} kWh) exceeds standard single-day output of a {selectedProsumer.solarCapacityKw} kW array (~{(selectedProsumer.solarCapacityKw * 5).toFixed(0)} kWh).
+              </span>
+            </div>
+          )}
 
           <div className="flex items-center justify-end gap-2 pt-2">
             <button
@@ -686,13 +1029,326 @@ export default function ReservationManagement({ theme }) {
             </button>
             <button
               type="submit"
-              disabled={actionLoading}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 text-xs font-bold shadow-sm"
+              disabled={actionLoading || isStationFullForDropOff || !createForm.prosumerNic || !createForm.stationId || !createForm.scheduledDateTime}
+              className={`px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-all ${
+                actionLoading || isStationFullForDropOff || !createForm.prosumerNic || !createForm.stationId || !createForm.scheduledDateTime
+                  ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 hover:brightness-105 active:scale-95'
+              }`}
             >
-              {actionLoading ? 'Scheduling...' : 'Confirm Booking'}
+              {actionLoading ? 'Scheduling...' : isStationFullForDropOff ? 'Hub Bay Full' : 'Confirm Booking'}
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal: View Digital Energy Pass / Details */}
+      <Modal
+        isOpen={isPassModalOpen}
+        onClose={() => setIsPassModalOpen(false)}
+        title="Digital Energy Reservation Pass"
+      >
+        {viewingRes && (
+          <div className="space-y-4">
+            {/* Viva Demo Alert Banner */}
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-xs flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <QrCode className="h-4 w-4 text-amber-500 shrink-0" />
+                <span>Viva Demonstration Mode: Ready for immediate Android camera scan or terminal token verification.</span>
+              </div>
+            </div>
+
+            {/* Top Pass Card */}
+            <div className="relative rounded-2xl bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 border border-slate-200 dark:border-slate-800 p-5 overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
+                    <Zap className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-wider text-slate-400 font-bold">Trading Pass</div>
+                    <div className="font-mono text-sm font-bold text-slate-900 dark:text-white">
+                      {viewingRes.reservationNumber}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                    viewingRes.status === 'Approved'
+                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                      : viewingRes.status === 'Pending'
+                      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                      : viewingRes.status === 'Completed'
+                      ? 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30'
+                      : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                  }`}>
+                    {viewingRes.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* QR Code graphic if Approved or Completed */}
+              {qrDataUrl ? (
+                <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 mb-4 shadow-inner">
+                  <img src={qrDataUrl} alt="Reservation QR" className="w-44 h-44 object-contain" />
+                  <p className="font-mono text-[10px] text-slate-500 mt-2 flex items-center gap-1">
+                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                    Cryptographic Station Token: {viewingRes.qrCodeToken ? 'Verified Active' : 'Fallback Token'}
+                  </p>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-xs mb-4 text-center">
+                  QR Pass is generated automatically once the reservation is approved by Backoffice.
+                </div>
+              )}
+
+              {/* Raw Token Box with Copy */}
+              <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs space-y-1.5 mb-4">
+                <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-semibold">
+                  <span>Cryptographic QR Token (Payload)</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const t = viewingRes.qrCodeToken || `SOLAR-TX:${viewingRes.reservationNumber}:VERIFIED`;
+                      navigator.clipboard.writeText(t);
+                      setCopiedToken(true);
+                      setTimeout(() => setCopiedToken(false), 2000);
+                    }}
+                    className="text-amber-600 dark:text-amber-400 hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedToken ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                    <span>{copiedToken ? 'Token Copied!' : 'Copy Token'}</span>
+                  </button>
+                </div>
+                <div className="font-mono text-[11px] text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-950 p-2 rounded-lg border border-slate-200 dark:border-slate-800 break-all select-all">
+                  {viewingRes.qrCodeToken || `SOLAR-TX:${viewingRes.reservationNumber}:VERIFIED`}
+                </div>
+              </div>
+
+              {/* Key Pass Details Grid */}
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] uppercase text-slate-400 block font-semibold">Prosumer NIC</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white">{viewingRes.prosumerNic}</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] uppercase text-slate-400 block font-semibold">Trade Direction</span>
+                  <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1">
+                    {viewingRes.tradeType === 'DropOff' ? (
+                      <>
+                        <Zap className="h-3 w-3 text-amber-500" />
+                        DropOff (Sell)
+                      </>
+                    ) : (
+                      <>
+                        <BatteryCharging className="h-3 w-3 text-emerald-500" />
+                        PickUp (Buy)
+                      </>
+                    )}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] uppercase text-slate-400 block font-semibold">Energy Quota</span>
+                  <span className="font-bold text-amber-600 dark:text-amber-400 text-sm">
+                    {viewingRes.energyAmountKwh} kWh
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] uppercase text-slate-400 block font-semibold">Microgrid Hub</span>
+                  <span className="font-bold text-slate-900 dark:text-white truncate block">
+                    {viewingRes.stationName || 'Colombo Central Solar Hub'}
+                  </span>
+                </div>
+                <div className="col-span-2 p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] uppercase text-slate-400 block font-semibold">Scheduled Appointment</span>
+                  <span className="font-mono text-slate-900 dark:text-white">
+                    {viewingRes.scheduledDateTime ? new Date(viewingRes.scheduledDateTime).toLocaleString() : 'N/A'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(viewingRes.reservationNumber);
+                  setCopiedRes(true);
+                  setTimeout(() => setCopiedRes(false), 2000);
+                }}
+                className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+              >
+                {copiedRes ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                <span>{copiedRes ? 'Copied Res #' : 'Copy Res #'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsPassModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold transition cursor-pointer"
+              >
+                Close Pass
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal / Drawer: Audit Details & Lifecycle History */}
+      <Modal
+        isOpen={isAuditDrawerOpen}
+        onClose={() => setIsAuditDrawerOpen(false)}
+        title={`Audit Trail: ${auditRes?.reservationNumber || ''}`}
+      >
+        {auditRes && (
+          <div className="space-y-4">
+            {/* Header Identity Card */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Ledger Reference</span>
+                  <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">{auditRes.reservationNumber}</span>
+                </div>
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                  auditRes.status === 'Approved'
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                    : auditRes.status === 'Pending'
+                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                    : auditRes.status === 'Completed'
+                    ? 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30'
+                    : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                }`}>
+                  {auditRes.status}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 dark:border-slate-800 text-[11px]">
+                <div>
+                  <span className="text-slate-500">Prosumer NIC:</span>{' '}
+                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{auditRes.prosumerNic}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Solar Hub:</span>{' '}
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{auditRes.stationName}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Energy Quota:</span>{' '}
+                  <span className="font-bold text-amber-600 dark:text-amber-400">{auditRes.energyAmountKwh} kWh ({auditRes.tradeType})</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Notice Policy:</span>{' '}
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{getNoticeDetails(auditRes.scheduledDateTime).label}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Operator Fulfillment Tag (if completed) */}
+            <div className="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/25 text-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                  <ShieldCheck className="h-4 w-4 text-cyan-500" />
+                  <span>Grid Operator Verification &amp; Fulfillment</span>
+                </div>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                  auditRes.status === 'Completed'
+                    ? 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30'
+                    : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+                }`}>
+                  {auditRes.status === 'Completed' ? 'Verified on Ground' : 'Fulfillment Pending'}
+                </span>
+              </div>
+
+              {auditRes.status === 'Completed' ? (
+                <div className="space-y-1 text-[11px] text-slate-700 dark:text-slate-300">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-500">Completed By Operator:</span>
+                    <span className="font-mono font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-800 dark:text-cyan-200 border border-cyan-500/30">
+                      {auditRes.completedByOperatorNic || 'OPERATOR001'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-500">Fulfillment Timestamp:</span>
+                    <span className="font-mono">
+                      {auditRes.completedAt ? new Date(auditRes.completedAt).toLocaleString() : new Date(auditRes.updatedAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-500">Verification Method:</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">Cryptographic Mobile QR Scan Verified</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  This transaction is awaiting physical execution at {auditRes.stationName}. When the operator scans the prosumer QR pass via the Solvance Android Terminal, this record will record the operator identity tag.
+                </p>
+              )}
+            </div>
+
+            {/* Cancellation History & Notes (if cancelled) */}
+            {auditRes.status === 'Cancelled' && (
+              <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-xs space-y-2">
+                <div className="flex items-center gap-2 font-bold text-rose-700 dark:text-rose-300">
+                  <XCircle className="h-4 w-4 text-rose-500" />
+                  <span>Cancellation History &amp; Administrative Notes</span>
+                </div>
+                <div className="space-y-1.5 text-[11px]">
+                  <div>
+                    <span className="font-medium text-slate-500 dark:text-slate-400">Reason Logged:</span>
+                    <p className="font-semibold text-rose-700 dark:text-rose-300 mt-0.5 bg-rose-500/10 p-2 rounded-lg border border-rose-500/20">
+                      {auditRes.cancellationReason || 'Cancelled by Backoffice Administration (Inventory slot released).'}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span>Cancelled Timestamp:</span>
+                    <span className="font-mono text-slate-700 dark:text-slate-300">{new Date(auditRes.updatedAt).toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span>Inventory Action:</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">Battery Bay Slot Unlocked &amp; Restored</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Lifecycle Timeline */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs space-y-2">
+              <span className="font-bold text-slate-900 dark:text-white block">Audit Timestamps</span>
+              <div className="space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400">
+                <div className="flex items-center justify-between">
+                  <span>Record Created:</span>
+                  <span className="font-mono text-slate-800 dark:text-slate-200">{new Date(auditRes.createdAt).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Scheduled Trading Horizon:</span>
+                  <span className="font-mono text-slate-800 dark:text-slate-200">{new Date(auditRes.scheduledDateTime).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Last State Transition:</span>
+                  <span className="font-mono text-slate-800 dark:text-slate-200">{new Date(auditRes.updatedAt).toLocaleString()}</span>
+                </div>
+                {auditRes.qrCodeToken && (
+                  <div className="pt-1.5 border-t border-slate-200 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-400 block mb-0.5">Token Signature:</span>
+                    <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400 break-all">{auditRes.qrCodeToken}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setIsAuditDrawerOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold transition cursor-pointer"
+              >
+                Close Audit Record
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

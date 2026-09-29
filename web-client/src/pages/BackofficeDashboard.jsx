@@ -105,20 +105,20 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       {/* Hero Welcome Banner */}
-      <div className="relative rounded-3xl overflow-hidden border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white p-8 sm:p-10 shadow-xl">
+      <div className="relative rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/80 backdrop-blur-xl p-8 sm:p-10 shadow-sm dark:shadow-xl transition-colors duration-300">
         <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 mb-4 backdrop-blur-md">
-              <ShieldCheck className="h-4 w-4 text-amber-400" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20 dark:border-amber-500/30 mb-4 backdrop-blur-md">
+              <ShieldCheck className="h-4 w-4 text-amber-500" />
               <span>Enterprise Grid Brokerage Engine</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-display font-black text-white tracking-tight leading-tight">
+            <h1 className="text-3xl sm:text-4xl font-display font-black text-slate-900 dark:text-white tracking-tight leading-tight">
               Microgrid Command &amp; Energy Brokerage
             </h1>
-            <p className="mt-2.5 text-slate-300 text-sm sm:text-base leading-relaxed">
+            <p className="mt-2.5 text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
               Real-time monitoring of decentralized solar station nodes, prosumer trading accounts, and strict enforcement of the 7-day booking lifecycle.
             </p>
           </div>
@@ -127,21 +127,21 @@ export default function BackofficeDashboard({ setActiveTab, theme }) {
             <button
               onClick={loadDashboardData}
               disabled={loading}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700 text-xs font-bold transition shadow-sm active:scale-95"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold transition shadow-xs active:scale-95 cursor-pointer"
             >
-              <RefreshCw className={`h-4 w-4 text-amber-400 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-4 w-4 text-amber-500 ${loading ? 'animate-spin' : ''}`} />
               <span>Refresh Metrics</span>
             </button>
             <button
               onClick={() => setActiveTab('staff')}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700 text-xs font-bold transition shadow-sm active:scale-95"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold transition shadow-xs active:scale-95 cursor-pointer"
             >
               <span>Staff &amp; Operators</span>
-              <ArrowRight className="h-4 w-4 text-amber-400" />
+              <ArrowRight className="h-4 w-4 text-amber-500" />
             </button>
             <button
               onClick={() => setActiveTab('prosumers')}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 transition active:scale-95"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer"
             >
               <span>Manage Prosumers</span>
               <ArrowRight className="h-4 w-4" />

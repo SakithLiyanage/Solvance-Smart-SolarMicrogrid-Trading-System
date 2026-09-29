@@ -175,5 +175,40 @@ namespace SolarMicrogridApi.Controllers
                 activatedAt = user.ActivatedAt
             });
         }
+
+        /// <summary>
+        /// Updates the authenticated user's personal password and clears mandatory reset flag.
+        /// </summary>
+        [HttpPost("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+        {
+            // Method: ChangePassword - Updates credentials when user sets personal password or satisfies mandatory change flag.
+            var userNic = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userNic))
+            {
+                return Unauthorized();
+            }
+
+            if (!string.IsNullOrEmpty(dto.ConfirmPassword) && dto.NewPassword != dto.ConfirmPassword)
+            {
+                return BadRequest(new { message = "New password and confirmation password do not match." });
+            }
+
+            try
+            {
+                var success = await _userService.ChangePasswordAsync(userNic, dto.CurrentPassword, dto.NewPassword);
+                if (!success)
+                {
+                    return BadRequest(new { message = "Incorrect current password." });
+                }
+
+                return Ok(new { message = "Password updated successfully." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

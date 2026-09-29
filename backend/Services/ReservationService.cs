@@ -81,6 +81,22 @@ namespace SolarMicrogridApi.Services
                 throw new InvalidOperationException("The requested solar hub is currently deactivated.");
             }
 
+            // Enforce station capacity business rule: DropOff requires open battery slot
+            if (dto.TradeType == "DropOff" && station.AvailableBatterySlots <= 0)
+            {
+                throw new InvalidOperationException($"The solar hub '{station.Name}' is currently at capacity with 0 available battery slots.");
+            }
+
+            if (dto.EnergyAmountKwh <= 0)
+            {
+                throw new ArgumentException("Energy quota must be greater than 0 kWh.");
+            }
+
+            if (dto.EnergyAmountKwh > station.CapacityKwh)
+            {
+                throw new ArgumentException($"Requested energy quota ({dto.EnergyAmountKwh} kWh) exceeds station total capacity ({station.CapacityKwh} kWh).");
+            }
+
             var slotReserved = false;
             var slotId = dto.SlotId?.Trim() ?? string.Empty;
             if (!string.IsNullOrEmpty(slotId))

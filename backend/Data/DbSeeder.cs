@@ -3,7 +3,7 @@
 // Project: Solvance — Smart Solar Microgrid Trading System
 // Author: Enterprise Application Development Team
 // Course: SE4040 - Enterprise Application Development (SLIIT)
-// Description: Seeds initial required mock data for Backoffice, Operators, Stations, and Slots.
+// Description: Seeds initial required administrative, operator, and station records for development and evaluation.
 // References & Citations:
 //   - MongoDB.Driver .NET CRUD (InsertManyAsync, CountDocumentsAsync):
 //     https://www.mongodb.com/docs/drivers/csharp/
@@ -59,6 +59,7 @@ namespace SolarMicrogridApi.Data
                     FullName = "Nuwan Perera",
                     Email = "operator@solarmicrogrid.lk",
                     Phone = "+94777654321",
+                    Address = "HUB-CMB-01 — Colombo Central Solar Hub",
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("Operator@123"),
                     Role = "GridOperator",
                     Status = "Active",
@@ -68,6 +69,13 @@ namespace SolarMicrogridApi.Data
                     UpdatedAt = DateTime.UtcNow
                 };
                 await context.Users.InsertOneAsync(operatorUser);
+            }
+            else if (string.IsNullOrEmpty(operatorExists.Address))
+            {
+                await context.Users.UpdateOneAsync(
+                    u => u.Nic == "OPERATOR001",
+                    Builders<User>.Update.Set(u => u.Address, "HUB-CMB-01 — Colombo Central Solar Hub")
+                );
             }
 
             // Seed prosumer sample accounts if needed
