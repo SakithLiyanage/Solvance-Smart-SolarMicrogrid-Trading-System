@@ -50,7 +50,7 @@ namespace SolarMicrogridApi.Data
             try
             {
                 var settings = MongoClientSettings.FromConnectionString(connectionString);
-                settings.ServerSelectionTimeout = TimeSpan.FromSeconds(6);
+                settings.ServerSelectionTimeout = TimeSpan.FromSeconds(25);
                 if (settings.UseTls)
                 {
                     settings.SslSettings = new SslSettings
@@ -68,22 +68,19 @@ namespace SolarMicrogridApi.Data
             }
             catch
             {
-                // Fallback to local MongoDB instance if cloud TLS or network encounters transient issues
-                try
+                var fallbackSettings = MongoClientSettings.FromConnectionString(connectionString);
+                fallbackSettings.ServerSelectionTimeout = TimeSpan.FromSeconds(30);
+                if (fallbackSettings.UseTls)
                 {
-                    var fallbackSettings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
-                    fallbackSettings.ServerSelectionTimeout = TimeSpan.FromSeconds(5);
-                    var fallbackClient = new MongoClient(fallbackSettings);
-                    targetClient = fallbackClient;
-                    targetDb = fallbackClient.GetDatabase(databaseName);
+                    fallbackSettings.SslSettings = new SslSettings
+                    {
+                        CheckCertificateRevocation = false,
+                        ServerCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true
+                    };
                 }
-                catch
-                {
-                    // Fallback to default client
-                    var defaultClient = new MongoClient(connectionString);
-                    targetClient = defaultClient;
-                    targetDb = defaultClient.GetDatabase(databaseName);
-                }
+                var defaultClient = new MongoClient(fallbackSettings);
+                targetClient = defaultClient;
+                targetDb = defaultClient.GetDatabase(databaseName);
             }
 
             _client = targetClient!;
