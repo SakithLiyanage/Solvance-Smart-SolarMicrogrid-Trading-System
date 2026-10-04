@@ -157,9 +157,6 @@ export default function NodeManagement({ theme }) {
     address: '',
     capacityKwh: '',
     totalBatterySlots: '',
-    gridConnection: 'Three-Phase 400V Grid Intertie',
-    storageType: 'Lithium Iron Phosphate (LFP)',
-    maxDischargeRateKw: '',
     openTime: '06:00',
     closeTime: '22:00',
     daysOpen: [...ALL_DAYS],
@@ -401,9 +398,6 @@ export default function NodeManagement({ theme }) {
       address: defaultRegion.address,
       capacityKwh: 1000,
       totalBatterySlots: 24,
-      gridConnection: 'Three-Phase 400V Grid Intertie',
-      storageType: 'Lithium Iron Phosphate (LFP)',
-      maxDischargeRateKw: 200,
       openTime: '06:00',
       closeTime: '22:00',
       daysOpen: [...ALL_DAYS],
@@ -433,9 +427,6 @@ export default function NodeManagement({ theme }) {
       address: station.address,
       capacityKwh: station.capacityKwh,
       totalBatterySlots: station.totalBatterySlots,
-      gridConnection: station.gridConnection || 'Three-Phase 400V Grid Intertie',
-      storageType: station.storageType || 'Lithium Iron Phosphate (LFP)',
-      maxDischargeRateKw: station.maxDischargeRateKw || Math.round(station.capacityKwh * 0.2),
       openTime: station.schedule?.openTime || '06:00',
       closeTime: station.schedule?.closeTime || '22:00',
       daysOpen: station.schedule?.daysOpen?.length ? station.schedule.daysOpen : [...ALL_DAYS],
@@ -531,9 +522,6 @@ export default function NodeManagement({ theme }) {
         totalBatterySlots === editingStation.totalBatterySlots &&
         formData.openTime === editingStation.schedule?.openTime &&
         formData.closeTime === editingStation.schedule?.closeTime &&
-        formData.gridConnection === editingStation.gridConnection &&
-        formData.storageType === editingStation.storageType &&
-        formData.maxDischargeRateKw === editingStation.maxDischargeRateKw &&
         JSON.stringify(formData.daysOpen) === JSON.stringify(editingStation.schedule?.daysOpen);
       if (unchanged) {
         setIsModalOpen(false);
@@ -552,9 +540,6 @@ export default function NodeManagement({ theme }) {
       totalBatterySlots,
       // Racks that are occupied stay occupied when the total changes
       availableBatterySlots: totalBatterySlots - occupiedSlots,
-      gridConnection: formData.gridConnection,
-      storageType: formData.storageType,
-      maxDischargeRateKw,
       schedule: {
         openTime: formData.openTime,
         closeTime: formData.closeTime,
@@ -1112,17 +1097,8 @@ export default function NodeManagement({ theme }) {
             <div className="flex items-center justify-between">
               <label htmlFor="location-search-input" className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5" />
-                <span>Station Location &amp; Regional Coordinates (Sri Lanka)</span>
+                <span>Location Search (Google Maps)</span>
               </label>
-              {GOOGLE_MAPS_KEY ? (
-                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                  {mapsApiLoaded ? 'Google Places Live' : 'Loading Places API...'}
-                </span>
-              ) : (
-                <span className="text-[10px] text-amber-700 dark:text-amber-300 font-medium">
-                  Regional Autocomplete Active
-                </span>
-              )}
             </div>
 
             {GOOGLE_MAPS_KEY ? (
@@ -1328,33 +1304,7 @@ export default function NodeManagement({ theme }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="hub-grid" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Grid Connection Spec</label>
-              <input
-                id="hub-grid"
-                type="text"
-                value={formData.gridConnection}
-                onChange={(e) => setFormData({ ...formData, gridConnection: e.target.value })}
-                placeholder="e.g. Three-Phase 400V Grid Intertie"
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50"
-              />
-            </div>
-            <div>
-              <label htmlFor="hub-storage-type" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Battery Chemistry</label>
-              <select
-                id="hub-storage-type"
-                value={formData.storageType}
-                onChange={(e) => setFormData({ ...formData, storageType: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50"
-              >
-                <option value="Lithium Iron Phosphate (LFP)">Lithium Iron Phosphate (LFP)</option>
-                <option value="Lithium Nickel Manganese Cobalt (NMC)">Lithium Nickel Manganese Cobalt (NMC)</option>
-                <option value="Flow Battery (Vanadium Redox)">Flow Battery (Vanadium Redox)</option>
-                <option value="Sodium-Ion Commercial">Sodium-Ion Commercial</option>
-              </select>
-            </div>
-          </div>
+
 
           <div className="grid grid-cols-2 gap-3">
             <div>
