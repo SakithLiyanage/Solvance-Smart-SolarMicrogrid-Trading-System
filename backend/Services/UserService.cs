@@ -34,20 +34,23 @@ namespace SolarMicrogridApi.Services
         private readonly JwtSettings _jwtSettings;
         private readonly SecuritySettings _securitySettings;
         private readonly ILogger<UserService> _logger;
+        private readonly IEmailService _emailService;
 
         public UserService(
             MongoDbContext context, 
             IConfiguration configuration,
             IOptions<JwtSettings> jwtOptions,
             IOptions<SecuritySettings> securityOptions,
-            ILogger<UserService> logger)
+            ILogger<UserService> logger,
+            IEmailService emailService)
         {
-            // Method: UserService Constructor - Injects database context, logger and strongly-typed configuration settings.
+            // Method: UserService Constructor - Injects database context, logger, email service, and strongly-typed configuration settings.
             _context = context;
             _configuration = configuration;
             _jwtSettings = jwtOptions?.Value ?? new JwtSettings();
             _securitySettings = securityOptions?.Value ?? new SecuritySettings();
             _logger = logger;
+            _emailService = emailService;
         }
 
         public async Task<AuthResponseDto?> AuthenticateAsync(LoginRequestDto request)
@@ -618,14 +621,26 @@ namespace SolarMicrogridApi.Services
             _logger.LogWarning("[SECURITY DISPATCH] Password Reset OTP for {Email} (NIC: {Nic}): {OtpCode} (Expires: {Expiry} UTC)", 
                 user.Email, user.Nic, otpCode, expiry);
 
+            // Real SMTP Email Dispatch
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _emailService.SendPasswordResetEmailAsync(user.Email, user.FullName, otpCode, 15);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning("[EMAIL DISPATCH] Background email dispatch failed: {Message}", ex.Message);
+                }
+            });
+
             string masked = MaskEmail(user.Email);
 
             return new PasswordResetRequestResponseDto
             {
                 Message = $"A 6-digit verification code has been dispatched to {masked}. Valid for 15 minutes.",
                 MaskedRecipient = masked,
-                ExpiresInMinutes = 15,
-                DebugCode = otpCode
+                ExpiresInMinutes = 15
             };
         }
 

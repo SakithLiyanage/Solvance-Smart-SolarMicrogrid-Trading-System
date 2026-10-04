@@ -46,12 +46,14 @@ builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSet
 builder.Services.Configure<SecuritySettings>(builder.Configuration.GetSection("SecuritySettings"));
 builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDbSettings"));
 builder.Services.Configure<ReservationSettings>(builder.Configuration.GetSection("ReservationSettings"));
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
 // Register MongoDB Context
 builder.Services.AddSingleton<MongoDbContext>();
 
 // Register Enterprise Services (FAT Service Architecture)
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IStationService, StationService>();
 builder.Services.AddScoped<ISlotService, SlotService>();
 builder.Services.AddScoped<IReservationService, ReservationService>();

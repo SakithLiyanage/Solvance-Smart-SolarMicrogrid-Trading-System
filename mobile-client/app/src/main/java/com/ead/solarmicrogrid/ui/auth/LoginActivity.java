@@ -269,7 +269,6 @@ public class LoginActivity extends AppCompatActivity {
 
         // Step 2 Views
         TextView tvOtpDispatchedInfo = dialogView.findViewById(R.id.tvOtpDispatchedInfo);
-        TextView tvDevOtpFill = dialogView.findViewById(R.id.tvDevOtpFill);
         EditText etRecoveryOtp = dialogView.findViewById(R.id.etRecoveryOtp);
         EditText etRecoveryNewPassword = dialogView.findViewById(R.id.etRecoveryNewPassword);
         EditText etRecoveryConfirmPassword = dialogView.findViewById(R.id.etRecoveryConfirmPassword);
@@ -313,14 +312,6 @@ public class LoginActivity extends AppCompatActivity {
                         AuthDtos.PasswordResetOtpResponse body = response.body();
 
                         tvOtpDispatchedInfo.setText(body.message != null ? body.message : "Verification code dispatched. Valid for 15 minutes.");
-
-                        if (body.debugCode != null && !body.debugCode.isEmpty()) {
-                            tvDevOtpFill.setText("Dev Code: " + body.debugCode + " (Tap to fill)");
-                            tvDevOtpFill.setVisibility(View.VISIBLE);
-                            tvDevOtpFill.setOnClickListener(vFill -> etRecoveryOtp.setText(body.debugCode));
-                        } else {
-                            tvDevOtpFill.setVisibility(View.GONE);
-                        }
 
                         layoutStep1.setVisibility(View.GONE);
                         layoutStep2.setVisibility(View.VISIBLE);

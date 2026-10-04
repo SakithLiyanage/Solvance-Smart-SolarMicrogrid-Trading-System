@@ -232,8 +232,6 @@ public class AuthDtos {
         public String maskedRecipient;
         @SerializedName("expiresInMinutes")
         public int expiresInMinutes;
-        @SerializedName("debugCode")
-        public String debugCode;
     }
 
     public static class PasswordResetVerifyRequest {

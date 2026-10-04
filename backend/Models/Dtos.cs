@@ -75,7 +75,6 @@ namespace SolarMicrogridApi.Models
         public string Message { get; set; } = string.Empty;
         public string MaskedRecipient { get; set; } = string.Empty;
         public int ExpiresInMinutes { get; set; } = 15;
-        public string? DebugCode { get; set; }
     }
 
     public class PasswordResetVerifyDto
