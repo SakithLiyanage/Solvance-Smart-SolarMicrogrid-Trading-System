@@ -53,6 +53,12 @@ public interface SolarApiService {
     @PUT("stations/{id}/battery-slots")
     Call<ResponseBody> updateBatterySlots(@Path("id") String id, @Body AuthDtos.UpdateBatterySlotsRequest request);
 
+    @POST("auth/forgot-password/request")
+    Call<AuthDtos.PasswordResetOtpResponse> requestPasswordResetOtp(@Body AuthDtos.PasswordResetOtpRequest request);
+
+    @POST("auth/forgot-password/verify")
+    Call<ResponseBody> verifyPasswordResetOtp(@Body AuthDtos.PasswordResetVerifyRequest request);
+
     @POST("auth/forgot-password")
     Call<ResponseBody> forgotPassword(@Body AuthDtos.ForgotPasswordRequest request);
 

@@ -64,6 +64,36 @@ namespace SolarMicrogridApi.Models
         public string? ConfirmPassword { get; set; }
     }
 
+    public class PasswordResetRequestDto
+    {
+        [Required(ErrorMessage = "Registered NIC or Email address is required.")]
+        public string Identifier { get; set; } = string.Empty;
+    }
+
+    public class PasswordResetRequestResponseDto
+    {
+        public string Message { get; set; } = string.Empty;
+        public string MaskedRecipient { get; set; } = string.Empty;
+        public int ExpiresInMinutes { get; set; } = 15;
+        public string? DebugCode { get; set; }
+    }
+
+    public class PasswordResetVerifyDto
+    {
+        [Required(ErrorMessage = "Registered NIC or Email address is required.")]
+        public string Identifier { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Verification OTP code is required.")]
+        [RegularExpression(@"^[0-9]{6}$", ErrorMessage = "Verification code must be exactly 6 digits.")]
+        public string OtpCode { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "New password is required.")]
+        [MinLength(6, ErrorMessage = "Password must be at least 6 characters.")]
+        public string NewPassword { get; set; } = string.Empty;
+
+        public string? ConfirmPassword { get; set; }
+    }
+
     public class AuthErrorResponseDto
     {
         public string Code { get; set; } = string.Empty;

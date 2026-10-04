@@ -253,7 +253,71 @@ namespace SolarMicrogridApi.Controllers
         }
 
         /// <summary>
-        /// Self-service password recovery for prosumers using registered Sri Lankan NIC and Email.
+        /// Initiates secure multi-step password reset by dispatching a cryptographically random 6-digit OTP code.
+        /// </summary>
+        [HttpPost("forgot-password/request")]
+        [AllowAnonymous]
+        public async Task<IActionResult> RequestPasswordReset([FromBody] PasswordResetRequestDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var result = await _userService.RequestPasswordResetOtpAsync(dto);
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Verifies 6-digit OTP code and updates account password.
+        /// </summary>
+        [HttpPost("forgot-password/verify")]
+        [HttpPost("forgot-password/reset")]
+        [AllowAnonymous]
+        public async Task<IActionResult> VerifyPasswordReset([FromBody] PasswordResetVerifyDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var success = await _userService.VerifyPasswordResetOtpAsync(dto);
+                if (!success)
+                {
+                    return BadRequest(new { message = "Unable to reset password. Please check your verification code." });
+                }
+
+                return Ok(new { message = "Password reset successfully. You can now sign in with your new password." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Self-service password recovery for prosumers using registered Sri Lankan NIC and Email (Direct/Legacy).
         /// </summary>
         [HttpPost("forgot-password")]
         [AllowAnonymous]

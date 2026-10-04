@@ -216,6 +216,44 @@ public class AuthDtos {
         }
     }
 
+    public static class PasswordResetOtpRequest {
+        @SerializedName("identifier")
+        public String identifier;
+
+        public PasswordResetOtpRequest(String identifier) {
+            this.identifier = identifier;
+        }
+    }
+
+    public static class PasswordResetOtpResponse {
+        @SerializedName("message")
+        public String message;
+        @SerializedName("maskedRecipient")
+        public String maskedRecipient;
+        @SerializedName("expiresInMinutes")
+        public int expiresInMinutes;
+        @SerializedName("debugCode")
+        public String debugCode;
+    }
+
+    public static class PasswordResetVerifyRequest {
+        @SerializedName("identifier")
+        public String identifier;
+        @SerializedName("otpCode")
+        public String otpCode;
+        @SerializedName("newPassword")
+        public String newPassword;
+        @SerializedName("confirmPassword")
+        public String confirmPassword;
+
+        public PasswordResetVerifyRequest(String identifier, String otpCode, String newPassword, String confirmPassword) {
+            this.identifier = identifier;
+            this.otpCode = otpCode;
+            this.newPassword = newPassword;
+            this.confirmPassword = confirmPassword;
+        }
+    }
+
     public static class ForgotPasswordRequest {
         @SerializedName("nic")
         public String nic;

@@ -33,18 +33,21 @@ namespace SolarMicrogridApi.Services
         private readonly IConfiguration _configuration;
         private readonly JwtSettings _jwtSettings;
         private readonly SecuritySettings _securitySettings;
+        private readonly ILogger<UserService> _logger;
 
         public UserService(
             MongoDbContext context, 
             IConfiguration configuration,
             IOptions<JwtSettings> jwtOptions,
-            IOptions<SecuritySettings> securityOptions)
+            IOptions<SecuritySettings> securityOptions,
+            ILogger<UserService> logger)
         {
-            // Method: UserService Constructor - Injects database context and strongly-typed configuration settings.
+            // Method: UserService Constructor - Injects database context, logger and strongly-typed configuration settings.
             _context = context;
             _configuration = configuration;
             _jwtSettings = jwtOptions?.Value ?? new JwtSettings();
             _securitySettings = securityOptions?.Value ?? new SecuritySettings();
+            _logger = logger;
         }
 
         public async Task<AuthResponseDto?> AuthenticateAsync(LoginRequestDto request)
@@ -568,6 +571,156 @@ namespace SolarMicrogridApi.Services
 
             var result = await _context.Users.UpdateOneAsync(filter, update);
             return result.ModifiedCount > 0;
+        }
+
+        public async Task<PasswordResetRequestResponseDto> RequestPasswordResetOtpAsync(PasswordResetRequestDto dto)
+        {
+            var raw = dto.Identifier.Trim();
+            var cleanUpper = raw.ToUpperInvariant();
+            var cleanLower = raw.ToLowerInvariant();
+
+            var user = await _context.Users.Find(u =>
+                u.Nic == cleanUpper ||
+                u.Nic == raw ||
+                u.Email.ToLower() == cleanLower ||
+                u.Username.ToLower() == cleanLower
+            ).FirstOrDefaultAsync();
+
+            if (user == null)
+            {
+                return new PasswordResetRequestResponseDto
+                {
+                    Message = "If this account is registered in the grid, a 6-digit verification code has been dispatched.",
+                    MaskedRecipient = "registered contact",
+                    ExpiresInMinutes = 15
+                };
+            }
+
+            if (user.Status == "Deactivated")
+            {
+                throw new InvalidOperationException("This account is currently deactivated. Please contact grid backoffice support.");
+            }
+
+            // Cryptographically secure 6-digit random code
+            var codeNumber = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 999999);
+            var otpCode = codeNumber.ToString();
+            var expiry = DateTime.UtcNow.AddMinutes(15);
+
+            var filter = Builders<User>.Filter.Eq(u => u.Id, user.Id);
+            var update = Builders<User>.Update
+                .Set(u => u.PasswordResetOtp, otpCode)
+                .Set(u => u.PasswordResetOtpExpiry, expiry)
+                .Set(u => u.PasswordResetOtpAttempts, 0)
+                .Set(u => u.UpdatedAt, DateTime.UtcNow);
+
+            await _context.Users.UpdateOneAsync(filter, update);
+
+            _logger.LogWarning("[SECURITY DISPATCH] Password Reset OTP for {Email} (NIC: {Nic}): {OtpCode} (Expires: {Expiry} UTC)", 
+                user.Email, user.Nic, otpCode, expiry);
+
+            string masked = MaskEmail(user.Email);
+
+            return new PasswordResetRequestResponseDto
+            {
+                Message = $"A 6-digit verification code has been dispatched to {masked}. Valid for 15 minutes.",
+                MaskedRecipient = masked,
+                ExpiresInMinutes = 15,
+                DebugCode = otpCode
+            };
+        }
+
+        private static string MaskEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email) || !email.Contains('@')) return "registered email";
+            var parts = email.Split('@');
+            var name = parts[0];
+            var domain = parts[1];
+            var maskedName = name.Length > 2 
+                ? name.Substring(0, 1) + new string('*', Math.Min(name.Length - 2, 4)) + name.Substring(name.Length - 1) 
+                : name + "***";
+            return $"{maskedName}@{domain}";
+        }
+
+        public async Task<bool> VerifyPasswordResetOtpAsync(PasswordResetVerifyDto dto)
+        {
+            var raw = dto.Identifier.Trim();
+            var cleanUpper = raw.ToUpperInvariant();
+            var cleanLower = raw.ToLowerInvariant();
+
+            var user = await _context.Users.Find(u =>
+                u.Nic == cleanUpper ||
+                u.Nic == raw ||
+                u.Email.ToLower() == cleanLower ||
+                u.Username.ToLower() == cleanLower
+            ).FirstOrDefaultAsync();
+
+            if (user == null)
+            {
+                throw new ArgumentException("No matching account found for the provided identifier.");
+            }
+
+            if (user.Status == "Deactivated")
+            {
+                throw new InvalidOperationException("Account is currently deactivated.");
+            }
+
+            if (string.IsNullOrWhiteSpace(user.PasswordResetOtp) || user.PasswordResetOtpExpiry == null)
+            {
+                throw new InvalidOperationException("No active password reset request found. Please request a new verification code.");
+            }
+
+            if (DateTime.UtcNow > user.PasswordResetOtpExpiry.Value)
+            {
+                await _context.Users.UpdateOneAsync(
+                    Builders<User>.Filter.Eq(u => u.Id, user.Id),
+                    Builders<User>.Update.Unset(u => u.PasswordResetOtp).Unset(u => u.PasswordResetOtpExpiry)
+                );
+                throw new InvalidOperationException("Verification code has expired. Please request a new code.");
+            }
+
+            if (user.PasswordResetOtpAttempts >= 5)
+            {
+                await _context.Users.UpdateOneAsync(
+                    Builders<User>.Filter.Eq(u => u.Id, user.Id),
+                    Builders<User>.Update.Unset(u => u.PasswordResetOtp).Unset(u => u.PasswordResetOtpExpiry)
+                );
+                throw new InvalidOperationException("Too many incorrect attempts. For security reasons, this code has been revoked. Please request a new code.");
+            }
+
+            if (user.PasswordResetOtp.Trim() != dto.OtpCode.Trim())
+            {
+                var newAttempts = user.PasswordResetOtpAttempts + 1;
+                await _context.Users.UpdateOneAsync(
+                    Builders<User>.Filter.Eq(u => u.Id, user.Id),
+                    Builders<User>.Update.Set(u => u.PasswordResetOtpAttempts, newAttempts)
+                );
+                var remaining = Math.Max(0, 5 - newAttempts);
+                throw new ArgumentException($"Invalid verification code. {remaining} attempt(s) remaining.");
+            }
+
+            if (!string.IsNullOrEmpty(dto.ConfirmPassword) && dto.NewPassword != dto.ConfirmPassword)
+            {
+                throw new ArgumentException("New password and confirm password do not match.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.NewPassword) || dto.NewPassword.Length < 6)
+            {
+                throw new ArgumentException("Password must be at least 6 characters.");
+            }
+
+            var filter = Builders<User>.Filter.Eq(u => u.Id, user.Id);
+            var update = Builders<User>.Update
+                .Set(u => u.PasswordHash, BCrypt.Net.BCrypt.HashPassword(dto.NewPassword))
+                .Set(u => u.MustChangePassword, false)
+                .Set(u => u.FailedLoginAttempts, 0)
+                .Set(u => u.LockoutEnd, null)
+                .Unset(u => u.PasswordResetOtp)
+                .Unset(u => u.PasswordResetOtpExpiry)
+                .Set(u => u.PasswordResetOtpAttempts, 0)
+                .Set(u => u.UpdatedAt, DateTime.UtcNow);
+
+            var updateResult = await _context.Users.UpdateOneAsync(filter, update);
+            return updateResult.ModifiedCount > 0;
         }
 
         public async Task<bool> DeleteUserAsync(string nic)

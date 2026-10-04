@@ -109,6 +109,15 @@ namespace SolarMicrogridApi.Models
         [BsonElement("lockoutEnd")]
         public DateTime? LockoutEnd { get; set; }
 
+        [BsonElement("passwordResetOtp")]
+        public string? PasswordResetOtp { get; set; }
+
+        [BsonElement("passwordResetOtpExpiry")]
+        public DateTime? PasswordResetOtpExpiry { get; set; }
+
+        [BsonElement("passwordResetOtpAttempts")]
+        public int PasswordResetOtpAttempts { get; set; } = 0;
+
         /// <summary>
         /// Flag set by administrator forcing user to update credentials upon subsequent login.
         /// </summary>

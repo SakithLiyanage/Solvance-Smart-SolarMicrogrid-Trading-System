@@ -258,110 +258,178 @@ public class LoginActivity extends AppCompatActivity {
             dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
         }
 
-        EditText etForgotNic = dialogView.findViewById(R.id.etForgotNic);
-        EditText etForgotEmail = dialogView.findViewById(R.id.etForgotEmail);
-        EditText etForgotNewPassword = dialogView.findViewById(R.id.etForgotNewPassword);
-        EditText etForgotConfirmPassword = dialogView.findViewById(R.id.etForgotConfirmPassword);
-        TextView tvForgotError = dialogView.findViewById(R.id.tvForgotError);
-        Button btnCancel = dialogView.findViewById(R.id.btnCancelForgot);
-        Button btnSubmit = dialogView.findViewById(R.id.btnSubmitForgot);
+        View layoutStep1 = dialogView.findViewById(R.id.layoutStep1Request);
+        View layoutStep2 = dialogView.findViewById(R.id.layoutStep2Verify);
 
-        // Pre-fill NIC or Email if already typed into main login form
+        // Step 1 Views
+        EditText etRecoveryIdentifier = dialogView.findViewById(R.id.etRecoveryIdentifier);
+        TextView tvStep1Error = dialogView.findViewById(R.id.tvStep1Error);
+        Button btnCancelStep1 = dialogView.findViewById(R.id.btnCancelStep1);
+        Button btnSendOtp = dialogView.findViewById(R.id.btnSendOtp);
+
+        // Step 2 Views
+        TextView tvOtpDispatchedInfo = dialogView.findViewById(R.id.tvOtpDispatchedInfo);
+        TextView tvDevOtpFill = dialogView.findViewById(R.id.tvDevOtpFill);
+        EditText etRecoveryOtp = dialogView.findViewById(R.id.etRecoveryOtp);
+        EditText etRecoveryNewPassword = dialogView.findViewById(R.id.etRecoveryNewPassword);
+        EditText etRecoveryConfirmPassword = dialogView.findViewById(R.id.etRecoveryConfirmPassword);
+        TextView tvStep2Error = dialogView.findViewById(R.id.tvStep2Error);
+        Button btnBackToStep1 = dialogView.findViewById(R.id.btnBackToStep1);
+        Button btnVerifyAndReset = dialogView.findViewById(R.id.btnVerifyAndReset);
+
+        // Pre-fill identifier if already entered on login screen
         String enteredLogin = etUsername.getText() != null ? etUsername.getText().toString().trim() : "";
         if (!enteredLogin.isEmpty()) {
-            if (enteredLogin.contains("@")) {
-                etForgotEmail.setText(enteredLogin);
-            } else {
-                etForgotNic.setText(enteredLogin);
-            }
+            etRecoveryIdentifier.setText(enteredLogin);
         }
 
-        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        btnCancelStep1.setOnClickListener(v -> dialog.dismiss());
 
-        btnSubmit.setOnClickListener(v -> {
-            String nic = etForgotNic.getText() != null ? etForgotNic.getText().toString().trim() : "";
-            String email = etForgotEmail.getText() != null ? etForgotEmail.getText().toString().trim() : "";
-            String newPassword = etForgotNewPassword.getText() != null ? etForgotNewPassword.getText().toString() : "";
-            String confirmPassword = etForgotConfirmPassword.getText() != null ? etForgotConfirmPassword.getText().toString() : "";
+        final String[] currentIdentifierHolder = new String[1];
 
-            tvForgotError.setVisibility(View.GONE);
+        // Step 1: Request OTP
+        btnSendOtp.setOnClickListener(v -> {
+            String identifier = etRecoveryIdentifier.getText() != null ? etRecoveryIdentifier.getText().toString().trim() : "";
+            tvStep1Error.setVisibility(View.GONE);
 
-            if (nic.isEmpty()) {
-                tvForgotError.setText("Please enter your registered National ID (NIC).");
-                tvForgotError.setVisibility(View.VISIBLE);
+            if (identifier.isEmpty()) {
+                tvStep1Error.setText("Please enter your registered National ID (NIC) or Email.");
+                tvStep1Error.setVisibility(View.VISIBLE);
                 return;
             }
 
-            if (email.isEmpty() || !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-                tvForgotError.setText("Please enter a valid registered email address.");
-                tvForgotError.setVisibility(View.VISIBLE);
+            btnSendOtp.setEnabled(false);
+            btnSendOtp.setText("Sending...");
+
+            AuthDtos.PasswordResetOtpRequest req = new AuthDtos.PasswordResetOtpRequest(identifier);
+            ApiClient.getService(LoginActivity.this).requestPasswordResetOtp(req).enqueue(new Callback<AuthDtos.PasswordResetOtpResponse>() {
+                @Override
+                public void onResponse(Call<AuthDtos.PasswordResetOtpResponse> call, Response<AuthDtos.PasswordResetOtpResponse> response) {
+                    btnSendOtp.setEnabled(true);
+                    btnSendOtp.setText("Send Code");
+
+                    if (response.isSuccessful() && response.body() != null) {
+                        currentIdentifierHolder[0] = identifier;
+                        AuthDtos.PasswordResetOtpResponse body = response.body();
+
+                        tvOtpDispatchedInfo.setText(body.message != null ? body.message : "Verification code dispatched. Valid for 15 minutes.");
+
+                        if (body.debugCode != null && !body.debugCode.isEmpty()) {
+                            tvDevOtpFill.setText("Dev Code: " + body.debugCode + " (Tap to fill)");
+                            tvDevOtpFill.setVisibility(View.VISIBLE);
+                            tvDevOtpFill.setOnClickListener(vFill -> etRecoveryOtp.setText(body.debugCode));
+                        } else {
+                            tvDevOtpFill.setVisibility(View.GONE);
+                        }
+
+                        layoutStep1.setVisibility(View.GONE);
+                        layoutStep2.setVisibility(View.VISIBLE);
+                    } else {
+                        String errMsg = "Failed to dispatch recovery code. Please check your identifier.";
+                        try {
+                            if (response.errorBody() != null) {
+                                String raw = response.errorBody().string();
+                                org.json.JSONObject obj = new org.json.JSONObject(raw);
+                                if (obj.has("message")) errMsg = obj.getString("message");
+                            }
+                        } catch (Exception ignored) {}
+                        tvStep1Error.setText(errMsg);
+                        tvStep1Error.setVisibility(View.VISIBLE);
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<AuthDtos.PasswordResetOtpResponse> call, Throwable t) {
+                    btnSendOtp.setEnabled(true);
+                    btnSendOtp.setText("Send Code");
+                    tvStep1Error.setText("Network error: " + (t.getMessage() != null ? t.getMessage() : "Server unreachable"));
+                    tvStep1Error.setVisibility(View.VISIBLE);
+                }
+            });
+        });
+
+        // Step 2: Back to Step 1
+        btnBackToStep1.setOnClickListener(v -> {
+            layoutStep2.setVisibility(View.GONE);
+            layoutStep1.setVisibility(View.VISIBLE);
+        });
+
+        // Step 2: Verify OTP & Reset Password
+        btnVerifyAndReset.setOnClickListener(v -> {
+            String identifier = currentIdentifierHolder[0] != null ? currentIdentifierHolder[0] : etRecoveryIdentifier.getText().toString().trim();
+            String otpCode = etRecoveryOtp.getText() != null ? etRecoveryOtp.getText().toString().trim() : "";
+            String newPassword = etRecoveryNewPassword.getText() != null ? etRecoveryNewPassword.getText().toString() : "";
+            String confirmPassword = etRecoveryConfirmPassword.getText() != null ? etRecoveryConfirmPassword.getText().toString() : "";
+
+            tvStep2Error.setVisibility(View.GONE);
+
+            if (otpCode.length() != 6) {
+                tvStep2Error.setText("Please enter the 6-digit verification code.");
+                tvStep2Error.setVisibility(View.VISIBLE);
                 return;
             }
 
             if (newPassword.length() < 6) {
-                tvForgotError.setText("New password must be at least 6 characters.");
-                tvForgotError.setVisibility(View.VISIBLE);
+                tvStep2Error.setText("New password must be at least 6 characters.");
+                tvStep2Error.setVisibility(View.VISIBLE);
                 return;
             }
 
             if (!newPassword.equals(confirmPassword)) {
-                tvForgotError.setText("Passwords do not match.");
-                tvForgotError.setVisibility(View.VISIBLE);
+                tvStep2Error.setText("Passwords do not match.");
+                tvStep2Error.setVisibility(View.VISIBLE);
                 return;
             }
 
-            btnSubmit.setEnabled(false);
-            btnSubmit.setText("Verifying...");
+            btnVerifyAndReset.setEnabled(false);
+            btnVerifyAndReset.setText("Verifying...");
 
-            AuthDtos.ForgotPasswordRequest req = new AuthDtos.ForgotPasswordRequest(nic, email, newPassword, confirmPassword);
-            ApiClient.getService(LoginActivity.this).forgotPassword(req).enqueue(new Callback<okhttp3.ResponseBody>() {
+            AuthDtos.PasswordResetVerifyRequest verifyReq = new AuthDtos.PasswordResetVerifyRequest(identifier, otpCode, newPassword, confirmPassword);
+            ApiClient.getService(LoginActivity.this).verifyPasswordResetOtp(verifyReq).enqueue(new Callback<okhttp3.ResponseBody>() {
                 @Override
                 public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
-                    btnSubmit.setEnabled(true);
-                    btnSubmit.setText("Reset Password");
+                    btnVerifyAndReset.setEnabled(true);
+                    btnVerifyAndReset.setText("Save Password");
 
                     if (response.isSuccessful()) {
                         dialog.dismiss();
-                        etUsername.setText(nic);
+                        etUsername.setText(identifier);
                         etPassword.setText(newPassword);
 
                         List<SolvanceDialog.DetailItem> details = new ArrayList<>();
-                        details.add(new SolvanceDialog.DetailItem("National ID", nic));
-                        details.add(new SolvanceDialog.DetailItem("Registered Email", email));
-                        details.add(new SolvanceDialog.DetailItem("Security Status", "Password Updated"));
+                        details.add(new SolvanceDialog.DetailItem("Account", identifier));
+                        details.add(new SolvanceDialog.DetailItem("Verification", "6-Digit OTP Confirmed"));
+                        details.add(new SolvanceDialog.DetailItem("Status", "Password Updated"));
 
                         SolvanceDialog.showSuccess(
                                 LoginActivity.this,
-                                "Password Reset Complete",
+                                "Account Recovered",
                                 "CREDENTIALS UPDATED",
-                                "Your solar prosumer password has been successfully reset. You can now log into your microgrid account.",
+                                "Your solar prosumer password has been securely updated. You can now sign into your microgrid account.",
                                 details,
                                 "Sign In Now",
                                 () -> performLogin()
                         );
                     } else {
-                        String errMsg = "Password reset failed. Please verify your NIC and Email.";
+                        String errMsg = "Password update failed. Code may be invalid or expired.";
                         try {
                             if (response.errorBody() != null) {
-                                String errBodyStr = response.errorBody().string();
-                                org.json.JSONObject obj = new org.json.JSONObject(errBodyStr);
-                                if (obj.has("message")) {
-                                    errMsg = obj.getString("message");
-                                }
+                                String raw = response.errorBody().string();
+                                org.json.JSONObject obj = new org.json.JSONObject(raw);
+                                if (obj.has("message")) errMsg = obj.getString("message");
                             }
-                        } catch (Exception ignored) { }
-
-                        tvForgotError.setText(errMsg);
-                        tvForgotError.setVisibility(View.VISIBLE);
+                        } catch (Exception ignored) {}
+                        tvStep2Error.setText(errMsg);
+                        tvStep2Error.setVisibility(View.VISIBLE);
                     }
                 }
 
                 @Override
                 public void onFailure(Call<okhttp3.ResponseBody> call, Throwable t) {
-                    btnSubmit.setEnabled(true);
-                    btnSubmit.setText("Reset Password");
-                    tvForgotError.setText("Connection failed: " + (t.getMessage() != null ? t.getMessage() : "Server unreachable"));
-                    tvForgotError.setVisibility(View.VISIBLE);
+                    btnVerifyAndReset.setEnabled(true);
+                    btnVerifyAndReset.setText("Save Password");
+                    tvStep2Error.setText("Network error: " + (t.getMessage() != null ? t.getMessage() : "Server unreachable"));
+                    tvStep2Error.setVisibility(View.VISIBLE);
                 }
             });
         });
