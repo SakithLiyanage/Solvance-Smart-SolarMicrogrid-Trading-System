@@ -37,6 +37,31 @@ import Pagination, { usePagination } from '../components/Pagination';
 const STATUS_FILTERS = ['All', 'Active', 'Inactive'];
 const ALL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+
+const loadGoogleMapsScript = (apiKey) => {
+  if (!apiKey) return Promise.reject(new Error('No API key'));
+  if (window.google?.maps?.places) return Promise.resolve(window.google.maps);
+  const existingScript = document.getElementById('google-maps-script');
+  if (existingScript) {
+    return new Promise((resolve, reject) => {
+      if (window.google?.maps?.places) return resolve(window.google.maps);
+      existingScript.addEventListener('load', () => resolve(window.google.maps));
+      existingScript.addEventListener('error', reject);
+    });
+  }
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.id = 'google-maps-script';
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve(window.google.maps);
+    script.onerror = (err) => reject(err);
+    document.head.appendChild(script);
+  });
+};
+
 // Local calendar date as YYYY-MM-DD. toISOString() gives the UTC date, which is
 // still "yesterday" in Sri Lanka between 00:00 and 05:30.
 const todayLocalIso = () => {
@@ -130,6 +155,57 @@ export default function NodeManagement({ theme }) {
     daysOpen: [...ALL_DAYS],
     autoGenerateSlots: true
   });
+
+  // Google Maps Places Autocomplete State
+  const placeInputRef = useRef(null);
+  const autocompleteRef = useRef(null);
+  const [mapsApiLoaded, setMapsApiLoaded] = useState(false);
+  const [mapsLoadError, setMapsLoadError] = useState('');
+
+  useEffect(() => {
+    if (!GOOGLE_MAPS_KEY) return;
+    loadGoogleMapsScript(GOOGLE_MAPS_KEY)
+      .then(() => setMapsApiLoaded(true))
+      .catch(() => setMapsLoadError('Google Maps API key invalid or failed to load.'));
+  }, []);
+
+  useEffect(() => {
+    if (!mapsApiLoaded || !placeInputRef.current || !isModalOpen) return;
+
+    try {
+      const autocomplete = new window.google.maps.places.Autocomplete(placeInputRef.current, {
+        componentRestrictions: { country: 'lk' },
+        fields: ['name', 'formatted_address', 'geometry']
+      });
+
+      const listener = autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (!place || !place.geometry || !place.geometry.location) return;
+
+        const lat = place.geometry.location.lat().toFixed(6);
+        const lng = place.geometry.location.lng().toFixed(6);
+        const address = place.formatted_address || '';
+        const name = place.name || '';
+
+        setFormData((prev) => ({
+          ...prev,
+          latitude: lat,
+          longitude: lng,
+          address: address || prev.address,
+          name: prev.name ? prev.name : (name ? `${name} Solar Hub` : prev.name)
+        }));
+      });
+
+      autocompleteRef.current = autocomplete;
+      return () => {
+        if (window.google?.maps?.event && listener) {
+          window.google.maps.event.removeListener(listener);
+        }
+      };
+    } catch (err) {
+      console.error('Google Autocomplete initialization error:', err);
+    }
+  }, [mapsApiLoaded, isModalOpen]);
 
   const fetchSlots = async (stationId, date) => {
     // Ignore responses that arrive after the user has switched hub or date
@@ -985,7 +1061,38 @@ export default function NodeManagement({ theme }) {
             </div>
           )}
 
-
+          {/* Google Places Live Search & Select */}
+          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label htmlFor="google-places-search" className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5" />
+                <span>Search Location via Google Maps (Places Autocomplete)</span>
+              </label>
+              {GOOGLE_MAPS_KEY ? (
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                  {mapsApiLoaded ? 'Live Places API Active' : 'Loading Places...'}
+                </span>
+              ) : (
+                <span className="text-[10px] text-amber-700 dark:text-amber-300 font-medium">
+                  Manual Entry (or set VITE_GOOGLE_MAPS_API_KEY in .env)
+                </span>
+              )}
+            </div>
+            <input
+              ref={placeInputRef}
+              id="google-places-search"
+              type="text"
+              disabled={!GOOGLE_MAPS_KEY}
+              placeholder={GOOGLE_MAPS_KEY ? "Search place, landmark, or city (e.g. Kandy, Galle Fort, Colombo Port)..." : "Google Places optional: set VITE_GOOGLE_MAPS_API_KEY in .env or type details below"}
+              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-amber-500/30 rounded-lg text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 disabled:bg-slate-100 dark:disabled:bg-slate-800/60 disabled:cursor-not-allowed"
+            />
+            {mapsLoadError && (
+              <p className="text-[11px] text-red-500 dark:text-red-400">{mapsLoadError}</p>
+            )}
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Selecting a location auto-fills coordinates, address, and hub name below.
+            </p>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
