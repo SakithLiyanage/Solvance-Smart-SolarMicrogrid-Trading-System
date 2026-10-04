@@ -215,4 +215,41 @@ public class AuthDtos {
             this.tradeType = tradeType;
         }
     }
+
+    public static class ForgotPasswordRequest {
+        @SerializedName("nic")
+        public String nic;
+        @SerializedName("email")
+        public String email;
+        @SerializedName("newPassword")
+        public String newPassword;
+        @SerializedName("confirmPassword")
+        public String confirmPassword;
+
+        public ForgotPasswordRequest(String nic, String email, String newPassword, String confirmPassword) {
+            this.nic = nic;
+            this.email = email;
+            this.newPassword = newPassword;
+            this.confirmPassword = confirmPassword;
+        }
+
+        public ForgotPasswordRequest(String nic, String email, String newPassword) {
+            this(nic, email, newPassword, newPassword);
+        }
+    }
+
+    public static class ChangePasswordRequest {
+        @SerializedName("currentPassword")
+        public String currentPassword;
+        @SerializedName("newPassword")
+        public String newPassword;
+        @SerializedName("confirmPassword")
+        public String confirmPassword;
+
+        public ChangePasswordRequest(String currentPassword, String newPassword, String confirmPassword) {
+            this.currentPassword = currentPassword;
+            this.newPassword = newPassword;
+            this.confirmPassword = confirmPassword;
+        }
+    }
 }

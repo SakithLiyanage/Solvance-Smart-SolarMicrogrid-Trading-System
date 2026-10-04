@@ -20,7 +20,7 @@ import {
   UserPlus, Edit3, X, Zap, Shield, MapPin, Eye, EyeOff, FileText,
   Upload, AlertCircle, Award, CheckCircle, ShieldCheck,
   CreditCard, Layers, FileCheck, Image, Trash2, Cpu,
-  ExternalLink
+  ExternalLink, Key, Lock, Copy
 } from 'lucide-react';
 import api from '../api/client';
 import { 
@@ -58,6 +58,18 @@ const openImageInNewTab = (base64Data) => {
   }
 };
 
+// Password policy enforced by backend: 8+ chars, letters and digits
+const meetsPasswordPolicy = (pwd) => pwd.length >= 8 && /[a-zA-Z]/.test(pwd) && /[0-9]/.test(pwd);
+
+const generateTemporaryPassword = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  const pick = () => chars[Math.floor(Math.random() * chars.length)];
+  let pwd = '';
+  for (let i = 0; i < 9; i++) pwd += pick();
+  pwd += Math.floor(Math.random() * 10);
+  return pwd;
+};
+
 // Pending applications need Backoffice action, so they are listed first
 const STATUS_ORDER = { Pending: 0, Active: 1, Deactivated: 2 };
 
@@ -90,6 +102,21 @@ export default function ProsumerManagement({ theme }) {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(''); // shown inside the create/edit modals
+
+  // Password Reset Modal States
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resettingUser, setResettingUser] = useState(null);
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetSubmitting, setResetSubmitting] = useState(false);
+  const [showResetPasswordInput, setShowResetPasswordInput] = useState(false);
+  const [showResetConfirmPasswordInput, setShowResetConfirmPasswordInput] = useState(false);
+  const [requireNextLoginChange, setRequireNextLoginChange] = useState(true);
+  const [resetTab, setResetTab] = useState('manual'); // 'manual' | 'generate'
+  const [generatedPassword, setGeneratedPassword] = useState('');
+  const [copiedPassword, setCopiedPassword] = useState(false);
+
   // Status changes (approve / deactivate / reactivate)
   const [statusUpdatingNic, setStatusUpdatingNic] = useState(null);
   const [actionError, setActionError] = useState(''); // shown inside the review/confirm modals
@@ -164,6 +191,90 @@ export default function ProsumerManagement({ theme }) {
     setActionError('');
     setShowKycModal(false);
     setConfirmDeactivate(user);
+  };
+
+  const handleOpenResetPassword = (user) => {
+    setResettingUser(user);
+    setResetNewPassword('');
+    setResetConfirmPassword('');
+    setResetError('');
+    setCopiedPassword(false);
+    setShowResetPasswordInput(false);
+    setShowResetConfirmPasswordInput(false);
+    setRequireNextLoginChange(true);
+    setResetTab('manual');
+    setGeneratedPassword('');
+    setShowResetModal(true);
+  };
+
+  const closeResetModal = () => {
+    setShowResetModal(false);
+    setResettingUser(null);
+    setGeneratedPassword('');
+  };
+
+  const isResetLengthValid = resetNewPassword.length >= 8;
+  const isResetAlphaNumeric = /[a-zA-Z]/.test(resetNewPassword) && /[0-9]/.test(resetNewPassword);
+  const isResetMatch = resetNewPassword.length > 0 && resetNewPassword === resetConfirmPassword;
+  const isResetFormValid = isResetLengthValid && isResetAlphaNumeric && isResetMatch;
+
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (resetSubmitting) return;
+    if (!isResetFormValid) {
+      setResetError("The password doesn't meet the requirements below.");
+      return;
+    }
+
+    setResetError('');
+    setResetSubmitting(true);
+
+    try {
+      await api.post(`/users/${resettingUser.nic}/reset-password`, {
+        newPassword: resetNewPassword,
+        confirmPassword: resetConfirmPassword,
+        requirePasswordChange: requireNextLoginChange
+      });
+      notify(`Password for ${resettingUser.fullName} (${resettingUser.nic}) successfully updated.`, 'success');
+      closeResetModal();
+    } catch (err) {
+      setResetError(getApiError(err, 'Failed to reset password.'));
+    } finally {
+      setResetSubmitting(false);
+    }
+  };
+
+  const handleGenerateTemporaryPassword = async () => {
+    if (resetSubmitting) return;
+    setResetSubmitting(true);
+    setResetError('');
+
+    const tempPassword = generateTemporaryPassword();
+    try {
+      await api.post(`/users/${resettingUser.nic}/reset-password`, {
+        newPassword: tempPassword,
+        confirmPassword: tempPassword,
+        requirePasswordChange: requireNextLoginChange
+      });
+      setGeneratedPassword(tempPassword);
+      setCopiedPassword(false);
+      notify(`Temporary password set for ${resettingUser.fullName}.`, 'success');
+    } catch (err) {
+      setResetError(getApiError(err, 'Failed to set a temporary password.'));
+    } finally {
+      setResetSubmitting(false);
+    }
+  };
+
+  const handleCopyPassword = async (text) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedPassword(true);
+      setTimeout(() => setCopiedPassword(false), 2000);
+    } catch {
+      // Clipboard API unavailable outside secure context
+    }
   };
 
   const handleOpenCreate = () => {
@@ -640,6 +751,15 @@ export default function ProsumerManagement({ theme }) {
                             aria-label={`Edit profile of ${u.fullName || u.nic}`}
                           >
                             <Edit3 className="h-3.5 w-3.5 shrink-0" />
+                          </button>
+
+                          <button
+                            onClick={() => handleOpenResetPassword(u)}
+                            className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-amber-500 dark:hover:text-amber-400 transition cursor-pointer shrink-0"
+                            title="Reset Password"
+                            aria-label={`Reset password for ${u.fullName || u.nic}`}
+                          >
+                            <Key className="h-3.5 w-3.5 shrink-0" />
                           </button>
 
                           {u.status === 'Pending' && (
@@ -1808,6 +1928,244 @@ export default function ProsumerManagement({ theme }) {
               </button>
             </div>
           </form>
+        )}
+      </Modal>
+
+      {/* Modal: Reset Prosumer Password */}
+      <Modal
+        isOpen={showResetModal && !!resettingUser}
+        onClose={closeResetModal}
+        maxWidth="max-w-md"
+        title="Reset Prosumer Password"
+      >
+        {resettingUser && (
+          <div className="space-y-4 text-xs">
+            {resetError && (
+              <div role="alert" className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>{resetError}</span>
+              </div>
+            )}
+
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <span className="font-bold text-slate-800 dark:text-slate-200 block">{resettingUser.fullName}</span>
+                <span className="font-mono text-[11px] text-amber-600 dark:text-amber-400 font-bold">{resettingUser.nic}</span>
+              </div>
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 font-semibold text-slate-600 dark:text-slate-400">
+                Prosumer
+              </span>
+            </div>
+
+            {/* Reset Method Tabs */}
+            <div className="flex border-b border-slate-200 dark:border-slate-800 gap-2" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={resetTab === 'manual'}
+                disabled={!!generatedPassword}
+                onClick={() => { setResetTab('manual'); setResetError(''); }}
+                className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
+                  resetTab === 'manual'
+                    ? 'border-amber-500 text-amber-600 dark:text-amber-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                Set Password
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={resetTab === 'generate'}
+                onClick={() => { setResetTab('generate'); setResetError(''); }}
+                className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
+                  resetTab === 'generate'
+                    ? 'border-amber-500 text-amber-600 dark:text-amber-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <Key className="h-3.5 w-3.5" />
+                <span>Generate Temporary</span>
+              </button>
+            </div>
+
+            {resetTab === 'generate' ? (
+              generatedPassword ? (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-3">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      <span>Temporary password set for {resettingUser.fullName}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono text-sm font-bold text-slate-900 dark:text-white select-all break-all">
+                        {generatedPassword}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyPassword(generatedPassword)}
+                        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition cursor-pointer"
+                      >
+                        {copiedPassword ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                        <span>{copiedPassword ? 'Copied' : 'Copy'}</span>
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Hand this password over to the prosumer. It will not be shown again once you close this window.
+                      {requireNextLoginChange ? ' They will be prompted to choose a new password upon next sign-in.' : ''}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-end pt-3 border-t border-slate-200 dark:border-slate-800">
+                    <button
+                      type="button"
+                      onClick={closeResetModal}
+                      className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md cursor-pointer"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-2xl bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20">
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                      A secure random temporary password will be assigned to{' '}
+                      <strong className="text-slate-800 dark:text-slate-200">{resettingUser.fullName}</strong> and displayed here for administrative handover.
+                    </p>
+                  </div>
+
+                  <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={requireNextLoginChange}
+                      onChange={(e) => setRequireNextLoginChange(e.target.checked)}
+                      className="rounded border-slate-300 dark:border-slate-700 text-amber-500 focus:ring-amber-400 h-4 w-4"
+                    />
+                    <span>Require prosumer to change password upon next sign-in</span>
+                  </label>
+
+                  <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+                    <button
+                      type="button"
+                      onClick={closeResetModal}
+                      className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleGenerateTemporaryPassword}
+                      disabled={resetSubmitting}
+                      className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Key className="h-3.5 w-3.5" />
+                      <span>{resetSubmitting ? 'Generating…' : 'Generate Password'}</span>
+                    </button>
+                  </div>
+                </div>
+              )
+            ) : (
+              <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    New Password *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showResetPasswordInput ? 'text' : 'password'}
+                      required
+                      autoComplete="new-password"
+                      value={resetNewPassword}
+                      onChange={(e) => setResetNewPassword(e.target.value)}
+                      placeholder="At least 8 characters, letters & numbers"
+                      className="w-full pl-3 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowResetPasswordInput(!showResetPasswordInput)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      {showResetPasswordInput ? <EyeOff className="h-4 w-4 text-amber-500" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Confirm New Password *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showResetConfirmPasswordInput ? 'text' : 'password'}
+                      required
+                      autoComplete="new-password"
+                      value={resetConfirmPassword}
+                      onChange={(e) => setResetConfirmPassword(e.target.value)}
+                      placeholder="Re-enter password"
+                      className="w-full pl-3 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowResetConfirmPasswordInput(!showResetConfirmPasswordInput)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      {showResetConfirmPasswordInput ? <EyeOff className="h-4 w-4 text-amber-500" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Live validation checklist */}
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 space-y-1.5 text-[11px]">
+                  <div className="flex items-center gap-1.5">
+                    {isResetLengthValid ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <AlertCircle className="h-3.5 w-3.5 text-slate-400" />}
+                    <span className={isResetLengthValid ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-slate-500'}>
+                      At least 8 characters
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {isResetAlphaNumeric ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <AlertCircle className="h-3.5 w-3.5 text-slate-400" />}
+                    <span className={isResetAlphaNumeric ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-slate-500'}>
+                      Contains both letters and numbers
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {isResetMatch ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <AlertCircle className="h-3.5 w-3.5 text-slate-400" />}
+                    <span className={isResetMatch ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-slate-500'}>
+                      Passwords match
+                    </span>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer pt-1">
+                  <input
+                    type="checkbox"
+                    checked={requireNextLoginChange}
+                    onChange={(e) => setRequireNextLoginChange(e.target.checked)}
+                    className="rounded border-slate-300 dark:border-slate-700 text-amber-500 focus:ring-amber-400 h-4 w-4"
+                  />
+                  <span>Require prosumer to change password upon next sign-in</span>
+                </label>
+
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={closeResetModal}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={resetSubmitting || !isResetFormValid}
+                    className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    {resetSubmitting ? 'Saving…' : 'Save Password'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         )}
       </Modal>
 

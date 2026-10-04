@@ -24,6 +24,7 @@ namespace SolarMicrogridApi.Services
         Task<bool> RequestDeactivationAsync(string nic);
         Task<bool> ResetPasswordAsync(string nic, string newPassword, string requesterRole, string requesterNic, bool requirePasswordChange = false);
         Task<bool> ChangePasswordAsync(string nic, string currentPassword, string newPassword);
+        Task<bool> ForgotPasswordAsync(ForgotPasswordDto dto);
         Task<bool> DeleteUserAsync(string nic);
     }
 }

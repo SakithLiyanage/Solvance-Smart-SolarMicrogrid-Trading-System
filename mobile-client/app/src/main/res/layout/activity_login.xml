@@ -150,7 +150,7 @@
                     app:passwordToggleEnabled="true"
                     app:passwordToggleTint="@color/primary"
                     android:textColorHint="@color/text_muted"
-                    android:layout_marginBottom="22dp">
+                    android:layout_marginBottom="6dp">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etPassword"
@@ -161,6 +161,18 @@
                         android:padding="16dp"
                         android:inputType="textPassword" />
                 </com.google.android.material.textfield.TextInputLayout>
+
+                <TextView
+                    android:id="@+id/tvForgotPassword"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:text="Forgot Password?"
+                    android:textColor="@color/primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="14dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnLogin"

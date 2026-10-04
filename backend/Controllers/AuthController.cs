@@ -251,5 +251,38 @@ namespace SolarMicrogridApi.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Self-service password recovery for prosumers using registered Sri Lankan NIC and Email.
+        /// </summary>
+        [HttpPost("forgot-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+        {
+            // Method: ForgotPassword - Authenticates prosumer identity via NIC & Email and resets their password.
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var success = await _userService.ForgotPasswordAsync(dto);
+                if (!success)
+                {
+                    return NotFound(new { message = "Unable to reset password. Please check your credentials." });
+                }
+
+                return Ok(new { message = "Password reset successfully. You can now sign in with your new password." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+            }
+        }
     }
 }

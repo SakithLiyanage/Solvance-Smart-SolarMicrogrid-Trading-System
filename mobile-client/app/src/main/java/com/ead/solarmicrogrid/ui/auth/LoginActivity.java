@@ -17,6 +17,7 @@ package com.ead.solarmicrogrid.ui.auth;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -35,8 +36,12 @@ import com.ead.solarmicrogrid.data.models.User;
 import com.ead.solarmicrogrid.data.remote.ApiClient;
 import com.ead.solarmicrogrid.ui.operator.OperatorScannerActivity;
 import com.ead.solarmicrogrid.ui.prosumer.ProsumerDashboardActivity;
+import com.ead.solarmicrogrid.util.SolvanceDialog;
 import com.ead.solarmicrogrid.util.ThemeManager;
 import com.google.android.material.textfield.TextInputEditText;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -48,7 +53,7 @@ public class LoginActivity extends AppCompatActivity {
     private Button btnLogin;
     private ImageButton btnThemeToggle;
     private android.widget.ImageView ivBrandLogo;
-    private TextView tvRegister;
+    private TextView tvRegister, tvForgotPassword;
     private ProgressBar progressBar;
     private DatabaseHelper dbHelper;
 
@@ -89,6 +94,7 @@ public class LoginActivity extends AppCompatActivity {
         etPassword = findViewById(R.id.etPassword);
         btnLogin = findViewById(R.id.btnLogin);
         tvRegister = findViewById(R.id.tvRegister);
+        tvForgotPassword = findViewById(R.id.tvForgotPassword);
         progressBar = findViewById(R.id.progressBar);
         btnThemeToggle = findViewById(R.id.btnThemeToggle);
         ivBrandLogo = findViewById(R.id.ivBrandLogo);
@@ -108,6 +114,10 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         btnLogin.setOnClickListener(v -> performLogin());
+
+        if (tvForgotPassword != null) {
+            tvForgotPassword.setOnClickListener(v -> showForgotPasswordDialog());
+        }
 
         tvRegister.setOnClickListener(v -> {
             startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
@@ -236,6 +246,127 @@ public class LoginActivity extends AppCompatActivity {
                         .show();
             }
         });
+    }
+
+    private void showForgotPasswordDialog() {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_forgot_password, null);
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .create();
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+
+        EditText etForgotNic = dialogView.findViewById(R.id.etForgotNic);
+        EditText etForgotEmail = dialogView.findViewById(R.id.etForgotEmail);
+        EditText etForgotNewPassword = dialogView.findViewById(R.id.etForgotNewPassword);
+        EditText etForgotConfirmPassword = dialogView.findViewById(R.id.etForgotConfirmPassword);
+        TextView tvForgotError = dialogView.findViewById(R.id.tvForgotError);
+        Button btnCancel = dialogView.findViewById(R.id.btnCancelForgot);
+        Button btnSubmit = dialogView.findViewById(R.id.btnSubmitForgot);
+
+        // Pre-fill NIC or Email if already typed into main login form
+        String enteredLogin = etUsername.getText() != null ? etUsername.getText().toString().trim() : "";
+        if (!enteredLogin.isEmpty()) {
+            if (enteredLogin.contains("@")) {
+                etForgotEmail.setText(enteredLogin);
+            } else {
+                etForgotNic.setText(enteredLogin);
+            }
+        }
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+
+        btnSubmit.setOnClickListener(v -> {
+            String nic = etForgotNic.getText() != null ? etForgotNic.getText().toString().trim() : "";
+            String email = etForgotEmail.getText() != null ? etForgotEmail.getText().toString().trim() : "";
+            String newPassword = etForgotNewPassword.getText() != null ? etForgotNewPassword.getText().toString() : "";
+            String confirmPassword = etForgotConfirmPassword.getText() != null ? etForgotConfirmPassword.getText().toString() : "";
+
+            tvForgotError.setVisibility(View.GONE);
+
+            if (nic.isEmpty()) {
+                tvForgotError.setText("Please enter your registered National ID (NIC).");
+                tvForgotError.setVisibility(View.VISIBLE);
+                return;
+            }
+
+            if (email.isEmpty() || !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                tvForgotError.setText("Please enter a valid registered email address.");
+                tvForgotError.setVisibility(View.VISIBLE);
+                return;
+            }
+
+            if (newPassword.length() < 6) {
+                tvForgotError.setText("New password must be at least 6 characters.");
+                tvForgotError.setVisibility(View.VISIBLE);
+                return;
+            }
+
+            if (!newPassword.equals(confirmPassword)) {
+                tvForgotError.setText("Passwords do not match.");
+                tvForgotError.setVisibility(View.VISIBLE);
+                return;
+            }
+
+            btnSubmit.setEnabled(false);
+            btnSubmit.setText("Verifying...");
+
+            AuthDtos.ForgotPasswordRequest req = new AuthDtos.ForgotPasswordRequest(nic, email, newPassword, confirmPassword);
+            ApiClient.getService(LoginActivity.this).forgotPassword(req).enqueue(new Callback<okhttp3.ResponseBody>() {
+                @Override
+                public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
+                    btnSubmit.setEnabled(true);
+                    btnSubmit.setText("Reset Password");
+
+                    if (response.isSuccessful()) {
+                        dialog.dismiss();
+                        etUsername.setText(nic);
+                        etPassword.setText(newPassword);
+
+                        List<SolvanceDialog.DetailItem> details = new ArrayList<>();
+                        details.add(new SolvanceDialog.DetailItem("National ID", nic));
+                        details.add(new SolvanceDialog.DetailItem("Registered Email", email));
+                        details.add(new SolvanceDialog.DetailItem("Security Status", "Password Updated"));
+
+                        SolvanceDialog.showSuccess(
+                                LoginActivity.this,
+                                "Password Reset Complete",
+                                "CREDENTIALS UPDATED",
+                                "Your solar prosumer password has been successfully reset. You can now log into your microgrid account.",
+                                details,
+                                "Sign In Now",
+                                () -> performLogin()
+                        );
+                    } else {
+                        String errMsg = "Password reset failed. Please verify your NIC and Email.";
+                        try {
+                            if (response.errorBody() != null) {
+                                String errBodyStr = response.errorBody().string();
+                                org.json.JSONObject obj = new org.json.JSONObject(errBodyStr);
+                                if (obj.has("message")) {
+                                    errMsg = obj.getString("message");
+                                }
+                            }
+                        } catch (Exception ignored) { }
+
+                        tvForgotError.setText(errMsg);
+                        tvForgotError.setVisibility(View.VISIBLE);
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<okhttp3.ResponseBody> call, Throwable t) {
+                    btnSubmit.setEnabled(true);
+                    btnSubmit.setText("Reset Password");
+                    tvForgotError.setText("Connection failed: " + (t.getMessage() != null ? t.getMessage() : "Server unreachable"));
+                    tvForgotError.setVisibility(View.VISIBLE);
+                }
+            });
+        });
+
+        dialog.show();
     }
 
     private void showServerConfigDialog() {

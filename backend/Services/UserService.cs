@@ -527,6 +527,49 @@ namespace SolarMicrogridApi.Services
             return result.ModifiedCount > 0;
         }
 
+        public async Task<bool> ForgotPasswordAsync(ForgotPasswordDto dto)
+        {
+            // Method: ForgotPasswordAsync - Authenticates prosumer identity via registered NIC and Email, then securely updates password hash.
+            var cleanNic = dto.Nic.Trim().ToUpperInvariant();
+            var cleanEmail = dto.Email.Trim().ToLowerInvariant();
+
+            var user = await _context.Users.Find(u => 
+                (u.Nic == cleanNic || u.Nic == dto.Nic.Trim()) && 
+                u.Email == cleanEmail
+            ).FirstOrDefaultAsync();
+
+            if (user == null)
+            {
+                throw new ArgumentException("No account found matching the provided National ID (NIC) and Email address.");
+            }
+
+            if (user.Status == "Deactivated")
+            {
+                throw new InvalidOperationException("Account is currently deactivated. Please contact Backoffice administration for account recovery.");
+            }
+
+            if (!string.IsNullOrEmpty(dto.ConfirmPassword) && dto.NewPassword != dto.ConfirmPassword)
+            {
+                throw new ArgumentException("New password and confirm password do not match.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.NewPassword) || dto.NewPassword.Length < 6)
+            {
+                throw new ArgumentException("Password must be at least 6 characters.");
+            }
+
+            var filter = Builders<User>.Filter.Eq(u => u.Id, user.Id);
+            var update = Builders<User>.Update
+                .Set(u => u.PasswordHash, BCrypt.Net.BCrypt.HashPassword(dto.NewPassword))
+                .Set(u => u.MustChangePassword, false)
+                .Set(u => u.FailedLoginAttempts, 0)
+                .Set(u => u.LockoutEnd, null)
+                .Set(u => u.UpdatedAt, DateTime.UtcNow);
+
+            var result = await _context.Users.UpdateOneAsync(filter, update);
+            return result.ModifiedCount > 0;
+        }
+
         public async Task<bool> DeleteUserAsync(string nic)
         {
             // Method: DeleteUserAsync - Removes staff or prosumer account with Backoffice administrator safeguards and active booking verification.

@@ -42,7 +42,23 @@ namespace SolarMicrogridApi.Models
         public string CurrentPassword { get; set; } = string.Empty;
 
         [Required]
-        [MinLength(8)]
+        [MinLength(6, ErrorMessage = "Password must be at least 6 characters.")]
+        public string NewPassword { get; set; } = string.Empty;
+
+        public string? ConfirmPassword { get; set; }
+    }
+
+    public class ForgotPasswordDto
+    {
+        [Required(ErrorMessage = "National Identity Card (NIC) is required.")]
+        public string Nic { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email address is required.")]
+        [EmailAddress(ErrorMessage = "Invalid email format.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "New password is required.")]
+        [MinLength(6, ErrorMessage = "Password must be at least 6 characters.")]
         public string NewPassword { get; set; } = string.Empty;
 
         public string? ConfirmPassword { get; set; }

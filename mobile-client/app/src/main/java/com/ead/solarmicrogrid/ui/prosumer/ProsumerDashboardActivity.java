@@ -571,6 +571,90 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
         dialog.show();
     }
 
+    private void showChangePasswordDialog() {
+        android.app.Dialog dialog = new android.app.Dialog(this);
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_change_password);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+            dialog.getWindow().setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+
+        EditText etCurrent = dialog.findViewById(R.id.etCurrentPassword);
+        EditText etNewPass = dialog.findViewById(R.id.etNewPassword);
+        EditText etConfirm = dialog.findViewById(R.id.etConfirmPassword);
+        TextView tvError = dialog.findViewById(R.id.tvChangePassError);
+        Button btnCancel = dialog.findViewById(R.id.btnCancelChangePass);
+        Button btnSubmit = dialog.findViewById(R.id.btnSubmitChangePass);
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+
+        btnSubmit.setOnClickListener(v -> {
+            String currentPassword = etCurrent.getText() != null ? etCurrent.getText().toString() : "";
+            String newPassword = etNewPass.getText() != null ? etNewPass.getText().toString() : "";
+            String confirmPassword = etConfirm.getText() != null ? etConfirm.getText().toString() : "";
+
+            tvError.setVisibility(View.GONE);
+
+            if (currentPassword.isEmpty()) {
+                tvError.setText("Please enter your current password.");
+                tvError.setVisibility(View.VISIBLE);
+                return;
+            }
+
+            if (newPassword.length() < 6) {
+                tvError.setText("New password must be at least 6 characters.");
+                tvError.setVisibility(View.VISIBLE);
+                return;
+            }
+
+            if (!newPassword.equals(confirmPassword)) {
+                tvError.setText("Passwords do not match.");
+                tvError.setVisibility(View.VISIBLE);
+                return;
+            }
+
+            btnSubmit.setEnabled(false);
+            btnSubmit.setText("Updating...");
+
+            AuthDtos.ChangePasswordRequest req = new AuthDtos.ChangePasswordRequest(currentPassword, newPassword, confirmPassword);
+            ApiClient.getService(ProsumerDashboardActivity.this).changePassword(req).enqueue(new Callback<ResponseBody>() {
+                @Override
+                public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                    btnSubmit.setEnabled(true);
+                    btnSubmit.setText("Update Password");
+
+                    if (response.isSuccessful()) {
+                        dialog.dismiss();
+                        Toast.makeText(ProsumerDashboardActivity.this, "Password updated successfully.", Toast.LENGTH_LONG).show();
+                    } else {
+                        String errMsg = "Password update failed.";
+                        try {
+                            if (response.errorBody() != null) {
+                                String raw = response.errorBody().string();
+                                org.json.JSONObject obj = new org.json.JSONObject(raw);
+                                if (obj.has("message")) errMsg = obj.getString("message");
+                            }
+                        } catch (Exception ignored) {}
+
+                        tvError.setText(errMsg);
+                        tvError.setVisibility(View.VISIBLE);
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<ResponseBody> call, Throwable t) {
+                    btnSubmit.setEnabled(true);
+                    btnSubmit.setText("Update Password");
+                    tvError.setText("Network error: " + (t.getMessage() != null ? t.getMessage() : "Server unreachable"));
+                    tvError.setVisibility(View.VISIBLE);
+                }
+            });
+        });
+
+        dialog.show();
+    }
+
     private void executeEditProfile(String name, String email, String phone, String address, double solarCapacityKw, String inverterSerial) {
         AuthDtos.UpdateProfileRequest request = new AuthDtos.UpdateProfileRequest(name, email, phone, address, solarCapacityKw, inverterSerial);
         ApiClient.getService(this).updateProfile(request).enqueue(new Callback<ResponseBody>() {
@@ -656,6 +740,14 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
             itemEdit.setOnClickListener(v -> {
                 sheetDialog.dismiss();
                 showEditProfileDialog();
+            });
+        }
+
+        View itemChangePassword = sheetView.findViewById(R.id.sheetItemChangePassword);
+        if (itemChangePassword != null) {
+            itemChangePassword.setOnClickListener(v -> {
+                sheetDialog.dismiss();
+                showChangePasswordDialog();
             });
         }
 

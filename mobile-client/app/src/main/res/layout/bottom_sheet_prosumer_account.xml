@@ -274,6 +274,59 @@
             android:contentDescription="Arrow" />
     </LinearLayout>
 
+    <!-- Action: Change Password -->
+    <LinearLayout
+        android:id="@+id/sheetItemChangePassword"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_execution_white_card"
+        android:padding="12dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:layout_marginBottom="8dp">
+
+        <ImageView
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_shield_check"
+            app:tint="#D97706"
+            android:background="@drawable/bg_pill_mint"
+            android:padding="6dp"
+            android:layout_marginEnd="12dp"
+            android:contentDescription="Security" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Change Account Password"
+                android:textColor="@color/text_primary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Update your security password for mobile &amp; web login"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_chevron_forward"
+            app:tint="@color/text_muted"
+            android:contentDescription="Arrow" />
+    </LinearLayout>
+
     <!-- Action 2: Microgrid P2P Rules & Tariff -->
     <LinearLayout
         android:id="@+id/sheetItemGridRules"
