@@ -24,6 +24,7 @@ namespace SolarMicrogridApi.Models
     {
         public string Token { get; set; } = string.Empty;
         public string Nic { get; set; } = string.Empty;
+        public string? StaffId { get; set; }
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
@@ -90,9 +91,10 @@ namespace SolarMicrogridApi.Models
 
     public class CreateStaffUserDto
     {
-        [Required]
-        [RegularExpression(@"^([0-9]{9}[vVxX]|[0-9]{12}|(ADMIN|OPERATOR)[0-9]{3,})$", ErrorMessage = "Invalid Staff Identifier or NIC format.")]
-        public string Nic { get; set; } = string.Empty;
+        [RegularExpression(@"^[a-zA-Z0-9_\-\.#]{3,50}$", ErrorMessage = "Staff Identifier must be between 3 and 50 characters (letters, numbers, hyphens, underscores, dots, #).")]
+        public string? StaffId { get; set; }
+
+        public string? Nic { get; set; }
 
         [Required]
         public string FullName { get; set; } = string.Empty;
@@ -111,6 +113,33 @@ namespace SolarMicrogridApi.Models
 
         [Required]
         public string Role { get; set; } = "GridOperator"; // "Backoffice" or "GridOperator"
+    }
+
+    public class BootstrapAdminDto
+    {
+        [Required]
+        public string SetupKey { get; set; } = string.Empty;
+
+        [RegularExpression(@"^[a-zA-Z0-9_\-\.#]{3,50}$", ErrorMessage = "Staff Identifier must be between 3 and 50 characters.")]
+        public string? StaffId { get; set; }
+
+        public string? Nic { get; set; }
+
+        [Required]
+        public string FullName { get; set; } = string.Empty;
+
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [Required]
+        public string Phone { get; set; } = string.Empty;
+
+        public string Address { get; set; } = string.Empty;
+
+        [Required]
+        [MinLength(8, ErrorMessage = "Password must be at least 8 characters.")]
+        public string Password { get; set; } = string.Empty;
     }
 
     public class UpdateProfileDto
@@ -154,6 +183,14 @@ namespace SolarMicrogridApi.Models
         public int AvailableBatterySlots { get; set; }
 
         public OperationalSchedule Schedule { get; set; } = new OperationalSchedule();
+
+        public string GridConnection { get; set; } = "Three-Phase 400V AC";
+
+        public string StorageType { get; set; } = "LiFePO4 BESS";
+
+        public double MaxDischargeRateKw { get; set; } = 150.0;
+
+        public bool AutoGenerateSlots { get; set; } = false;
 
         public bool IsActive { get; set; } = true;
     }

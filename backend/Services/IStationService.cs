@@ -20,5 +20,6 @@ namespace SolarMicrogridApi.Services
         Task<bool> DeactivateStationAsync(string id);
         Task<bool> ReactivateStationAsync(string id);
         Task<bool> DeleteStationAsync(string id);
+        Task<int> GenerateHourlySlotsAsync(string id, int daysAhead = 7);
     }
 }

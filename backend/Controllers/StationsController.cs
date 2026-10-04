@@ -169,6 +169,28 @@ namespace SolarMicrogridApi.Controllers
         }
 
         /// <summary>
+        /// Generates hourly booking slots for the station across operational days (Backoffice only).
+        /// </summary>
+        [HttpPost("{id}/generate-slots")]
+        [Authorize(Roles = "Backoffice")]
+        public async Task<IActionResult> GenerateSlots(string id, [FromQuery] int days = 7)
+        {
+            try
+            {
+                var count = await _stationService.GenerateHourlySlotsAsync(id, days);
+                return Ok(new { message = $"Generated {count} hourly operational slots.", slotsGenerated = count });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Permanently deletes a solar station (Backoffice only). Blocked if active reservations exist.
         /// </summary>
         [HttpDelete("{id}")]

@@ -109,6 +109,7 @@ export default function NodeManagement({ theme }) {
   const [slotSubmitting, setSlotSubmitting] = useState(false);
   const [adjustingSlotId, setAdjustingSlotId] = useState(null);
   const [pendingDeleteSlotId, setPendingDeleteSlotId] = useState(null);
+  const [generatingSlotsStationId, setGeneratingSlotsStationId] = useState(null);
   const [newSlotForm, setNewSlotForm] = useState(emptySlotForm);
   const slotsRequestRef = useRef(0);
 
@@ -116,13 +117,18 @@ export default function NodeManagement({ theme }) {
   const [formData, setFormData] = useState({
     stationCode: '',
     name: '',
-    latitude: 6.9271,
-    longitude: 79.8612,
+    latitude: '',
+    longitude: '',
     address: '',
-    capacityKwh: 500,
-    totalBatterySlots: 20,
+    capacityKwh: '',
+    totalBatterySlots: '',
+    gridConnection: 'Three-Phase 400V Grid Intertie',
+    storageType: 'Lithium Iron Phosphate (LFP)',
+    maxDischargeRateKw: '',
     openTime: '06:00',
-    closeTime: '22:00'
+    closeTime: '22:00',
+    daysOpen: [...ALL_DAYS],
+    autoGenerateSlots: true
   });
 
   const fetchSlots = async (stationId, date) => {
@@ -286,17 +292,32 @@ export default function NodeManagement({ theme }) {
     setEditingStation(null);
     setFormError('');
     setFormData({
-      stationCode: 'HUB-NEW-' + Math.floor(100 + Math.random() * 900),
+      stationCode: '',
       name: '',
-      latitude: 6.9271,
-      longitude: 79.8612,
+      latitude: '',
+      longitude: '',
       address: '',
-      capacityKwh: 500,
-      totalBatterySlots: 20,
+      capacityKwh: '',
+      totalBatterySlots: '',
+      gridConnection: 'Three-Phase 400V Grid Intertie',
+      storageType: 'Lithium Iron Phosphate (LFP)',
+      maxDischargeRateKw: '',
       openTime: '06:00',
-      closeTime: '22:00'
+      closeTime: '22:00',
+      daysOpen: [...ALL_DAYS],
+      autoGenerateSlots: true
     });
     setIsModalOpen(true);
+  };
+
+  const toggleDayOpen = (day) => {
+    setFormData((prev) => {
+      const current = prev.daysOpen || [];
+      const updated = current.includes(day)
+        ? current.filter((d) => d !== day)
+        : [...current, day];
+      return { ...prev, daysOpen: updated };
+    });
   };
 
   const openEditModal = (station) => {
@@ -310,8 +331,13 @@ export default function NodeManagement({ theme }) {
       address: station.address,
       capacityKwh: station.capacityKwh,
       totalBatterySlots: station.totalBatterySlots,
+      gridConnection: station.gridConnection || 'Three-Phase 400V Grid Intertie',
+      storageType: station.storageType || 'Lithium Iron Phosphate (LFP)',
+      maxDischargeRateKw: station.maxDischargeRateKw || Math.round(station.capacityKwh * 0.2),
       openTime: station.schedule?.openTime || '06:00',
-      closeTime: station.schedule?.closeTime || '22:00'
+      closeTime: station.schedule?.closeTime || '22:00',
+      daysOpen: station.schedule?.daysOpen?.length ? station.schedule.daysOpen : [...ALL_DAYS],
+      autoGenerateSlots: false
     });
     setIsModalOpen(true);
   };
@@ -320,6 +346,19 @@ export default function NodeManagement({ theme }) {
   const occupiedSlots = editingStation
     ? Math.max(0, (editingStation.totalBatterySlots || 0) - (editingStation.availableBatterySlots || 0))
     : 0;
+
+  const handleGenerateSlotsQuick = async (station) => {
+    if (generatingSlotsStationId) return;
+    setGeneratingSlotsStationId(station.id);
+    try {
+      const res = await api.post(`/stations/${station.id}/generate-slots?days=7`);
+      showToast(res.data?.message || 'Generated 7-day operational trading slots.', 'success');
+    } catch (err) {
+      showToast(getApiError(err, 'Failed to generate operational trading slots.'), 'error');
+    } finally {
+      setGeneratingSlotsStationId(null);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -333,9 +372,15 @@ export default function NodeManagement({ theme }) {
     const longitude = parseFloat(formData.longitude);
     const capacityKwh = parseFloat(formData.capacityKwh);
     const totalBatterySlots = parseInt(formData.totalBatterySlots, 10);
+    const maxDischargeRateKw = parseFloat(formData.maxDischargeRateKw) || Math.round(capacityKwh * 0.2);
 
     if (toMinutes(formData.closeTime) <= toMinutes(formData.openTime)) {
       setFormError('Closing time must be after opening time.');
+      return;
+    }
+
+    if (!formData.daysOpen || formData.daysOpen.length === 0) {
+      setFormError('At least one operational day must be selected.');
       return;
     }
 
@@ -363,7 +408,11 @@ export default function NodeManagement({ theme }) {
         capacityKwh === editingStation.capacityKwh &&
         totalBatterySlots === editingStation.totalBatterySlots &&
         formData.openTime === editingStation.schedule?.openTime &&
-        formData.closeTime === editingStation.schedule?.closeTime;
+        formData.closeTime === editingStation.schedule?.closeTime &&
+        formData.gridConnection === editingStation.gridConnection &&
+        formData.storageType === editingStation.storageType &&
+        formData.maxDischargeRateKw === editingStation.maxDischargeRateKw &&
+        JSON.stringify(formData.daysOpen) === JSON.stringify(editingStation.schedule?.daysOpen);
       if (unchanged) {
         setIsModalOpen(false);
         showToast('No changes to save.', 'info');
@@ -381,11 +430,15 @@ export default function NodeManagement({ theme }) {
       totalBatterySlots,
       // Racks that are occupied stay occupied when the total changes
       availableBatterySlots: totalBatterySlots - occupiedSlots,
+      gridConnection: formData.gridConnection,
+      storageType: formData.storageType,
+      maxDischargeRateKw,
       schedule: {
         openTime: formData.openTime,
         closeTime: formData.closeTime,
-        daysOpen: editingStation?.schedule?.daysOpen?.length ? editingStation.schedule.daysOpen : ALL_DAYS
+        daysOpen: formData.daysOpen
       },
+      autoGenerateSlots: !editingStation && formData.autoGenerateSlots,
       // Editing must not silently reactivate a deactivated hub
       isActive: editingStation ? editingStation.isActive : true
     };
@@ -397,7 +450,7 @@ export default function NodeManagement({ theme }) {
         showToast(`Solar hub '${name}' updated.`);
       } else {
         await api.post('/stations', payload);
-        showToast(`Solar hub '${name}' added.`);
+        showToast(`Solar hub '${name}' added with 7-day slots generated.`);
       }
       setIsModalOpen(false);
       fetchStations();
@@ -844,13 +897,24 @@ export default function NodeManagement({ theme }) {
 
                   {/* Card Actions */}
                   <div className="p-6 pt-0 space-y-2">
-                    <button
-                      onClick={() => openSlotsModal(station)}
-                      className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-bold rounded-xl transition cursor-pointer whitespace-nowrap"
-                    >
-                      <BatteryCharging className="h-3.5 w-3.5" />
-                      <span>Trading slots</span>
-                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => openSlotsModal(station)}
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-bold rounded-xl transition cursor-pointer whitespace-nowrap"
+                      >
+                        <BatteryCharging className="h-3.5 w-3.5" />
+                        <span>Trading slots</span>
+                      </button>
+                      <button
+                        onClick={() => handleGenerateSlotsQuick(station)}
+                        disabled={generatingSlotsStationId === station.id}
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-xl transition cursor-pointer whitespace-nowrap disabled:opacity-50"
+                        title="Generate 7-day hourly slots based on opening hours and operating days"
+                      >
+                        <RefreshCw className={`h-3 w-3 ${generatingSlotsStationId === station.id ? 'animate-spin' : ''}`} />
+                        <span>{generatingSlotsStationId === station.id ? 'Generating...' : 'Auto-Gen 7D'}</span>
+                      </button>
+                    </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => openEditModal(station)}
@@ -921,6 +985,8 @@ export default function NodeManagement({ theme }) {
             </div>
           )}
 
+
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label htmlFor="hub-code" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Station Code</label>
@@ -939,7 +1005,7 @@ export default function NodeManagement({ theme }) {
                 id="hub-name"
                 type="text"
                 required
-                placeholder="e.g. Colombo South Station"
+                placeholder="e.g. Colombo Harbor Microgrid Substation"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50"
@@ -953,7 +1019,7 @@ export default function NodeManagement({ theme }) {
               id="hub-address"
               type="text"
               required
-              placeholder="e.g. 102 Baseline Road, Colombo"
+              placeholder="e.g. Port Access Road, Colombo 13, Western Province"
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50"
@@ -963,7 +1029,6 @@ export default function NodeManagement({ theme }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="hub-lat" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">GPS Latitude</label>
-              {/* step="any" so coordinates pasted from Google Maps (6+ decimals) pass browser validation */}
               <input
                 id="hub-lat"
                 type="number"
@@ -994,7 +1059,7 @@ export default function NodeManagement({ theme }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="hub-capacity" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Capacity (kWh)</label>
+              <label htmlFor="hub-capacity" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Storage Capacity (kWh)</label>
               <input
                 id="hub-capacity"
                 type="number"
@@ -1008,7 +1073,7 @@ export default function NodeManagement({ theme }) {
               />
             </div>
             <div>
-              <label htmlFor="hub-slots" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Battery Slots (total)</label>
+              <label htmlFor="hub-slots" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Battery Slots (Total Racks)</label>
               <input
                 id="hub-slots"
                 type="number"
@@ -1024,6 +1089,34 @@ export default function NodeManagement({ theme }) {
                   {occupiedSlots} occupied now; free slots = total &minus; {occupiedSlots}.
                 </p>
               )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="hub-grid" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Grid Connection Spec</label>
+              <input
+                id="hub-grid"
+                type="text"
+                value={formData.gridConnection}
+                onChange={(e) => setFormData({ ...formData, gridConnection: e.target.value })}
+                placeholder="e.g. Three-Phase 400V Grid Intertie"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50"
+              />
+            </div>
+            <div>
+              <label htmlFor="hub-storage-type" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Battery Chemistry</label>
+              <select
+                id="hub-storage-type"
+                value={formData.storageType}
+                onChange={(e) => setFormData({ ...formData, storageType: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50"
+              >
+                <option value="Lithium Iron Phosphate (LFP)">Lithium Iron Phosphate (LFP)</option>
+                <option value="Lithium Nickel Manganese Cobalt (NMC)">Lithium Nickel Manganese Cobalt (NMC)</option>
+                <option value="Flow Battery (Vanadium Redox)">Flow Battery (Vanadium Redox)</option>
+                <option value="Sodium-Ion Commercial">Sodium-Ion Commercial</option>
+              </select>
             </div>
           </div>
 
@@ -1051,6 +1144,45 @@ export default function NodeManagement({ theme }) {
               />
             </div>
           </div>
+
+          {/* Operational Days Selector */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Operational Days</label>
+            <div className="flex flex-wrap gap-1.5">
+              {ALL_DAYS.map((day) => {
+                const isSelected = formData.daysOpen?.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => toggleDayOpen(day)}
+                    className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition ${
+                      isSelected
+                        ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/50 font-bold'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:text-slate-900'
+                    }`}
+                  >
+                    {day.slice(0, 3)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {!editingStation && (
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                id="auto-slots-checkbox"
+                type="checkbox"
+                checked={formData.autoGenerateSlots}
+                onChange={(e) => setFormData({ ...formData, autoGenerateSlots: e.target.checked })}
+                className="rounded border-slate-300 dark:border-slate-700 text-amber-500 focus:ring-amber-500 h-4 w-4 cursor-pointer"
+              />
+              <label htmlFor="auto-slots-checkbox" className="text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
+                Automatically generate 7-day hourly energy trading slots upon creation
+              </label>
+            </div>
+          )}
 
           <div className="pt-3 flex justify-end gap-2 border-t border-slate-200 dark:border-slate-800">
             <button
@@ -1160,14 +1292,37 @@ export default function NodeManagement({ theme }) {
                 </button>
               )}
             </div>
-            <button
-              onClick={() => slotStation && fetchSlots(slotStation.id, slotDateFilter)}
-              className="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-amber-500 cursor-pointer"
-              title="Refresh slots"
-              aria-label="Refresh slots"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${loadingSlots ? 'animate-spin' : ''}`} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!slotStation || generatingSlotsStationId) return;
+                  setGeneratingSlotsStationId(slotStation.id);
+                  try {
+                    const res = await api.post(`/stations/${slotStation.id}/generate-slots?days=7`);
+                    setSlotSuccess(res.data?.message || 'Generated 7-day operational trading slots.');
+                    await fetchSlots(slotStation.id, slotDateFilter);
+                  } catch (err) {
+                    setSlotError(getApiError(err, 'Failed to generate operational trading slots.'));
+                  } finally {
+                    setGeneratingSlotsStationId(null);
+                  }
+                }}
+                disabled={generatingSlotsStationId === slotStation?.id}
+                className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3 w-3 ${generatingSlotsStationId === slotStation?.id ? 'animate-spin' : ''}`} />
+                <span>Auto-Generate 7-Day Slots</span>
+              </button>
+              <button
+                onClick={() => slotStation && fetchSlots(slotStation.id, slotDateFilter)}
+                className="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-amber-500 cursor-pointer"
+                title="Refresh slots"
+                aria-label="Refresh slots"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${loadingSlots ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
 
           {/* Existing Slots Table */}

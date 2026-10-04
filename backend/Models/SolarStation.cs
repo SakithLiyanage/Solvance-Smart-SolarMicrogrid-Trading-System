@@ -69,6 +69,15 @@ namespace SolarMicrogridApi.Models
         [BsonElement("availableBatterySlots")]
         public int AvailableBatterySlots { get; set; }
 
+        [BsonElement("gridConnection")]
+        public string GridConnection { get; set; } = "Three-Phase 400V AC";
+
+        [BsonElement("storageType")]
+        public string StorageType { get; set; } = "LiFePO4 BESS";
+
+        [BsonElement("maxDischargeRateKw")]
+        public double MaxDischargeRateKw { get; set; } = 150.0;
+
         [BsonElement("operationalSchedule")]
         public OperationalSchedule Schedule { get; set; } = new OperationalSchedule();
 
