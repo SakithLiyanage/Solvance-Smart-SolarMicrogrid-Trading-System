@@ -37,6 +37,16 @@ import Pagination, { usePagination } from '../components/Pagination';
 const STATUS_FILTERS = ['All', 'Active', 'Inactive'];
 const ALL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+const SRI_LANKA_REGIONS = [
+  { city: 'Colombo', name: 'Colombo Harbor Microgrid Substation', code: 'MG-COL', lat: 6.9428, lng: 79.8512, address: 'Port Access Road, Colombo 13, Western Province' },
+  { city: 'Kandy', name: 'Kandy Central Energy Depot', code: 'MG-KND', lat: 7.2906, lng: 80.6337, address: 'William Gopallawa Mawatha, Kandy, Central Province' },
+  { city: 'Galle', name: 'Galle Fort Coastal Solar Hub', code: 'MG-GAL', lat: 6.0328, lng: 80.2170, address: 'Rampart Street, Galle, Southern Province' },
+  { city: 'Jaffna', name: 'Jaffna Peninsula Solar Array', code: 'MG-JAF', lat: 9.6615, lng: 80.0255, address: 'Kandy Road, Jaffna, Northern Province' },
+  { city: 'Hambantota', name: 'Hambantota Green Energy Exchange', code: 'MG-HMB', lat: 6.1429, lng: 81.1212, address: 'Mirijjawila Industrial Corridor, Hambantota' },
+  { city: 'Negombo', name: 'Negombo Coastal Substation', code: 'MG-NEG', lat: 7.2008, lng: 79.8737, address: 'Main Street, Negombo, Western Province' },
+  { city: 'Kurunegala', name: 'Kurunegala Grid Intertie', code: 'MG-KUR', lat: 7.4863, lng: 80.3623, address: 'Dambulla Road, Kurunegala, North Western Province' }
+];
+
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
 const loadGoogleMapsScript = (apiKey) => {
@@ -161,6 +171,19 @@ export default function NodeManagement({ theme }) {
   const autocompleteRef = useRef(null);
   const [mapsApiLoaded, setMapsApiLoaded] = useState(false);
   const [mapsLoadError, setMapsLoadError] = useState('');
+  const [locationSearchText, setLocationSearchText] = useState('');
+
+  const handleSelectRegion = (region) => {
+    setFormData((prev) => ({
+      ...prev,
+      stationCode: prev.stationCode || `${region.code}-01`,
+      name: region.name,
+      address: region.address,
+      latitude: region.lat,
+      longitude: region.lng
+    }));
+    setLocationSearchText('');
+  };
 
   useEffect(() => {
     if (!GOOGLE_MAPS_KEY) return;
@@ -367,17 +390,20 @@ export default function NodeManagement({ theme }) {
   const openCreateModal = () => {
     setEditingStation(null);
     setFormError('');
+    setLocationSearchText('');
+    const defaultRegion = SRI_LANKA_REGIONS[0];
+    const seq = String(stations.length + 1).padStart(2, '0');
     setFormData({
-      stationCode: '',
-      name: '',
-      latitude: '',
-      longitude: '',
-      address: '',
-      capacityKwh: '',
-      totalBatterySlots: '',
+      stationCode: `MG-COL-${seq}`,
+      name: defaultRegion.name,
+      latitude: defaultRegion.lat,
+      longitude: defaultRegion.lng,
+      address: defaultRegion.address,
+      capacityKwh: 1000,
+      totalBatterySlots: 24,
       gridConnection: 'Three-Phase 400V Grid Intertie',
       storageType: 'Lithium Iron Phosphate (LFP)',
-      maxDischargeRateKw: '',
+      maxDischargeRateKw: 200,
       openTime: '06:00',
       closeTime: '22:00',
       daysOpen: [...ALL_DAYS],
@@ -449,6 +475,26 @@ export default function NodeManagement({ theme }) {
     const capacityKwh = parseFloat(formData.capacityKwh);
     const totalBatterySlots = parseInt(formData.totalBatterySlots, 10);
     const maxDischargeRateKw = parseFloat(formData.maxDischargeRateKw) || Math.round(capacityKwh * 0.2);
+
+    if (isNaN(latitude) || isNaN(longitude)) {
+      setFormError('Please provide valid GPS latitude and longitude coordinates.');
+      return;
+    }
+
+    if (latitude < 5.8 || latitude > 9.9 || longitude < 79.5 || longitude > 82.0) {
+      setFormError('GPS coordinates must be located within Sri Lanka boundaries (Lat 5.9°–9.9°N, Long 79.5°–81.9°E).');
+      return;
+    }
+
+    if (isNaN(capacityKwh) || capacityKwh <= 0) {
+      setFormError('Storage capacity must be a positive number in kWh.');
+      return;
+    }
+
+    if (isNaN(totalBatterySlots) || totalBatterySlots < 1) {
+      setFormError('Total battery slots must be at least 1.');
+      return;
+    }
 
     if (toMinutes(formData.closeTime) <= toMinutes(formData.openTime)) {
       setFormError('Closing time must be after opening time.');
@@ -1061,37 +1107,80 @@ export default function NodeManagement({ theme }) {
             </div>
           )}
 
-          {/* Google Places Live Search & Select */}
-          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-1.5">
+          {/* Location & Google Maps Integration */}
+          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-2.5">
             <div className="flex items-center justify-between">
-              <label htmlFor="google-places-search" className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+              <label htmlFor="location-search-input" className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5" />
-                <span>Search Location via Google Maps (Places Autocomplete)</span>
+                <span>Station Location &amp; Regional Coordinates (Sri Lanka)</span>
               </label>
               {GOOGLE_MAPS_KEY ? (
                 <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                  {mapsApiLoaded ? 'Live Places API Active' : 'Loading Places...'}
+                  {mapsApiLoaded ? 'Google Places Live' : 'Loading Places API...'}
                 </span>
               ) : (
                 <span className="text-[10px] text-amber-700 dark:text-amber-300 font-medium">
-                  Manual Entry (or set VITE_GOOGLE_MAPS_API_KEY in .env)
+                  Regional Autocomplete Active
                 </span>
               )}
             </div>
-            <input
-              ref={placeInputRef}
-              id="google-places-search"
-              type="text"
-              disabled={!GOOGLE_MAPS_KEY}
-              placeholder={GOOGLE_MAPS_KEY ? "Search place, landmark, or city (e.g. Kandy, Galle Fort, Colombo Port)..." : "Google Places optional: set VITE_GOOGLE_MAPS_API_KEY in .env or type details below"}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-amber-500/30 rounded-lg text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 disabled:bg-slate-100 dark:disabled:bg-slate-800/60 disabled:cursor-not-allowed"
-            />
-            {mapsLoadError && (
-              <p className="text-[11px] text-red-500 dark:text-red-400">{mapsLoadError}</p>
+
+            {GOOGLE_MAPS_KEY ? (
+              <input
+                ref={placeInputRef}
+                id="location-search-input"
+                type="text"
+                placeholder="Search place, landmark, or city (e.g. Kandy, Galle Fort, Colombo Port)..."
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-amber-500/30 rounded-lg text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              />
+            ) : (
+              <div className="relative">
+                <input
+                  id="location-search-input"
+                  type="text"
+                  value={locationSearchText}
+                  onChange={(e) => setLocationSearchText(e.target.value)}
+                  placeholder="Type city or district (e.g. Kandy, Galle, Jaffna, Hambantota)..."
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-amber-500/30 rounded-lg text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                />
+                {locationSearchText.trim() && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl z-20 max-h-48 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                    {SRI_LANKA_REGIONS.filter(
+                      (r) =>
+                        r.city.toLowerCase().includes(locationSearchText.toLowerCase()) ||
+                        r.name.toLowerCase().includes(locationSearchText.toLowerCase()) ||
+                        r.address.toLowerCase().includes(locationSearchText.toLowerCase())
+                    ).map((r) => (
+                      <button
+                        key={r.city}
+                        type="button"
+                        onClick={() => handleSelectRegion(r)}
+                        className="w-full text-left p-2.5 hover:bg-amber-500/10 text-xs flex flex-col gap-0.5 cursor-pointer"
+                      >
+                        <span className="font-bold text-slate-900 dark:text-white">{r.name}</span>
+                        <span className="text-[11px] text-slate-500">{r.address}</span>
+                        <span className="text-[10px] font-mono text-amber-600">GPS: {r.lat}, {r.lng}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Selecting a location auto-fills coordinates, address, and hub name below.
-            </p>
+
+            {/* Quick-Pick Region Pills */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Quick Fill:</span>
+              {SRI_LANKA_REGIONS.map((r) => (
+                <button
+                  key={r.city}
+                  type="button"
+                  onClick={() => handleSelectRegion(r)}
+                  className="px-2 py-0.5 bg-amber-500/10 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 border border-amber-500/20 rounded-md text-[11px] font-medium transition cursor-pointer"
+                >
+                  {r.city}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1140,8 +1229,8 @@ export default function NodeManagement({ theme }) {
                 id="hub-lat"
                 type="number"
                 step="any"
-                min="-90"
-                max="90"
+                min="5.8"
+                max="9.9"
                 required
                 value={formData.latitude}
                 onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
@@ -1154,8 +1243,8 @@ export default function NodeManagement({ theme }) {
                 id="hub-lng"
                 type="number"
                 step="any"
-                min="-180"
-                max="180"
+                min="79.5"
+                max="82.0"
                 required
                 value={formData.longitude}
                 onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
@@ -1163,6 +1252,38 @@ export default function NodeManagement({ theme }) {
               />
             </div>
           </div>
+
+          {/* Live In-Modal Google Maps Embed */}
+          {formData.latitude && formData.longitude && !isNaN(parseFloat(formData.latitude)) && !isNaN(parseFloat(formData.longitude)) && (
+            <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950">
+              <div className="px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-[11px]">
+                <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-amber-500" />
+                  Google Maps Pin Preview ({Number(formData.latitude).toFixed(4)}, {Number(formData.longitude).toFixed(4)})
+                </span>
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${formData.latitude},${formData.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 font-bold text-xs"
+                >
+                  <span>Verify on Google Maps</span>
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+              <div className="relative w-full h-[140px]">
+                <iframe
+                  title="Google Maps Pin Preview"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={`https://maps.google.com/maps?q=${formData.latitude},${formData.longitude}&hl=en&z=15&output=embed`}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -1175,7 +1296,15 @@ export default function NodeManagement({ theme }) {
                 max="100000"
                 required
                 value={formData.capacityKwh}
-                onChange={(e) => setFormData({ ...formData, capacityKwh: e.target.value })}
+                onChange={(e) => {
+                  const cap = e.target.value;
+                  const numCap = parseFloat(cap);
+                  setFormData((prev) => ({
+                    ...prev,
+                    capacityKwh: cap,
+                    maxDischargeRateKw: !isNaN(numCap) && numCap > 0 ? Math.round(numCap * 0.2) : prev.maxDischargeRateKw
+                  }));
+                }}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 tabular-nums"
               />
             </div>
