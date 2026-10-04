@@ -19,7 +19,8 @@ import {
   ShieldAlert, CheckCircle2, UserX, Mail, Phone, Hash,
   UserPlus, Edit3, X, Zap, Shield, MapPin, Eye, EyeOff, FileText,
   Upload, AlertCircle, Award, CheckCircle, ShieldCheck,
-  CreditCard, Layers, FileCheck, Image, Trash2, Cpu
+  CreditCard, Layers, FileCheck, Image, Trash2, Cpu,
+  Maximize2, ZoomIn, ZoomOut, RotateCw, Download
 } from 'lucide-react';
 import api from '../api/client';
 import { 
@@ -61,6 +62,34 @@ export default function ProsumerManagement({ theme }) {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(''); // shown inside the create/edit modals
+
+  // Fullscreen Image Lightbox State
+  const [fullscreenImage, setFullscreenImage] = useState(null); // { src, title, subtitle }
+  const [lightboxZoom, setLightboxZoom] = useState(1);
+  const [lightboxRotation, setLightboxRotation] = useState(0);
+
+  const openFullscreenImage = (src, title, subtitle = '') => {
+    if (!src) return;
+    setFullscreenImage({ src, title, subtitle });
+    setLightboxZoom(1);
+    setLightboxRotation(0);
+  };
+
+  const closeFullscreenImage = () => {
+    setFullscreenImage(null);
+    setLightboxZoom(1);
+    setLightboxRotation(0);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && fullscreenImage) {
+        closeFullscreenImage();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [fullscreenImage]);
 
   // Status changes (approve / deactivate / reactivate)
   const [statusUpdatingNic, setStatusUpdatingNic] = useState(null);
@@ -939,14 +968,38 @@ export default function ProsumerManagement({ theme }) {
                     <div className="w-full max-w-lg">
                       <div className="flex items-center justify-between mb-2 text-[11px] text-slate-500">
                         <span>NIC front</span>
-                        <span className="font-semibold text-slate-400">{frontDoc ? 'Uploaded' : 'Not provided'}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-slate-400">{frontDoc ? 'Uploaded' : 'Not provided'}</span>
+                          {frontDoc && (
+                            <button
+                              type="button"
+                              onClick={() => openFullscreenImage(frontDoc, `NIC Front — ${selectedKycUser.fullName}`, `NIC: ${selectedKycUser.nic}`)}
+                              className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 font-bold text-[11px] flex items-center gap-1 shadow-xs transition cursor-pointer"
+                              title="View Full Screen"
+                            >
+                              <Maximize2 className="h-3 w-3 text-amber-500" />
+                              <span>Full Screen</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                       {frontDoc ? (
-                        <img
-                          src={frontDoc}
-                          alt={`NIC Front - ${selectedKycUser.nic}`}
-                          className="w-full h-auto object-contain max-h-72 rounded-xl border border-slate-200 dark:border-slate-800 shadow-md"
-                        />
+                        <div
+                          className="relative group cursor-pointer overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-md bg-slate-900/10"
+                          onClick={() => openFullscreenImage(frontDoc, `NIC Front — ${selectedKycUser.fullName}`, `NIC: ${selectedKycUser.nic}`)}
+                        >
+                          <img
+                            src={frontDoc}
+                            alt={`NIC Front - ${selectedKycUser.nic}`}
+                            className="w-full h-auto object-contain max-h-72 transition duration-200 group-hover:scale-[1.02]"
+                          />
+                          <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center backdrop-blur-[1px]">
+                            <span className="px-3 py-1.5 rounded-xl bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-white font-bold text-xs flex items-center gap-1.5 shadow-lg border border-slate-200 dark:border-slate-800">
+                              <Maximize2 className="h-3.5 w-3.5 text-amber-500" />
+                              Click to view full screen
+                            </span>
+                          </div>
+                        </div>
                       ) : (
                         <div className="py-12 px-6 flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40">
                           <FileText className="h-10 w-10 text-slate-400 mb-2" />
@@ -963,14 +1016,38 @@ export default function ProsumerManagement({ theme }) {
                     <div className="w-full max-w-lg">
                       <div className="flex items-center justify-between mb-2 text-[11px] text-slate-500">
                         <span>NIC back</span>
-                        <span className="font-semibold text-slate-400">{backDoc ? 'Uploaded' : 'Not provided'}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-slate-400">{backDoc ? 'Uploaded' : 'Not provided'}</span>
+                          {backDoc && (
+                            <button
+                              type="button"
+                              onClick={() => openFullscreenImage(backDoc, `NIC Back — ${selectedKycUser.fullName}`, `NIC: ${selectedKycUser.nic}`)}
+                              className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 font-bold text-[11px] flex items-center gap-1 shadow-xs transition cursor-pointer"
+                              title="View Full Screen"
+                            >
+                              <Maximize2 className="h-3 w-3 text-amber-500" />
+                              <span>Full Screen</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                       {backDoc ? (
-                        <img
-                          src={backDoc}
-                          alt={`NIC Back - ${selectedKycUser.nic}`}
-                          className="w-full h-auto object-contain max-h-72 rounded-xl border border-slate-200 dark:border-slate-800 shadow-md"
-                        />
+                        <div
+                          className="relative group cursor-pointer overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-md bg-slate-900/10"
+                          onClick={() => openFullscreenImage(backDoc, `NIC Back — ${selectedKycUser.fullName}`, `NIC: ${selectedKycUser.nic}`)}
+                        >
+                          <img
+                            src={backDoc}
+                            alt={`NIC Back - ${selectedKycUser.nic}`}
+                            className="w-full h-auto object-contain max-h-72 transition duration-200 group-hover:scale-[1.02]"
+                          />
+                          <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center backdrop-blur-[1px]">
+                            <span className="px-3 py-1.5 rounded-xl bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-white font-bold text-xs flex items-center gap-1.5 shadow-lg border border-slate-200 dark:border-slate-800">
+                              <Maximize2 className="h-3.5 w-3.5 text-amber-500" />
+                              Click to view full screen
+                            </span>
+                          </div>
+                        </div>
                       ) : (
                         <div className="py-12 px-6 flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40">
                           <Layers className="h-10 w-10 text-slate-400 mb-2" />
@@ -987,14 +1064,38 @@ export default function ProsumerManagement({ theme }) {
                     <div className="w-full max-w-lg">
                       <div className="flex items-center justify-between mb-2 text-[11px] text-slate-500">
                         <span>Electricity bill</span>
-                        <span className="font-semibold text-slate-400">{utilityBill ? 'Uploaded' : 'Not provided'}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-slate-400">{utilityBill ? 'Uploaded' : 'Not provided'}</span>
+                          {utilityBill && (
+                            <button
+                              type="button"
+                              onClick={() => openFullscreenImage(utilityBill, `Electricity Bill — ${selectedKycUser.fullName}`, `Address: ${selectedKycUser.address || '—'}`)}
+                              className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 font-bold text-[11px] flex items-center gap-1 shadow-xs transition cursor-pointer"
+                              title="View Full Screen"
+                            >
+                              <Maximize2 className="h-3 w-3 text-amber-500" />
+                              <span>Full Screen</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                       {utilityBill ? (
-                        <img
-                          src={utilityBill}
-                          alt="Utility Bill"
-                          className="w-full h-auto object-contain max-h-72 rounded-xl border border-slate-200 dark:border-slate-800 shadow-md"
-                        />
+                        <div
+                          className="relative group cursor-pointer overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-md bg-slate-900/10"
+                          onClick={() => openFullscreenImage(utilityBill, `Electricity Bill — ${selectedKycUser.fullName}`, `Address: ${selectedKycUser.address || '—'}`)}
+                        >
+                          <img
+                            src={utilityBill}
+                            alt="Utility Bill"
+                            className="w-full h-auto object-contain max-h-72 transition duration-200 group-hover:scale-[1.02]"
+                          />
+                          <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center backdrop-blur-[1px]">
+                            <span className="px-3 py-1.5 rounded-xl bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-white font-bold text-xs flex items-center gap-1.5 shadow-lg border border-slate-200 dark:border-slate-800">
+                              <Maximize2 className="h-3.5 w-3.5 text-amber-500" />
+                              Click to view full screen
+                            </span>
+                          </div>
+                        </div>
                       ) : (
                         <div className="py-12 px-6 flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40">
                           <FileText className="h-10 w-10 text-slate-400 mb-2" />
@@ -1704,6 +1805,125 @@ export default function ProsumerManagement({ theme }) {
           </form>
         )}
       </Modal>
+
+      {/* Full Screen Image Lightbox Modal */}
+      {fullscreenImage && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Image Fullscreen Viewer"
+          className="fixed inset-0 z-[100] flex flex-col bg-slate-950/95 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeFullscreenImage();
+          }}
+        >
+          {/* Top Floating Control Bar */}
+          <div className="flex items-center justify-between px-4 sm:px-6 py-3 bg-slate-900/90 border-b border-slate-800/80 text-white select-none z-10">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-8 w-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                <Image className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-bold text-xs sm:text-sm truncate text-white">{fullscreenImage.title}</h4>
+                {fullscreenImage.subtitle && (
+                  <p className="text-[11px] text-slate-400 truncate">{fullscreenImage.subtitle}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Viewer Controls */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="flex items-center bg-slate-800/80 rounded-xl p-1 border border-slate-700/60">
+                <button
+                  type="button"
+                  onClick={() => setLightboxZoom((prev) => Math.max(0.5, prev - 0.25))}
+                  title="Zoom Out"
+                  aria-label="Zoom out"
+                  className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLightboxZoom(1)}
+                  title="Reset Zoom (100%)"
+                  aria-label="Reset zoom"
+                  className="px-2 py-1 text-xs font-mono text-slate-300 hover:text-white transition cursor-pointer"
+                >
+                  {Math.round(lightboxZoom * 100)}%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLightboxZoom((prev) => Math.min(3.0, prev + 0.25))}
+                  title="Zoom In"
+                  aria-label="Zoom in"
+                  className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setLightboxRotation((prev) => (prev + 90) % 360)}
+                title="Rotate Clockwise (90°)"
+                aria-label="Rotate 90 degrees"
+                className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition cursor-pointer flex items-center gap-1 text-xs font-semibold"
+              >
+                <RotateCw className="h-4 w-4" />
+                <span className="hidden sm:inline">Rotate</span>
+              </button>
+
+              <a
+                href={fullscreenImage.src}
+                download={`${(fullscreenImage.title || 'document').replace(/[^a-z0-9]/gi, '_')}.png`}
+                title="Download image"
+                aria-label="Download image"
+                className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition cursor-pointer"
+              >
+                <Download className="h-4 w-4" />
+              </a>
+
+              <button
+                type="button"
+                onClick={closeFullscreenImage}
+                title="Close (Esc)"
+                aria-label="Close viewer"
+                className="p-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 border border-red-500/30 transition cursor-pointer ml-1"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Main Zoomable Image Canvas */}
+          <div
+            className="flex-1 overflow-auto flex items-center justify-center p-4 sm:p-8 cursor-grab active:cursor-grabbing"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) closeFullscreenImage();
+            }}
+          >
+            <div
+              className="relative transition-transform duration-200 ease-out select-none flex items-center justify-center"
+              style={{
+                transform: `scale(${lightboxZoom}) rotate(${lightboxRotation}deg)`
+              }}
+            >
+              <img
+                src={fullscreenImage.src}
+                alt={fullscreenImage.title}
+                className="max-h-[85vh] max-w-[90vw] object-contain rounded-xl shadow-2xl border border-slate-800"
+                draggable={false}
+              />
+            </div>
+          </div>
+
+          {/* Bottom helper tip */}
+          <div className="py-2 text-center text-[11px] text-slate-500 bg-slate-900/60 border-t border-slate-800/50">
+            <span>Use zoom buttons or mouse controls • Press <kbd className="px-1 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">ESC</kbd> to exit full screen</span>
+          </div>
+        </div>
+      )}
 
     </div>
   );
