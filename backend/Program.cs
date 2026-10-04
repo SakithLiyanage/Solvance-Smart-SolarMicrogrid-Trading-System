@@ -112,13 +112,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowAllClients");
 
-// Auto-seed initial system database
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<MongoDbContext>();
-    await DbSeeder.SeedAsync(context, builder.Configuration);
-}
-
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -10,8 +10,8 @@ Write-Host " STARTING SYSTEM VERIFICATION TESTS " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 # 1. Test Admin Login
-Write-Host "`n[Test 1] Authenticating Backoffice Admin (ADMIN001)..." -NoNewline
-$loginBody = @{ usernameOrNic = "ADMIN001"; password = "Admin@123" } | ConvertTo-Json
+Write-Host "`n[Test 1] Authenticating Backoffice Admin (200331713189)..." -NoNewline
+$loginBody = @{ usernameOrNic = "200331713189"; password = "AdminPassword123!" } | ConvertTo-Json
 $adminAuth = Invoke-RestMethod -Uri "$baseUrl/auth/login" -Method Post -Body $loginBody -ContentType "application/json"
 $adminToken = $adminAuth.token
 Write-Host " PASS (Token issued, Role: $($adminAuth.role))" -ForegroundColor Green

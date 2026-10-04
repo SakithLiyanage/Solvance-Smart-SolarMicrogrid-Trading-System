@@ -540,8 +540,8 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
             etEmail.setText(currentUser.getEmail());
             etPhone.setText(currentUser.getPhone());
             etAddress.setText(currentUser.getAddress());
-            etCapacity.setText(currentUser.getSolarCapacityKw() > 0 ? String.format(Locale.US, "%.1f", currentUser.getSolarCapacityKw()) : "18.5");
-            etInverter.setText(currentUser.getInverterSerial() != null && !currentUser.getInverterSerial().isEmpty() ? currentUser.getInverterSerial() : "INV-SL-9042A");
+            etCapacity.setText(currentUser.getSolarCapacityKw() > 0 ? String.format(Locale.US, "%.1f", currentUser.getSolarCapacityKw()) : "");
+            etInverter.setText(currentUser.getInverterSerial() != null ? currentUser.getInverterSerial() : "");
         }
 
         btnCancel.setOnClickListener(v -> dialog.dismiss());
@@ -559,7 +559,7 @@ public class ProsumerDashboardActivity extends AppCompatActivity {
                 return;
             }
 
-            double capacity = 18.5;
+            double capacity = 0.0;
             try {
                 if (!capStr.isEmpty()) capacity = Double.parseDouble(capStr);
             } catch (Exception ignored) {}

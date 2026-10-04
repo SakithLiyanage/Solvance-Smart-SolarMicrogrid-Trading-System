@@ -41,6 +41,7 @@ namespace SolarMicrogridApi.Controllers
             var result = users.Select(u => new
             {
                 u.Id,
+                StaffId = u.StaffId ?? (u.Role != "Prosumer" ? u.Nic : null),
                 u.Nic,
                 u.Username,
                 u.FullName,
@@ -313,6 +314,30 @@ namespace SolarMicrogridApi.Controllers
             catch (InvalidOperationException ex)
             {
                 return Conflict(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Deletes a staff member or prosumer account (Backoffice only; cannot delete Backoffice admin).
+        /// </summary>
+        [HttpDelete("{nic}")]
+        [Authorize(Roles = "Backoffice")]
+        public async Task<IActionResult> DeleteUser(string nic)
+        {
+            // Method: DeleteUser - Permanently removes staff or prosumer account with Backoffice safeguards.
+            try
+            {
+                var success = await _userService.DeleteUserAsync(nic);
+                if (!success)
+                {
+                    return NotFound(new { message = $"User with NIC '{nic}' not found." });
+                }
+
+                return Ok(new { message = $"User '{nic}' deleted successfully." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
     }

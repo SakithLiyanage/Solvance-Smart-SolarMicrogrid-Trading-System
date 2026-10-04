@@ -23,10 +23,16 @@ namespace SolarMicrogridApi.Models
         public string? Id { get; set; }
 
         /// <summary>
-        /// National Identity Card number or staff identifier. Acts as natural key.
+        /// National Identity Card number for Prosumers or primary natural key.
         /// </summary>
         [BsonElement("nic")]
         public string Nic { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Dedicated Staff ID for Backoffice and Grid Operator employees.
+        /// </summary>
+        [BsonElement("staffId")]
+        public string? StaffId { get; set; }
 
         [BsonElement("username")]
         public string Username { get; set; } = string.Empty;

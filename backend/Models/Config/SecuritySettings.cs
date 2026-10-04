@@ -21,5 +21,6 @@ namespace SolarMicrogridApi.Models.Config
         public int LockoutDurationMinutes { get; set; } = 15;
         public bool RequireKycApproval { get; set; } = true;
         public string DefaultProsumerStatus { get; set; } = "Pending";
+        public string SetupMasterKey { get; set; } = "SolvanceMasterBootstrap2026!#UltraSecure";
     }
 }

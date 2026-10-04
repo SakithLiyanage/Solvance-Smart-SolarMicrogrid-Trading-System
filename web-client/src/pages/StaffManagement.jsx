@@ -84,6 +84,7 @@ export default function StaffManagement({ theme, currentUser }) {
 
   // Form States
   const initialCreateForm = {
+    staffId: '',
     nic: '',
     fullName: '',
     email: '',
@@ -197,10 +198,12 @@ export default function StaffManagement({ theme, currentUser }) {
     setModalError('');
     setSubmitting(true);
 
+    const staffIdentifier = (createForm.staffId || createForm.nic || '').trim().toUpperCase();
     try {
       await api.post('/auth/register-staff', {
         ...createForm,
-        nic: createForm.nic.trim().toUpperCase(),
+        staffId: staffIdentifier,
+        nic: staffIdentifier,
         address: createForm.role === 'Backoffice' ? createForm.address || DEFAULT_OFFICE : createForm.address
       });
       notify(`${ROLE_LABELS[createForm.role]} account created for ${createForm.fullName}.`, 'success');
@@ -432,7 +435,7 @@ export default function StaffManagement({ theme, currentUser }) {
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer"
             >
               <UserPlus className="h-4 w-4" />
-              <span>New Staff Account</span>
+              <span>New Operator Account</span>
             </button>
           </div>
         </div>
@@ -499,8 +502,8 @@ export default function StaffManagement({ theme, currentUser }) {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by NIC, name, email, or phone..."
-            aria-label="Search staff by NIC, name, email or phone"
+            placeholder="Search by ID, name, email, or phone..."
+            aria-label="Search staff by ID, name, email or phone"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
@@ -583,7 +586,7 @@ export default function StaffManagement({ theme, currentUser }) {
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/40 text-slate-600 dark:text-slate-400 font-bold text-xs whitespace-nowrap">
                   <th className="py-3.5 px-6">Staff Member</th>
-                  <th className="py-3.5 px-4">Role</th>
+                  <th className="py-3.5 px-4">Staff ID</th>
                   <th className="py-3.5 px-4">Contact</th>
                   <th className="py-3.5 px-4">Assigned Hub / Office</th>
                   <th className="py-3.5 px-4">Status</th>
@@ -620,22 +623,19 @@ export default function StaffManagement({ theme, currentUser }) {
                                   You
                                 </span>
                               )}
+                              {!isOperator && (
+                                <span className="px-1.5 py-0.5 rounded text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                  Admin
+                                </span>
+                              )}
                             </div>
-                            <span className="font-mono text-[11px] text-slate-400 block mt-0.5">
-                              NIC: {u.nic}
-                            </span>
                           </div>
                         </div>
                       </td>
 
-                      <td className="py-4 px-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border whitespace-nowrap ${
-                          isOperator
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25'
-                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25'
-                        }`}>
-                          {isOperator ? <Radio className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
-                          <span>{isOperator ? 'Grid Operator' : 'Backoffice Admin'}</span>
+                      <td className="py-4 px-4 font-mono text-xs">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 font-bold text-slate-800 dark:text-slate-200 tracking-wide">
+                          {u.staffId || u.nic}
                         </span>
                       </td>
 
@@ -782,10 +782,10 @@ export default function StaffManagement({ theme, currentUser }) {
       <Modal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        title="New Staff Account"
+        title="New Grid Operator Account"
       >
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          Grid Operators get the operational tools (reservations, QR verification, battery slots). Backoffice Admins get full administration access.
+          Provision a new Grid Operator account for station operations, battery slot allocation, and QR verification.
         </p>
 
         {modalError && (
@@ -795,38 +795,20 @@ export default function StaffManagement({ theme, currentUser }) {
         )}
 
         <form onSubmit={handleCreateSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="create-staff-nic" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                NIC or Staff ID *
-              </label>
-              <input
-                id="create-staff-nic"
-                type="text"
-                required
-                placeholder="e.g. 198812345678 or OPERATOR002"
-                value={createForm.nic}
-                onChange={(e) => setCreateForm({ ...createForm, nic: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-amber-500/50"
-              />
-              {/* Mirrors the backend format check (CreateStaffUserDto) */}
-              <span className="text-[11px] text-slate-400 mt-1 block">12-digit NIC, 9 digits + V/X, or ADMIN/OPERATOR + 3 digits.</span>
-            </div>
-
-            <div>
-              <label htmlFor="create-staff-role" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Role *
-              </label>
-              <select
-                id="create-staff-role"
-                value={createForm.role}
-                onChange={(e) => handleCreateRoleChange(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-semibold focus:ring-2 focus:ring-amber-500/50"
-              >
-                <option value="GridOperator" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Grid Operator</option>
-                <option value="Backoffice" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Backoffice Administrator</option>
-              </select>
-            </div>
+          <div>
+            <label htmlFor="create-staff-id" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Staff ID *
+            </label>
+            <input
+              id="create-staff-id"
+              type="text"
+              required
+              placeholder="e.g. OP-101, EMP-2024, or ADMIN101"
+              value={createForm.staffId || createForm.nic}
+              onChange={(e) => setCreateForm({ ...createForm, staffId: e.target.value, nic: e.target.value })}
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-amber-500/50"
+            />
+            <span className="text-[11px] text-slate-400 mt-1 block">Unique staff identifier or employee code.</span>
           </div>
 
           <div>
@@ -881,20 +863,38 @@ export default function StaffManagement({ theme, currentUser }) {
               {createForm.role === 'GridOperator' ? 'Assigned Hub *' : 'Office'}
             </label>
             {createForm.role === 'GridOperator' ? (
-              <select
-                id="create-staff-base"
-                required
-                value={createForm.address}
-                onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-amber-500/50"
-              >
-                <option value="" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Select a hub…</option>
-                {stations.map((s) => (
-                  <option key={s.id} value={`${s.stationCode} — ${s.name}`} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                    {s.stationCode} — {s.name} ({s.address}){s.isActive === false ? ' (inactive)' : ''}
-                  </option>
-                ))}
-              </select>
+              stations.length > 0 ? (
+                <select
+                  id="create-staff-base"
+                  required
+                  value={createForm.address}
+                  onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-amber-500/50"
+                >
+                  <option value="" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Select a hub…</option>
+                  {stations.map((s) => (
+                    <option key={s.id} value={`${s.stationCode} — ${s.name}`} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                      {s.stationCode} — {s.name} ({s.address}){s.isActive === false ? ' (inactive)' : ''}
+                    </option>
+                  ))}
+                  <option value="General Operations Desk (Floating)" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">General Operations Desk (Floating)</option>
+                </select>
+              ) : (
+                <div className="space-y-1.5">
+                  <input
+                    id="create-staff-base"
+                    type="text"
+                    required
+                    placeholder="e.g. Colombo Operations Desk or Regional Hub"
+                    value={createForm.address}
+                    onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-amber-500/50"
+                  />
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                    No solar hubs registered yet in Hub Management. You can type an assigned operational desk now, or reassign once hubs are created.
+                  </p>
+                </div>
+              )
             ) : (
               <select
                 id="create-staff-base"
@@ -1037,23 +1037,35 @@ export default function StaffManagement({ theme, currentUser }) {
               {editingStaff?.role === 'GridOperator' ? 'Assigned Hub *' : 'Office'}
             </label>
             {editingStaff?.role === 'GridOperator' ? (
-              <select
-                id="edit-staff-base"
-                required
-                value={editForm.address}
-                onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-amber-500/50"
-              >
-                <option value="" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Select a hub…</option>
-                {stations.map((s) => (
-                  <option key={s.id} value={`${s.stationCode} — ${s.name}`} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                    {s.stationCode} — {s.name} ({s.address}){s.isActive === false ? ' (inactive)' : ''}
-                  </option>
-                ))}
-                {editForm.address && !stations.some(s => `${s.stationCode} — ${s.name}` === editForm.address) && (
-                  <option value={editForm.address} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{editForm.address}</option>
-                )}
-              </select>
+              stations.length > 0 ? (
+                <select
+                  id="edit-staff-base"
+                  required
+                  value={editForm.address}
+                  onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-amber-500/50"
+                >
+                  <option value="" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Select a hub…</option>
+                  {stations.map((s) => (
+                    <option key={s.id} value={`${s.stationCode} — ${s.name}`} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                      {s.stationCode} — {s.name} ({s.address}){s.isActive === false ? ' (inactive)' : ''}
+                    </option>
+                  ))}
+                  {editForm.address && !stations.some(s => `${s.stationCode} — ${s.name}` === editForm.address) && (
+                    <option value={editForm.address} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{editForm.address}</option>
+                  )}
+                </select>
+              ) : (
+                <input
+                  id="edit-staff-base"
+                  type="text"
+                  required
+                  placeholder="e.g. Colombo Operations Desk"
+                  value={editForm.address}
+                  onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-amber-500/50"
+                />
+              )
             ) : (
               <select
                 id="edit-staff-base"

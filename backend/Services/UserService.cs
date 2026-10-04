@@ -50,10 +50,18 @@ namespace SolarMicrogridApi.Services
         public async Task<AuthResponseDto?> AuthenticateAsync(LoginRequestDto request)
         {
             // Method: AuthenticateAsync - Validates credentials against User's detail, enforces status guards, tracks lockout, and generates JWT.
+            var identifier = request.UsernameOrNic.Trim();
+            var identifierUpper = identifier.ToUpperInvariant();
+            var identifierLower = identifier.ToLowerInvariant();
+
             var filter = Builders<User>.Filter.Or(
-                Builders<User>.Filter.Eq(u => u.Nic, request.UsernameOrNic.Trim()),
-                Builders<User>.Filter.Eq(u => u.Username, request.UsernameOrNic.Trim()),
-                Builders<User>.Filter.Eq(u => u.Email, request.UsernameOrNic.Trim().ToLower())
+                Builders<User>.Filter.Eq(u => u.StaffId, identifier),
+                Builders<User>.Filter.Eq(u => u.StaffId, identifierUpper),
+                Builders<User>.Filter.Eq(u => u.Nic, identifier),
+                Builders<User>.Filter.Eq(u => u.Nic, identifierUpper),
+                Builders<User>.Filter.Eq(u => u.Username, identifier),
+                Builders<User>.Filter.Eq(u => u.Username, identifierUpper),
+                Builders<User>.Filter.Eq(u => u.Email, identifierLower)
             );
 
             var user = await _context.Users.Find(filter).FirstOrDefaultAsync();
@@ -150,6 +158,7 @@ namespace SolarMicrogridApi.Services
             {
                 Token = tokenHandler.WriteToken(token),
                 Nic = user.Nic,
+                StaffId = user.StaffId ?? (user.Role != "Prosumer" ? user.Nic : null),
                 FullName = user.FullName,
                 Email = user.Email,
                 Phone = user.Phone,
@@ -200,23 +209,43 @@ namespace SolarMicrogridApi.Services
 
         public async Task<User> CreateStaffUserAsync(CreateStaffUserDto dto)
         {
-            // Method: CreateStaffUserAsync - Backoffice feature to provision Backoffice or GridOperator accounts.
-            var existingUser = await _context.Users.Find(u => u.Nic == dto.Nic || u.Email == dto.Email).FirstOrDefaultAsync();
+            // Security Policy: Administrators cannot create other Backoffice Administrators
+            if (dto.Role == "Backoffice")
+            {
+                throw new UnauthorizedAccessException("Security policy violation: Administrators cannot create additional Backoffice Administrators. Only Grid Operators can be provisioned.");
+            }
+
+            var staffIdRaw = !string.IsNullOrWhiteSpace(dto.StaffId) ? dto.StaffId : dto.Nic;
+            if (string.IsNullOrWhiteSpace(staffIdRaw))
+            {
+                throw new ArgumentException("Staff ID is required.");
+            }
+            var staffId = staffIdRaw.Trim();
+            var staffIdUpper = staffId.ToUpperInvariant();
+            var emailLower = dto.Email.Trim().ToLowerInvariant();
+
+            var existingUser = await _context.Users.Find(u => 
+                u.StaffId == staffId || u.StaffId == staffIdUpper ||
+                u.Nic == staffId || u.Nic == staffIdUpper || 
+                u.Username == staffId || u.Username == staffIdUpper ||
+                u.Email == emailLower).FirstOrDefaultAsync();
+
             if (existingUser != null)
             {
-                throw new InvalidOperationException("User with this NIC or Email already exists.");
+                throw new InvalidOperationException("User with this Staff ID or Email already exists.");
             }
 
             var staffUser = new User
             {
-                Nic = dto.Nic.Trim().ToUpper(),
-                Username = dto.Nic.Trim().ToUpper(),
+                StaffId = staffIdUpper,
+                Nic = staffIdUpper,
+                Username = staffIdUpper,
                 FullName = dto.FullName.Trim(),
-                Email = dto.Email.Trim().ToLower(),
+                Email = emailLower,
                 Phone = dto.Phone.Trim(),
                 Address = dto.Address.Trim(),
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-                Role = dto.Role == "Backoffice" ? "Backoffice" : "GridOperator",
+                Role = "GridOperator",
                 Status = "Active",
                 RegisteredAt = DateTime.UtcNow,
                 ActivatedAt = DateTime.UtcNow,
@@ -226,6 +255,70 @@ namespace SolarMicrogridApi.Services
 
             await _context.Users.InsertOneAsync(staffUser);
             return staffUser;
+        }
+
+        public async Task<User> BootstrapInitialAdminAsync(BootstrapAdminDto dto)
+        {
+            // 1. Verify Setup Key
+            var expectedKey = !string.IsNullOrEmpty(_securitySettings.SetupMasterKey)
+                ? _securitySettings.SetupMasterKey
+                : (_configuration["SecuritySettings:SetupMasterKey"] ?? "SolvanceMasterBootstrap2026!#UltraSecure");
+
+            if (string.IsNullOrWhiteSpace(dto.SetupKey) || dto.SetupKey != expectedKey)
+            {
+                throw new UnauthorizedAccessException("Invalid bootstrap security key.");
+            }
+
+            // 2. Strict Singleton Check: Reject if any Backoffice admin already exists in the system
+            var existingAdminCount = await _context.Users.CountDocumentsAsync(u => u.Role == "Backoffice");
+            if (existingAdminCount > 0)
+            {
+                throw new InvalidOperationException("Bootstrap disabled: An administrator account already exists. No additional admin accounts can be created.");
+            }
+
+            // 3. Resolve Admin Identifier (defaults to StaffId, Nic, or email prefix)
+            var adminIdRaw = !string.IsNullOrWhiteSpace(dto.StaffId)
+                ? dto.StaffId
+                : (!string.IsNullOrWhiteSpace(dto.Nic)
+                    ? dto.Nic
+                    : (dto.Email.Contains('@') ? dto.Email.Split('@')[0] : "ADMIN"));
+            var adminId = adminIdRaw.Trim();
+            var adminIdUpper = adminId.ToUpperInvariant();
+            var emailLower = dto.Email.Trim().ToLowerInvariant();
+
+            // Reject if ID or Email exists
+            var existingUser = await _context.Users.Find(u => 
+                u.StaffId == adminId || u.StaffId == adminIdUpper ||
+                u.Nic == adminId || u.Nic == adminIdUpper || 
+                u.Username == adminId || u.Username == adminIdUpper ||
+                u.Email == emailLower).FirstOrDefaultAsync();
+
+            if (existingUser != null)
+            {
+                throw new InvalidOperationException($"User with identifier '{adminId}' or email '{dto.Email}' already exists.");
+            }
+
+            // 4. Create single master Backoffice Admin
+            var adminUser = new User
+            {
+                StaffId = adminIdUpper,
+                Nic = adminIdUpper,
+                Username = adminIdUpper,
+                FullName = dto.FullName.Trim(),
+                Email = emailLower,
+                Phone = dto.Phone.Trim(),
+                Address = string.IsNullOrWhiteSpace(dto.Address) ? "National Operations Command — Colombo" : dto.Address.Trim(),
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                Role = "Backoffice",
+                Status = "Active",
+                RegisteredAt = DateTime.UtcNow,
+                ActivatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _context.Users.InsertOneAsync(adminUser);
+            return adminUser;
         }
 
         public async Task<List<User>> GetUsersAsync(string? role = null, string? status = null)
@@ -254,8 +347,13 @@ namespace SolarMicrogridApi.Services
 
         public async Task<User?> GetUserByNicAsync(string nic)
         {
-            // Method: GetUserByNicAsync - Looks up user profile by National Identity Card number or username.
-            return await _context.Users.Find(u => u.Nic == nic || u.Username == nic).FirstOrDefaultAsync();
+            // Method: GetUserByNicAsync - Looks up user profile by National Identity Card number, Staff ID, or username.
+            var trimmed = nic.Trim();
+            var upper = trimmed.ToUpperInvariant();
+            return await _context.Users.Find(u => 
+                u.StaffId == trimmed || u.StaffId == upper ||
+                u.Nic == trimmed || u.Nic == upper || 
+                u.Username == trimmed || u.Username == upper).FirstOrDefaultAsync();
         }
 
         public async Task<bool> UpdateUserStatusAsync(string nic, string newStatus, string operatorRole, string? operatorNic = null)
@@ -266,18 +364,20 @@ namespace SolarMicrogridApi.Services
                 throw new UnauthorizedAccessException("Only Backoffice officers have permission to activate or reactivate accounts.");
             }
 
+            var cleanNic = nic.Trim().ToUpperInvariant();
+
             // If deactivating a prosumer, verify no active/pending reservations exist
             if (newStatus == "Deactivated")
             {
                 var activeCount = await _context.Reservations.CountDocumentsAsync(r =>
-                    r.ProsumerNic == nic &&
+                    (r.ProsumerNic == cleanNic || r.ProsumerNic == nic.Trim()) &&
                     (r.Status == "Pending" || r.Status == "Approved") &&
                     r.ScheduledDateTime >= DateTime.UtcNow
                 );
 
                 if (activeCount > 0)
                 {
-                    throw new InvalidOperationException($"Cannot deactivate prosumer '{nic}'. User has {activeCount} active or pending energy reservations.");
+                    throw new InvalidOperationException($"Cannot deactivate prosumer '{cleanNic}'. User has {activeCount} active or pending energy reservations.");
                 }
             }
 
@@ -289,16 +389,17 @@ namespace SolarMicrogridApi.Services
             {
                 updateBuilder = updateBuilder
                     .Set(u => u.ActivatedAt, DateTime.UtcNow)
-                    .Set(u => u.ApprovedBy, operatorNic ?? "ADMIN001");
+                    .Set(u => u.ApprovedBy, !string.IsNullOrWhiteSpace(operatorNic) ? operatorNic : "Backoffice");
             }
 
-            var result = await _context.Users.UpdateOneAsync(u => u.Nic == nic, updateBuilder);
+            var result = await _context.Users.UpdateOneAsync(u => u.Nic == cleanNic || u.Nic == nic.Trim(), updateBuilder);
             return result.ModifiedCount > 0;
         }
 
         public async Task<bool> UpdateProfileAsync(string nic, UpdateProfileDto dto)
         {
             // Method: UpdateProfileAsync - Enables users to edit their own contact and solar capacity details.
+            var cleanNic = nic.Trim().ToUpperInvariant();
             var update = Builders<User>.Update
                 .Set(u => u.FullName, dto.FullName)
                 .Set(u => u.Email, dto.Email)
@@ -321,15 +422,16 @@ namespace SolarMicrogridApi.Services
                 update = update.Set(u => u.UtilityBillBase64, dto.UtilityBillBase64);
             }
 
-            var result = await _context.Users.UpdateOneAsync(u => u.Nic == nic, update);
+            var result = await _context.Users.UpdateOneAsync(u => u.Nic == cleanNic || u.Nic == nic.Trim(), update);
             return result.ModifiedCount > 0;
         }
 
         public async Task<bool> RequestDeactivationAsync(string nic)
         {
             // Method: RequestDeactivationAsync - Prosumer self-service action to deactivate account with active booking check.
+            var cleanNic = nic.Trim().ToUpperInvariant();
             var activeCount = await _context.Reservations.CountDocumentsAsync(r =>
-                r.ProsumerNic == nic &&
+                (r.ProsumerNic == cleanNic || r.ProsumerNic == nic.Trim()) &&
                 (r.Status == "Pending" || r.Status == "Approved") &&
                 r.ScheduledDateTime >= DateTime.UtcNow
             );
@@ -343,14 +445,15 @@ namespace SolarMicrogridApi.Services
                 .Set(u => u.Status, "Deactivated")
                 .Set(u => u.UpdatedAt, DateTime.UtcNow);
 
-            var result = await _context.Users.UpdateOneAsync(u => u.Nic == nic, update);
+            var result = await _context.Users.UpdateOneAsync(u => u.Nic == cleanNic || u.Nic == nic.Trim(), update);
             return result.ModifiedCount > 0;
         }
 
         public async Task<bool> ResetPasswordAsync(string nic, string newPassword, string requesterRole, string requesterNic, bool requirePasswordChange = false)
         {
             // Method: ResetPasswordAsync - Securely updates user password hash with authorization safeguard and mandatory reset flag.
-            var user = await _context.Users.Find(u => u.Nic == nic).FirstOrDefaultAsync();
+            var cleanNic = nic.Trim().ToUpperInvariant();
+            var user = await _context.Users.Find(u => u.Nic == cleanNic || u.Nic == nic.Trim()).FirstOrDefaultAsync();
             if (user == null)
             {
                 return false;
@@ -372,7 +475,10 @@ namespace SolarMicrogridApi.Services
                 throw new ArgumentException("Password must contain at least one letter and one number.");
             }
 
-            var filter = Builders<User>.Filter.Eq(u => u.Nic, nic);
+            var filter = Builders<User>.Filter.Or(
+                Builders<User>.Filter.Eq(u => u.Nic, cleanNic),
+                Builders<User>.Filter.Eq(u => u.Nic, nic.Trim())
+            );
             var update = Builders<User>.Update
                 .Set(u => u.PasswordHash, BCrypt.Net.BCrypt.HashPassword(newPassword))
                 .Set(u => u.MustChangePassword, requirePasswordChange)
@@ -387,7 +493,8 @@ namespace SolarMicrogridApi.Services
         public async Task<bool> ChangePasswordAsync(string nic, string currentPassword, string newPassword)
         {
             // Method: ChangePasswordAsync - Verifies active credentials and updates to new user-chosen password, clearing MustChangePassword flag.
-            var user = await _context.Users.Find(u => u.Nic == nic).FirstOrDefaultAsync();
+            var cleanNic = nic.Trim().ToUpperInvariant();
+            var user = await _context.Users.Find(u => u.Nic == cleanNic || u.Nic == nic.Trim()).FirstOrDefaultAsync();
             if (user == null) return false;
 
             if (!BCrypt.Net.BCrypt.Verify(currentPassword, user.PasswordHash))
@@ -405,7 +512,10 @@ namespace SolarMicrogridApi.Services
                 throw new ArgumentException("Password must contain at least one letter and one number.");
             }
 
-            var filter = Builders<User>.Filter.Eq(u => u.Nic, nic);
+            var filter = Builders<User>.Filter.Or(
+                Builders<User>.Filter.Eq(u => u.Nic, cleanNic),
+                Builders<User>.Filter.Eq(u => u.Nic, nic.Trim())
+            );
             var update = Builders<User>.Update
                 .Set(u => u.PasswordHash, BCrypt.Net.BCrypt.HashPassword(newPassword))
                 .Set(u => u.MustChangePassword, false)
@@ -415,6 +525,38 @@ namespace SolarMicrogridApi.Services
 
             var result = await _context.Users.UpdateOneAsync(filter, update);
             return result.ModifiedCount > 0;
+        }
+
+        public async Task<bool> DeleteUserAsync(string nic)
+        {
+            // Method: DeleteUserAsync - Removes staff or prosumer account with Backoffice administrator safeguards and active booking verification.
+            var cleanNic = nic.Trim().ToUpperInvariant();
+            var user = await GetUserByNicAsync(cleanNic);
+            if (user == null) return false;
+
+            if (user.Role == "Backoffice")
+            {
+                throw new InvalidOperationException("Security policy violation: Backoffice administrator accounts cannot be deleted.");
+            }
+
+            // Check if user has active reservations
+            var activeCount = await _context.Reservations.CountDocumentsAsync(r =>
+                (r.ProsumerNic == cleanNic || r.ProsumerNic == nic.Trim()) &&
+                (r.Status == "Pending" || r.Status == "Approved") &&
+                r.ScheduledDateTime >= DateTime.UtcNow
+            );
+
+            if (activeCount > 0)
+            {
+                throw new InvalidOperationException($"Cannot delete user '{cleanNic}'. User has {activeCount} active or pending energy reservations.");
+            }
+
+            var filter = Builders<User>.Filter.Or(
+                Builders<User>.Filter.Eq(u => u.Nic, cleanNic),
+                Builders<User>.Filter.Eq(u => u.Nic, nic.Trim())
+            );
+            var result = await _context.Users.DeleteOneAsync(filter);
+            return result.DeletedCount > 0;
         }
     }
 }

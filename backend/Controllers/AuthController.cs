@@ -129,10 +129,51 @@ namespace SolarMicrogridApi.Controllers
                 return Ok(new
                 {
                     message = $"{user.Role} account created successfully.",
+                    staffId = user.StaffId ?? user.Nic,
                     nic = user.Nic,
                     fullName = user.FullName,
                     role = user.Role
                 });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Highly secure initial bootstrap endpoint to create system administrator when no admin exists.
+        /// Rejects if an administrator already exists or if master setup key is invalid.
+        /// </summary>
+        [HttpPost("bootstrap-admin")]
+        [AllowAnonymous]
+        public async Task<IActionResult> BootstrapAdmin([FromBody] BootstrapAdminDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var admin = await _userService.BootstrapInitialAdminAsync(dto);
+                return Created($"/api/users/{admin.Nic}", new
+                {
+                    message = "System Administrator successfully initialized.",
+                    staffId = admin.StaffId ?? admin.Nic,
+                    nic = admin.Nic,
+                    fullName = admin.FullName,
+                    role = admin.Role,
+                    status = admin.Status
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
             }
             catch (InvalidOperationException ex)
             {

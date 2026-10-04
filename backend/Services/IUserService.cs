@@ -15,6 +15,7 @@ namespace SolarMicrogridApi.Services
         Task<AuthResponseDto?> AuthenticateAsync(LoginRequestDto request);
         Task<User> RegisterProsumerAsync(ProsumerRegisterDto dto);
         Task<User> CreateStaffUserAsync(CreateStaffUserDto dto);
+        Task<User> BootstrapInitialAdminAsync(BootstrapAdminDto dto);
         Task<List<User>> GetUsersAsync(string? role = null, string? status = null);
         Task<List<User>> GetPendingProsumersAsync();
         Task<User?> GetUserByNicAsync(string nic);
@@ -23,5 +24,6 @@ namespace SolarMicrogridApi.Services
         Task<bool> RequestDeactivationAsync(string nic);
         Task<bool> ResetPasswordAsync(string nic, string newPassword, string requesterRole, string requesterNic, bool requirePasswordChange = false);
         Task<bool> ChangePasswordAsync(string nic, string currentPassword, string newPassword);
+        Task<bool> DeleteUserAsync(string nic);
     }
 }

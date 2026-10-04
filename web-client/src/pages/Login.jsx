@@ -220,7 +220,7 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div>
                 <label htmlFor="login-identifier" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                  NIC, username or email
+                  Work email, Staff ID, or NIC
                 </label>
                 <div className="relative">
                   <input
@@ -233,7 +233,7 @@ export default function Login({ onLoginSuccess, theme, onToggleTheme, onBackToHo
                     spellCheck={false}
                     value={usernameOrNic}
                     onChange={(e) => setUsernameOrNic(e.target.value)}
-                    placeholder="e.g. ADMIN001 or OPERATOR001"
+                    placeholder="e.g. admin@solarmicrogrid.lk, ADMIN101, or OP-101"
                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-700/70 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition shadow-inner"
                   />
                 </div>

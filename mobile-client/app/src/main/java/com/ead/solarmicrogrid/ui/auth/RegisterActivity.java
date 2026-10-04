@@ -461,15 +461,8 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
 
-        // 9. Dual-Slot e-KYC Proof of Identity Mandatory Check
-        if (attachedNicFrontBase64 == null) {
-            Toast.makeText(this, "e-KYC Mandatory: Please capture or attach Front side of Sri Lankan NIC.", Toast.LENGTH_LONG).show();
-            return;
-        }
-        if (attachedNicBackBase64 == null) {
-            Toast.makeText(this, "e-KYC Mandatory: Please capture or attach Back side of Sri Lankan NIC.", Toast.LENGTH_LONG).show();
-            return;
-        }
+        // 9. Document attachments are optional at registration (processed if attached)
+
 
         progressBar.setVisibility(View.VISIBLE);
         btnRegister.setEnabled(false);
