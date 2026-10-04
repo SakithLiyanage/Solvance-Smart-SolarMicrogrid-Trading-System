@@ -149,20 +149,65 @@ namespace SolarMicrogridApi.Services
 
             var slotReserved = false;
             var slotId = dto.SlotId?.Trim() ?? string.Empty;
+
+            var localScheduled = TimeZoneInfo.ConvertTimeFromUtc(scheduledUtc, BookingTimeZone);
+            var dateStr = localScheduled.ToString("yyyy-MM-dd");
+            var timeStr = localScheduled.ToString("HH:mm");
+
+            // If slotId is omitted, auto-discover matching slot for this hub by date and hour window
+            if (string.IsNullOrEmpty(slotId))
+            {
+                var matchingSlot = await _context.Slots.Find(s =>
+                    s.StationId == station.Id &&
+                    s.Date == dateStr &&
+                    string.Compare(s.StartTime, timeStr) <= 0 &&
+                    string.Compare(s.EndTime, timeStr) > 0 &&
+                    s.AvailableSlots > 0 &&
+                    s.Status != "Maintenance"
+                ).FirstOrDefaultAsync();
+
+                if (matchingSlot != null)
+                {
+                    slotId = matchingSlot.Id ?? string.Empty;
+                }
+            }
+
             if (!string.IsNullOrEmpty(slotId))
             {
-                var slotFilter = Builders<EnergySlot>.Filter.And(
-                    Builders<EnergySlot>.Filter.Eq(s => s.Id, slotId),
-                    Builders<EnergySlot>.Filter.Eq(s => s.StationId, station.Id),
-                    Builders<EnergySlot>.Filter.Gt(s => s.AvailableSlots, 0),
-                    Builders<EnergySlot>.Filter.Ne(s => s.Status, "Maintenance"));
-                var slotUpdate = Builders<EnergySlot>.Update
-                    .Inc(s => s.AvailableSlots, -1)
-                    .Inc(s => s.AllocatedKwh, dto.EnergyAmountKwh);
-                var slotResult = await _context.Slots.UpdateOneAsync(slotFilter, slotUpdate);
-                if (slotResult.ModifiedCount == 1)
+                var targetSlot = await _context.Slots.Find(s => s.Id == slotId && s.StationId == station.Id).FirstOrDefaultAsync();
+                if (targetSlot != null)
                 {
-                    slotReserved = true;
+                    if (targetSlot.Status == "Maintenance")
+                    {
+                        throw new InvalidOperationException("The requested energy trading slot is currently undergoing maintenance.");
+                    }
+                    if (targetSlot.AvailableSlots <= 0)
+                    {
+                        throw new InvalidOperationException("The requested energy trading slot is fully booked.");
+                    }
+                    if (targetSlot.SlotCapacityKwh > 0 && (targetSlot.AllocatedKwh + dto.EnergyAmountKwh) > targetSlot.SlotCapacityKwh)
+                    {
+                        var remainingKwh = Math.Max(0, targetSlot.SlotCapacityKwh - targetSlot.AllocatedKwh);
+                        throw new InvalidOperationException($"Requested energy quota ({dto.EnergyAmountKwh} kWh) exceeds remaining capacity ({remainingKwh:F1} kWh) in this trading slot.");
+                    }
+
+                    var newAvailable = targetSlot.AvailableSlots - 1;
+                    var newStatus = newAvailable <= 0 ? "Full" : "Open";
+
+                    var slotFilter = Builders<EnergySlot>.Filter.And(
+                        Builders<EnergySlot>.Filter.Eq(s => s.Id, slotId),
+                        Builders<EnergySlot>.Filter.Eq(s => s.StationId, station.Id),
+                        Builders<EnergySlot>.Filter.Gt(s => s.AvailableSlots, 0),
+                        Builders<EnergySlot>.Filter.Ne(s => s.Status, "Maintenance"));
+                    var slotUpdate = Builders<EnergySlot>.Update
+                        .Inc(s => s.AvailableSlots, -1)
+                        .Inc(s => s.AllocatedKwh, dto.EnergyAmountKwh)
+                        .Set(s => s.Status, newStatus);
+                    var slotResult = await _context.Slots.UpdateOneAsync(slotFilter, slotUpdate);
+                    if (slotResult.ModifiedCount == 1)
+                    {
+                        slotReserved = true;
+                    }
                 }
             }
 
@@ -298,13 +343,80 @@ namespace SolarMicrogridApi.Services
 
             await _context.Reservations.UpdateOneAsync(r => r.Id == reservation.Id, update);
 
-            // Keep the time slot's allocated energy in step, so a later cancellation releases the right amount
-            var energyDeltaKwh = dto.EnergyAmountKwh - originalEnergyKwh;
-            if (reservation.SlotReserved && !string.IsNullOrEmpty(reservation.SlotId) && energyDeltaKwh != 0)
+            // Check if slot migration is needed
+            var targetSlotId = dto.SlotId?.Trim();
+            if (string.IsNullOrEmpty(targetSlotId) && scheduledUtc != resScheduledUtc)
             {
+                var localNew = TimeZoneInfo.ConvertTimeFromUtc(scheduledUtc, BookingTimeZone);
+                var newDateStr = localNew.ToString("yyyy-MM-dd");
+                var newTimeStr = localNew.ToString("HH:mm");
+                var autoSlot = await _context.Slots.Find(s =>
+                    s.StationId == reservation.StationId &&
+                    s.Date == newDateStr &&
+                    string.Compare(s.StartTime, newTimeStr) <= 0 &&
+                    string.Compare(s.EndTime, newTimeStr) > 0 &&
+                    s.AvailableSlots > 0 &&
+                    s.Status != "Maintenance"
+                ).FirstOrDefaultAsync();
+                if (autoSlot != null)
+                {
+                    targetSlotId = autoSlot.Id;
+                }
+            }
+
+            var slotChanged = !string.IsNullOrEmpty(targetSlotId) && targetSlotId != reservation.SlotId;
+
+            if (slotChanged)
+            {
+                var newSlot = await _context.Slots.Find(s => s.Id == targetSlotId && s.StationId == reservation.StationId).FirstOrDefaultAsync();
+                if (newSlot == null)
+                {
+                    throw new KeyNotFoundException("Target energy trading slot not found.");
+                }
+                if (newSlot.Status == "Maintenance")
+                {
+                    throw new InvalidOperationException("Target energy trading slot is under maintenance.");
+                }
+                if (newSlot.AvailableSlots <= 0)
+                {
+                    throw new InvalidOperationException("Target energy trading slot is fully booked.");
+                }
+                if (newSlot.SlotCapacityKwh > 0 && (newSlot.AllocatedKwh + dto.EnergyAmountKwh) > newSlot.SlotCapacityKwh)
+                {
+                    var rem = Math.Max(0, newSlot.SlotCapacityKwh - newSlot.AllocatedKwh);
+                    throw new InvalidOperationException($"Requested energy quota exceeds target slot remaining capacity ({rem:F1} kWh).");
+                }
+
+                // Release previous slot if reserved
+                if (reservation.SlotReserved && !string.IsNullOrEmpty(reservation.SlotId))
+                {
+                    await ReleaseSlotAsync(reservation);
+                }
+
+                // Reserve new slot
+                var newAvail = newSlot.AvailableSlots - 1;
+                var newStat = newAvail <= 0 ? "Full" : "Open";
                 await _context.Slots.UpdateOneAsync(
-                    s => s.Id == reservation.SlotId && s.StationId == reservation.StationId,
-                    Builders<EnergySlot>.Update.Inc(s => s.AllocatedKwh, energyDeltaKwh));
+                    s => s.Id == newSlot.Id,
+                    Builders<EnergySlot>.Update
+                        .Inc(s => s.AvailableSlots, -1)
+                        .Inc(s => s.AllocatedKwh, dto.EnergyAmountKwh)
+                        .Set(s => s.Status, newStat));
+
+                reservation.SlotId = newSlot.Id!;
+                reservation.SlotReserved = true;
+                update = update.Set(r => r.SlotId, newSlot.Id!).Set(r => r.SlotReserved, true);
+            }
+            else if (reservation.SlotReserved && !string.IsNullOrEmpty(reservation.SlotId))
+            {
+                // Slot didn't change: update energy delta
+                var energyDeltaKwh = dto.EnergyAmountKwh - originalEnergyKwh;
+                if (energyDeltaKwh != 0)
+                {
+                    await _context.Slots.UpdateOneAsync(
+                        s => s.Id == reservation.SlotId && s.StationId == reservation.StationId,
+                        Builders<EnergySlot>.Update.Inc(s => s.AllocatedKwh, energyDeltaKwh));
+                }
             }
 
             return reservation;
@@ -496,11 +608,18 @@ namespace SolarMicrogridApi.Services
             var slotFilter = Builders<EnergySlot>.Filter.And(
                 Builders<EnergySlot>.Filter.Eq(s => s.Id, reservation.SlotId),
                 Builders<EnergySlot>.Filter.Eq(s => s.StationId, reservation.StationId));
-            var slotUpdate = Builders<EnergySlot>.Update
-                .Inc(s => s.AvailableSlots, 1)
-                .Inc(s => s.AllocatedKwh, -reservation.EnergyAmountKwh)
-                .Set(s => s.Status, "Open");
-            await _context.Slots.UpdateOneAsync(slotFilter, slotUpdate);
+
+            var slot = await _context.Slots.Find(slotFilter).FirstOrDefaultAsync();
+            if (slot != null)
+            {
+                var newStatus = slot.Status == "Maintenance" ? "Maintenance" : "Open";
+                var slotUpdate = Builders<EnergySlot>.Update
+                    .Inc(s => s.AvailableSlots, 1)
+                    .Inc(s => s.AllocatedKwh, -reservation.EnergyAmountKwh)
+                    .Set(s => s.Status, newStatus);
+                await _context.Slots.UpdateOneAsync(slotFilter, slotUpdate);
+            }
+
             await _context.Reservations.UpdateOneAsync(
                 r => r.Id == reservation.Id,
                 Builders<EnergyReservation>.Update.Set(r => r.SlotReserved, false));

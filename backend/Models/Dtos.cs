@@ -225,6 +225,8 @@ namespace SolarMicrogridApi.Models
         public double EnergyAmountKwh { get; set; }
 
         public string TradeType { get; set; } = "DropOff";
+
+        public string? SlotId { get; set; }
     }
 
     public class CancelReservationDto

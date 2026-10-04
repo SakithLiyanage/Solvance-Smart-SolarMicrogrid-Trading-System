@@ -52,8 +52,23 @@ namespace SolarMicrogridApi.Controllers
                 return BadRequest(ModelState);
             }
 
-            var created = await _slotService.CreateSlotAsync(slot);
-            return Created($"/api/slots/{created.Id}", created);
+            try
+            {
+                var created = await _slotService.CreateSlotAsync(slot);
+                return Created($"/api/slots/{created.Id}", created);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
         }
 
         /// <summary>

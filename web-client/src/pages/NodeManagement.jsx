@@ -139,6 +139,7 @@ export default function NodeManagement({ theme }) {
   const [stationSlots, setStationSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slotDateFilter, setSlotDateFilter] = useState('');
+  const [slotStatusFilter, setSlotStatusFilter] = useState('All');
   const [slotError, setSlotError] = useState('');
   const [slotSuccess, setSlotSuccess] = useState('');
   const [slotSubmitting, setSlotSubmitting] = useState(false);
@@ -251,6 +252,7 @@ export default function NodeManagement({ theme }) {
     setSlotError('');
     setSlotSuccess('');
     setSlotDateFilter('');
+    setSlotStatusFilter('All');
     setPendingDeleteSlotId(null);
     setNewSlotForm(emptySlotForm());
     fetchSlots(station.id);
@@ -646,11 +648,14 @@ export default function NodeManagement({ theme }) {
   // Page size 9 = three rows of three cards
   const hubPager = usePagination(filteredStations, 9, `${statusFilter}|${search}`);
 
-  const sortedSlots = useMemo(
-    () => [...stationSlots].sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`)),
-    [stationSlots]
-  );
-  const slotPager = usePagination(sortedSlots, 10, `${slotStation?.id || ''}|${slotDateFilter}`);
+  const sortedSlots = useMemo(() => {
+    let list = [...stationSlots];
+    if (slotStatusFilter !== 'All') {
+      list = list.filter((s) => s.status === slotStatusFilter);
+    }
+    return list.sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`));
+  }, [stationSlots, slotStatusFilter]);
+  const slotPager = usePagination(sortedSlots, 10, `${slotStation?.id || ''}|${slotDateFilter}|${slotStatusFilter}`);
 
   const statusBadge = (isActive) =>
     isActive
@@ -1513,12 +1518,73 @@ export default function NodeManagement({ theme }) {
 
           {/* Existing Slots Table */}
           <div>
-            <h4 className="font-bold text-slate-900 dark:text-white mb-2">Configured slots</h4>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <h4 className="font-bold text-slate-900 dark:text-white">
+                Configured slots <span className="text-xs font-normal text-slate-500">({sortedSlots.length}{stationSlots.length !== sortedSlots.length ? ` of ${stationSlots.length}` : ''})</span>
+              </h4>
+              {stationSlots.length > 0 && (
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700/60 text-[11px]">
+                  {['All', 'Open', 'Full', 'Maintenance'].map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setSlotStatusFilter(st)}
+                      className={`px-2 py-0.5 rounded-md font-semibold transition cursor-pointer ${
+                        slotStatusFilter === st
+                          ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-xs'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             {loadingSlots && stationSlots.length === 0 ? (
               <div className="p-6 text-center text-slate-400">Loading slots...</div>
             ) : stationSlots.length === 0 ? (
+              <div className="p-8 text-center bg-slate-50 dark:bg-slate-950/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="mx-auto w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <div className="space-y-1">
+                  <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm">
+                    {slotDateFilter ? 'No trading slots on this date.' : 'No trading slots configured for this solar hub yet.'}
+                  </p>
+                  <p className="text-slate-500 dark:text-slate-400 text-xs max-w-md mx-auto">
+                    {slotDateFilter
+                      ? 'Add a trading slot for this date below, or clear the date filter.'
+                      : `Auto-generate 7-day operational slots according to this hub's opening schedule (${slotStation?.schedule?.openTime || '06:00'} - ${slotStation?.schedule?.closeTime || '22:00'}), or manually configure one below.`}
+                  </p>
+                </div>
+                {!slotDateFilter && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!slotStation || generatingSlotsStationId) return;
+                      setGeneratingSlotsStationId(slotStation.id);
+                      try {
+                        const res = await api.post(`/stations/${slotStation.id}/generate-slots?days=7`);
+                        setSlotSuccess(res.data?.message || 'Generated 7-day operational trading slots.');
+                        await fetchSlots(slotStation.id, '');
+                      } catch (err) {
+                        setSlotError(getApiError(err, 'Failed to generate operational trading slots.'));
+                      } finally {
+                        setGeneratingSlotsStationId(null);
+                      }
+                    }}
+                    disabled={generatingSlotsStationId === slotStation?.id}
+                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs inline-flex items-center gap-2 shadow-sm transition cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${generatingSlotsStationId === slotStation?.id ? 'animate-spin' : ''}`} />
+                    <span>Auto-Generate 7-Day Slots Now</span>
+                  </button>
+                )}
+              </div>
+            ) : sortedSlots.length === 0 ? (
               <div className="p-6 text-center text-slate-400 bg-slate-50 dark:bg-slate-950/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-                {slotDateFilter ? 'No trading slots on this date. Add one below.' : 'No trading slots for this hub yet. Add one below.'}
+                No slots matching status '{slotStatusFilter}'. <button onClick={() => setSlotStatusFilter('All')} className="text-amber-500 underline ml-1 cursor-pointer">Show all</button>
               </div>
             ) : (
               <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
