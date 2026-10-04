@@ -14,14 +14,13 @@
 // ============================================================================
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { 
   Search, Filter, Check, XCircle, RefreshCw, UserCheck, 
   ShieldAlert, CheckCircle2, UserX, Mail, Phone, Hash,
   UserPlus, Edit3, X, Zap, Shield, MapPin, Eye, EyeOff, FileText,
   Upload, AlertCircle, Award, CheckCircle, ShieldCheck,
   CreditCard, Layers, FileCheck, Image, Trash2, Cpu,
-  Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCw, Download, Expand
+  ExternalLink
 } from 'lucide-react';
 import api from '../api/client';
 import { 
@@ -30,6 +29,34 @@ import {
 } from '../utils/nicHelper';
 import Modal from '../components/Modal';
 import Pagination, { usePagination } from '../components/Pagination';
+
+// Helper to open base64 or remote image in a clean browser tab
+const openImageInNewTab = (base64Data) => {
+  if (!base64Data) return;
+  try {
+    if (base64Data.startsWith('http') || base64Data.startsWith('blob:')) {
+      window.open(base64Data, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    const parts = base64Data.split(';base64,');
+    const contentType = parts[0].replace('data:', '') || 'image/png';
+    const byteCharacters = atob(parts[1] || parts[0]);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: contentType });
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank', 'noopener,noreferrer');
+  } catch {
+    const win = window.open();
+    if (win) {
+      win.document.write(`<html><head><title>Document Preview</title></head><body style="margin:0;background:#0f172a;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${base64Data}" style="max-width:100%;max-height:100vh;object-fit:contain;"/></body></html>`);
+      win.document.close();
+    }
+  }
+};
 
 // Pending applications need Backoffice action, so they are listed first
 const STATUS_ORDER = { Pending: 0, Active: 1, Deactivated: 2 };
@@ -63,35 +90,6 @@ export default function ProsumerManagement({ theme }) {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(''); // shown inside the create/edit modals
-
-  // Fullscreen Image Lightbox State
-  const [fullscreenImage, setFullscreenImage] = useState(null); // { src, title, subtitle }
-  const [lightboxZoom, setLightboxZoom] = useState(1);
-  const [lightboxRotation, setLightboxRotation] = useState(0);
-
-  const openFullscreenImage = (src, title, subtitle = '') => {
-    if (!src) return;
-    setFullscreenImage({ src, title, subtitle });
-    setLightboxZoom(1);
-    setLightboxRotation(0);
-  };
-
-  const closeFullscreenImage = () => {
-    setFullscreenImage(null);
-    setLightboxZoom(1);
-    setLightboxRotation(0);
-  };
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && fullscreenImage) {
-        closeFullscreenImage();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [fullscreenImage]);
-
   // Status changes (approve / deactivate / reactivate)
   const [statusUpdatingNic, setStatusUpdatingNic] = useState(null);
   const [actionError, setActionError] = useState(''); // shown inside the review/confirm modals
@@ -974,32 +972,27 @@ export default function ProsumerManagement({ theme }) {
                           {frontDoc && (
                             <button
                               type="button"
-                              onClick={() => openFullscreenImage(frontDoc, `NIC Front — ${selectedKycUser.fullName}`, `NIC: ${selectedKycUser.nic}`)}
+                              onClick={() => openImageInNewTab(frontDoc)}
                               className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 font-bold text-[11px] flex items-center gap-1 shadow-xs transition cursor-pointer"
-                              title="View Full Screen"
+                              title="Open image in new tab"
                             >
-                              <Maximize2 className="h-3 w-3 text-amber-500" />
-                              <span>Full Screen</span>
+                              <ExternalLink className="h-3 w-3 text-amber-500" />
+                              <span>Open in new tab</span>
                             </button>
                           )}
                         </div>
                       </div>
                       {frontDoc ? (
                         <div
-                          className="relative group cursor-pointer overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-md bg-slate-900/10"
-                          onClick={() => openFullscreenImage(frontDoc, `NIC Front — ${selectedKycUser.fullName}`, `NIC: ${selectedKycUser.nic}`)}
+                          className="cursor-pointer overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-md bg-slate-900/10 hover:border-amber-500/50 transition"
+                          onClick={() => openImageInNewTab(frontDoc)}
+                          title="Click to open image in new tab"
                         >
                           <img
                             src={frontDoc}
                             alt={`NIC Front - ${selectedKycUser.nic}`}
-                            className="w-full h-auto object-contain max-h-72 transition duration-200 group-hover:scale-[1.02]"
+                            className="w-full h-auto object-contain max-h-72 transition duration-150 hover:scale-[1.01]"
                           />
-                          <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center backdrop-blur-[1px]">
-                            <span className="px-3 py-1.5 rounded-xl bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-white font-bold text-xs flex items-center gap-1.5 shadow-lg border border-slate-200 dark:border-slate-800">
-                              <Maximize2 className="h-3.5 w-3.5 text-amber-500" />
-                              Click to view full screen
-                            </span>
-                          </div>
                         </div>
                       ) : (
                         <div className="py-12 px-6 flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40">
@@ -1022,32 +1015,27 @@ export default function ProsumerManagement({ theme }) {
                           {backDoc && (
                             <button
                               type="button"
-                              onClick={() => openFullscreenImage(backDoc, `NIC Back — ${selectedKycUser.fullName}`, `NIC: ${selectedKycUser.nic}`)}
+                              onClick={() => openImageInNewTab(backDoc)}
                               className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 font-bold text-[11px] flex items-center gap-1 shadow-xs transition cursor-pointer"
-                              title="View Full Screen"
+                              title="Open image in new tab"
                             >
-                              <Maximize2 className="h-3 w-3 text-amber-500" />
-                              <span>Full Screen</span>
+                              <ExternalLink className="h-3 w-3 text-amber-500" />
+                              <span>Open in new tab</span>
                             </button>
                           )}
                         </div>
                       </div>
                       {backDoc ? (
                         <div
-                          className="relative group cursor-pointer overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-md bg-slate-900/10"
-                          onClick={() => openFullscreenImage(backDoc, `NIC Back — ${selectedKycUser.fullName}`, `NIC: ${selectedKycUser.nic}`)}
+                          className="cursor-pointer overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-md bg-slate-900/10 hover:border-amber-500/50 transition"
+                          onClick={() => openImageInNewTab(backDoc)}
+                          title="Click to open image in new tab"
                         >
                           <img
                             src={backDoc}
                             alt={`NIC Back - ${selectedKycUser.nic}`}
-                            className="w-full h-auto object-contain max-h-72 transition duration-200 group-hover:scale-[1.02]"
+                            className="w-full h-auto object-contain max-h-72 transition duration-150 hover:scale-[1.01]"
                           />
-                          <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center backdrop-blur-[1px]">
-                            <span className="px-3 py-1.5 rounded-xl bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-white font-bold text-xs flex items-center gap-1.5 shadow-lg border border-slate-200 dark:border-slate-800">
-                              <Maximize2 className="h-3.5 w-3.5 text-amber-500" />
-                              Click to view full screen
-                            </span>
-                          </div>
                         </div>
                       ) : (
                         <div className="py-12 px-6 flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40">
@@ -1070,32 +1058,27 @@ export default function ProsumerManagement({ theme }) {
                           {utilityBill && (
                             <button
                               type="button"
-                              onClick={() => openFullscreenImage(utilityBill, `Electricity Bill — ${selectedKycUser.fullName}`, `Address: ${selectedKycUser.address || '—'}`)}
+                              onClick={() => openImageInNewTab(utilityBill)}
                               className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 font-bold text-[11px] flex items-center gap-1 shadow-xs transition cursor-pointer"
-                              title="View Full Screen"
+                              title="Open image in new tab"
                             >
-                              <Maximize2 className="h-3 w-3 text-amber-500" />
-                              <span>Full Screen</span>
+                              <ExternalLink className="h-3 w-3 text-amber-500" />
+                              <span>Open in new tab</span>
                             </button>
                           )}
                         </div>
                       </div>
                       {utilityBill ? (
                         <div
-                          className="relative group cursor-pointer overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-md bg-slate-900/10"
-                          onClick={() => openFullscreenImage(utilityBill, `Electricity Bill — ${selectedKycUser.fullName}`, `Address: ${selectedKycUser.address || '—'}`)}
+                          className="cursor-pointer overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-md bg-slate-900/10 hover:border-amber-500/50 transition"
+                          onClick={() => openImageInNewTab(utilityBill)}
+                          title="Click to open image in new tab"
                         >
                           <img
                             src={utilityBill}
                             alt="Utility Bill"
-                            className="w-full h-auto object-contain max-h-72 transition duration-200 group-hover:scale-[1.02]"
+                            className="w-full h-auto object-contain max-h-72 transition duration-150 hover:scale-[1.01]"
                           />
-                          <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center backdrop-blur-[1px]">
-                            <span className="px-3 py-1.5 rounded-xl bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-white font-bold text-xs flex items-center gap-1.5 shadow-lg border border-slate-200 dark:border-slate-800">
-                              <Maximize2 className="h-3.5 w-3.5 text-amber-500" />
-                              Click to view full screen
-                            </span>
-                          </div>
                         </div>
                       ) : (
                         <div className="py-12 px-6 flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40">
@@ -1451,8 +1434,8 @@ export default function ProsumerManagement({ theme }) {
                   {formData.nicBackDocumentBase64 ? (
                     <div 
                       className="p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center gap-2.5 cursor-pointer hover:border-amber-500/50 transition group"
-                      onClick={() => openFullscreenImage(formData.nicBackDocumentBase64, 'NIC Back (Preview)', formData.nic || 'New Prosumer')}
-                      title="Click to view full screen"
+                      onClick={() => openImageInNewTab(formData.nicBackDocumentBase64)}
+                      title="Click to open in new tab"
                     >
                       <img
                         src={formData.nicBackDocumentBase64}
@@ -1464,9 +1447,9 @@ export default function ProsumerManagement({ theme }) {
                           <CheckCircle2 className="h-3 w-3 shrink-0" />
                           <span>Back Copy Attached</span>
                         </span>
-                        <span className="text-slate-400 text-[11px] block truncate">Click to preview full screen</span>
+                        <span className="text-slate-400 text-[11px] block truncate">Click to open in new tab</span>
                       </div>
-                      <Maximize2 className="h-3.5 w-3.5 text-slate-400 group-hover:text-amber-500 shrink-0 mr-1 transition" />
+                      <ExternalLink className="h-3.5 w-3.5 text-slate-400 group-hover:text-amber-500 shrink-0 mr-1 transition" />
                     </div>
                   ) : (
                     <label className="flex flex-col items-center justify-center p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500/60 dark:hover:border-amber-500/60 bg-slate-50/50 dark:bg-slate-950/40 hover:bg-amber-500/5 transition cursor-pointer group">
@@ -1508,8 +1491,8 @@ export default function ProsumerManagement({ theme }) {
                 {formData.utilityBillBase64 ? (
                   <div 
                     className="p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center gap-2.5 cursor-pointer hover:border-amber-500/50 transition group"
-                    onClick={() => openFullscreenImage(formData.utilityBillBase64, 'Electricity Bill (Preview)', formData.address || 'New Prosumer')}
-                    title="Click to view full screen"
+                    onClick={() => openImageInNewTab(formData.utilityBillBase64)}
+                    title="Click to open in new tab"
                   >
                     <img
                       src={formData.utilityBillBase64}
@@ -1521,9 +1504,9 @@ export default function ProsumerManagement({ theme }) {
                         <CheckCircle2 className="h-3 w-3 shrink-0" />
                         <span>Electricity Bill Attached</span>
                       </span>
-                      <span className="text-slate-400 text-[11px] block truncate">Click to preview full screen</span>
+                      <span className="text-slate-400 text-[11px] block truncate">Click to open in new tab</span>
                     </div>
-                    <Maximize2 className="h-3.5 w-3.5 text-slate-400 group-hover:text-amber-500 shrink-0 mr-1 transition" />
+                    <ExternalLink className="h-3.5 w-3.5 text-slate-400 group-hover:text-amber-500 shrink-0 mr-1 transition" />
                   </div>
                 ) : (
                   <label className="flex flex-col items-center justify-center p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500/60 dark:hover:border-amber-500/60 bg-slate-50/50 dark:bg-slate-950/40 hover:bg-amber-500/5 transition cursor-pointer group">
@@ -1712,8 +1695,8 @@ export default function ProsumerManagement({ theme }) {
                   {formData.nicDocumentBase64 ? (
                     <div 
                       className="p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center gap-2.5 cursor-pointer hover:border-amber-500/50 transition group"
-                      onClick={() => openFullscreenImage(formData.nicDocumentBase64, `NIC Front — ${formData.fullName || formData.nic}`, `NIC: ${formData.nic}`)}
-                      title="Click to view full screen"
+                      onClick={() => openImageInNewTab(formData.nicDocumentBase64)}
+                      title="Click to open in new tab"
                     >
                       <img
                         src={formData.nicDocumentBase64}
@@ -1725,9 +1708,9 @@ export default function ProsumerManagement({ theme }) {
                           <CheckCircle2 className="h-3 w-3 shrink-0" />
                           <span>Front Copy Attached</span>
                         </span>
-                        <span className="text-slate-400 text-[11px] block truncate">Click to preview full screen</span>
+                        <span className="text-slate-400 text-[11px] block truncate">Click to open in new tab</span>
                       </div>
-                      <Maximize2 className="h-3.5 w-3.5 text-slate-400 group-hover:text-amber-500 shrink-0 mr-1 transition" />
+                      <ExternalLink className="h-3.5 w-3.5 text-slate-400 group-hover:text-amber-500 shrink-0 mr-1 transition" />
                     </div>
                   ) : (
                     <label className="flex flex-col items-center justify-center p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500/60 dark:hover:border-amber-500/60 bg-slate-50/50 dark:bg-slate-950/40 hover:bg-amber-500/5 transition cursor-pointer group">
@@ -1767,8 +1750,8 @@ export default function ProsumerManagement({ theme }) {
                   {formData.nicBackDocumentBase64 ? (
                     <div 
                       className="p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center gap-2.5 cursor-pointer hover:border-amber-500/50 transition group"
-                      onClick={() => openFullscreenImage(formData.nicBackDocumentBase64, `NIC Back — ${formData.fullName || formData.nic}`, `NIC: ${formData.nic}`)}
-                      title="Click to view full screen"
+                      onClick={() => openImageInNewTab(formData.nicBackDocumentBase64)}
+                      title="Click to open in new tab"
                     >
                       <img
                         src={formData.nicBackDocumentBase64}
@@ -1780,9 +1763,9 @@ export default function ProsumerManagement({ theme }) {
                           <CheckCircle2 className="h-3 w-3 shrink-0" />
                           <span>Reverse Copy Attached</span>
                         </span>
-                        <span className="text-slate-400 text-[11px] block truncate">Click to preview full screen</span>
+                        <span className="text-slate-400 text-[11px] block truncate">Click to open in new tab</span>
                       </div>
-                      <Maximize2 className="h-3.5 w-3.5 text-slate-400 group-hover:text-amber-500 shrink-0 mr-1 transition" />
+                      <ExternalLink className="h-3.5 w-3.5 text-slate-400 group-hover:text-amber-500 shrink-0 mr-1 transition" />
                     </div>
                   ) : (
                     <label className="flex flex-col items-center justify-center p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500/60 dark:hover:border-amber-500/60 bg-slate-50/50 dark:bg-slate-950/40 hover:bg-amber-500/5 transition cursor-pointer group">
@@ -1827,135 +1810,6 @@ export default function ProsumerManagement({ theme }) {
           </form>
         )}
       </Modal>
-
-      {/* Full Screen Image Lightbox Modal (Portaled to document.body above all other modals) */}
-      {fullscreenImage && typeof document !== 'undefined' && createPortal(
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Image Fullscreen Viewer"
-          className="fixed inset-0 z-[999999] flex flex-col bg-slate-950/95 backdrop-blur-md animate-in fade-in duration-150 select-none"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) closeFullscreenImage();
-          }}
-          onWheel={(e) => {
-            e.stopPropagation();
-            if (e.deltaY < 0) {
-              setLightboxZoom((prev) => Math.min(4.0, Number((prev + 0.15).toFixed(2))));
-            } else {
-              setLightboxZoom((prev) => Math.max(0.4, Number((prev - 0.15).toFixed(2))));
-            }
-          }}
-        >
-          {/* Top Floating Control Bar */}
-          <div className="flex items-center justify-between px-4 sm:px-6 py-3 bg-slate-900/95 border-b border-slate-800 text-white select-none z-20 shrink-0 shadow-lg">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="h-9 w-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0 shadow-inner">
-                <Image className="h-4.5 w-4.5" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-bold text-xs sm:text-sm truncate text-white">{fullscreenImage.title}</h4>
-                {fullscreenImage.subtitle && (
-                  <p className="text-[11px] text-slate-400 truncate">{fullscreenImage.subtitle}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Viewer Controls */}
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <div className="flex items-center bg-slate-800/90 rounded-xl p-1 border border-slate-700/80 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setLightboxZoom((prev) => Math.max(0.4, Number((prev - 0.25).toFixed(2))))}
-                  title="Zoom Out"
-                  aria-label="Zoom out"
-                  className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer"
-                >
-                  <ZoomOut className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLightboxZoom(1)}
-                  title="Reset Zoom (100%)"
-                  aria-label="Reset zoom"
-                  className="px-2.5 py-1 text-xs font-mono font-bold text-amber-400 hover:text-white transition cursor-pointer"
-                >
-                  {Math.round(lightboxZoom * 100)}%
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLightboxZoom((prev) => Math.min(4.0, Number((prev + 0.25).toFixed(2))))}
-                  title="Zoom In"
-                  aria-label="Zoom in"
-                  className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer"
-                >
-                  <ZoomIn className="h-4 w-4" />
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setLightboxRotation((prev) => (prev + 90) % 360)}
-                title="Rotate 90° Clockwise"
-                aria-label="Rotate 90 degrees"
-                className="p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition cursor-pointer flex items-center gap-1.5 text-xs font-semibold shadow-sm"
-              >
-                <RotateCw className="h-4 w-4" />
-                <span className="hidden sm:inline">Rotate</span>
-              </button>
-
-              <a
-                href={fullscreenImage.src}
-                download={`${(fullscreenImage.title || 'document').replace(/[^a-z0-9]/gi, '_')}.png`}
-                title="Download image"
-                aria-label="Download image"
-                className="p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition cursor-pointer shadow-sm"
-              >
-                <Download className="h-4 w-4" />
-              </a>
-
-              <button
-                type="button"
-                onClick={closeFullscreenImage}
-                title="Close (Esc)"
-                aria-label="Close viewer"
-                className="p-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 border border-red-500/40 transition cursor-pointer ml-1 shadow-sm"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Main Zoomable Image Canvas */}
-          <div
-            className="flex-1 overflow-auto flex items-center justify-center p-4 sm:p-8 cursor-grab active:cursor-grabbing overscroll-none"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) closeFullscreenImage();
-            }}
-          >
-            <div
-              className="relative transition-transform duration-150 ease-out flex items-center justify-center"
-              style={{
-                transform: `scale(${lightboxZoom}) rotate(${lightboxRotation}deg)`
-              }}
-              onDoubleClick={() => setLightboxZoom((prev) => (prev === 1 ? 2 : 1))}
-            >
-              <img
-                src={fullscreenImage.src}
-                alt={fullscreenImage.title}
-                className="max-h-[82vh] max-w-[88vw] object-contain rounded-2xl shadow-2xl border border-slate-800 ring-1 ring-white/10"
-                draggable={false}
-              />
-            </div>
-          </div>
-
-          {/* Bottom helper bar */}
-          <div className="py-2.5 px-4 text-center text-[11px] text-slate-400 bg-slate-900/90 border-t border-slate-800 flex items-center justify-center gap-4 shrink-0">
-            <span>Scroll wheel or buttons to Zoom • Double click to Toggle 2x • Press <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 font-mono text-[10px]">ESC</kbd> to exit</span>
-          </div>
-        </div>,
-        document.body
-      )}
 
     </div>
   );
