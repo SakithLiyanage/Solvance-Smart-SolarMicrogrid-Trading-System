@@ -439,7 +439,12 @@ public class RegisterActivity extends AppCompatActivity {
         }
 
         // 7. Solar Array Capacity Validation
-        double parsedSolarKw = 15.0;
+        if (solarStr.isEmpty()) {
+            Toast.makeText(this, "Solar array capacity is required.", Toast.LENGTH_SHORT).show();
+            etSolarCapacity.requestFocus();
+            return;
+        }
+        double parsedSolarKw;
         try {
             parsedSolarKw = Double.parseDouble(solarStr);
             if (parsedSolarKw <= 0 || parsedSolarKw > 500.0) {

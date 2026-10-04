@@ -262,7 +262,6 @@
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
                             android:padding="16dp"
-                            android:text="15.0"
                             android:inputType="numberDecimal" />
                     </com.google.android.material.textfield.TextInputLayout>
 
@@ -270,7 +269,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:hint="Inverter Serial *"
+                        android:hint="Inverter Serial"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         app:boxCornerRadiusTopStart="14dp"
                         app:boxCornerRadiusTopEnd="14dp"
@@ -290,7 +289,6 @@
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
                             android:padding="16dp"
-                            android:text="INV-SL-2026-9981"
                             android:inputType="textCapCharacters" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
