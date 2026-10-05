@@ -35,6 +35,9 @@ const formatTimestamp = (iso) => (iso ? new Date(iso).toLocaleString() : '—');
 
 const isActiveBooking = (r) => r.status === 'Pending' || r.status === 'Approved';
 
+// Mirrors ReservationSettings.PeakSunHoursPerDay on the server: one drop-off <= solar capacity (kW) x 5 hours
+const PEAK_SUN_HOURS = 5;
+
 // Rule errors come back as { message }; model validation errors as ASP.NET ProblemDetails ({ title, errors })
 const getApiError = (err, fallback) => err.response?.data?.message || err.response?.data?.title || fallback;
 
@@ -362,6 +365,15 @@ export default function ReservationManagement({ theme }) {
     return createForm.tradeType === 'DropOff' && selectedStation && selectedStation.availableBatterySlots <= 0;
   }, [createForm.tradeType, selectedStation]);
 
+  // Panel-size cap: null when the prosumer has no solar capacity on record (the server skips the rule too)
+  const maxDropOffKwh = useMemo(() => {
+    const capacityKw = selectedProsumer?.solarCapacityKw || 0;
+    return capacityKw > 0 ? capacityKw * PEAK_SUN_HOURS : null;
+  }, [selectedProsumer]);
+
+  const exceedsSolarCapacity = createForm.tradeType === 'DropOff' && maxDropOffKwh !== null
+    && parseFloat(createForm.energyAmountKwh) > maxDropOffKwh;
+
   // View Digital Pass Modal Handler
   const handleOpenPassModal = async (res) => {
     setViewingRes(res);
@@ -396,6 +408,10 @@ export default function ReservationManagement({ theme }) {
     }
     if (!createForm.prosumerNic) {
       setModalError('Please select an active prosumer.');
+      return;
+    }
+    if (exceedsSolarCapacity) {
+      setModalError(`A ${selectedProsumer.solarCapacityKw} kW solar system produces about ${maxDropOffKwh.toFixed(1)} kWh per day, so a drop-off cannot exceed ${maxDropOffKwh.toFixed(1)} kWh.`);
       return;
     }
     return runAction(async () => {
@@ -1076,6 +1092,9 @@ export default function ReservationManagement({ theme }) {
                   <div>
                     <span className="text-slate-500 dark:text-slate-400">Solar Capacity:</span>{' '}
                     <span className="font-bold text-amber-600 dark:text-amber-400">{selectedProsumer.solarCapacityKw ?? '—'} kW</span>
+                    {maxDropOffKwh !== null && (
+                      <span className="text-slate-500 dark:text-slate-400"> (max drop-off {maxDropOffKwh.toFixed(1)} kWh)</span>
+                    )}
                   </div>
                   <div>
                     <span className="text-slate-500 dark:text-slate-400">Inverter:</span>{' '}
@@ -1206,6 +1225,11 @@ export default function ReservationManagement({ theme }) {
                 onChange={(e) => setCreateForm({ ...createForm, energyAmountKwh: e.target.value })}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
               />
+              {exceedsSolarCapacity && (
+                <p className="mt-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                  Exceeds this prosumer's daily solar output ({maxDropOffKwh.toFixed(1)} kWh max).
+                </p>
+              )}
             </div>
           </div>
 
