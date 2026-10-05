@@ -3,7 +3,7 @@
 // Project: Solvance — Smart Solar Microgrid Trading System
 // Author: L.T. Jayawardhana (IT23156760) & H.N. Madubashini (IT23192300)
 // Course: SE4040 - Enterprise Application Development (SLIIT)
-// Description: Core FAT-service enterprise logic for 7-day rule, 12-hour notice, and QR verification.
+// Description: Core FAT-service enterprise logic for 7-day rule, 12-hour notice, booking limits, and QR verification.
 // References & Citations:
 //   - MongoDB C# Driver CRUD & Linq Filter Definition Builder:
 //     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/crud/read-operations/
@@ -99,6 +99,28 @@ namespace SolarMicrogridApi.Services
             }
         }
 
+        /// <summary>
+        /// A drop-off sells energy produced by the prosumer's own panels, so one drop-off is limited to roughly a day
+        /// of generation: solar capacity (kW) x peak sun hours. Skipped when no solar capacity is on record.
+        /// </summary>
+        private void EnsureWithinSolarCapacity(User prosumer, string tradeType, double energyKwh)
+        {
+            // Method: EnsureWithinSolarCapacity - Rejects drop-offs larger than the prosumer's panels can produce in a day.
+            if (tradeType != "DropOff" || prosumer.SolarCapacityKw <= 0)
+            {
+                return;
+            }
+
+            var sunHours = _settings.PeakSunHoursPerDay > 0 ? _settings.PeakSunHoursPerDay : 5.0;
+            var maxDropOffKwh = prosumer.SolarCapacityKw * sunHours;
+            if (energyKwh > maxDropOffKwh)
+            {
+                throw new ArgumentException(
+                    $"A {prosumer.SolarCapacityKw} kW solar system produces about {maxDropOffKwh:F1} kWh per day, " +
+                    $"so a drop-off cannot exceed {maxDropOffKwh:F1} kWh ({energyKwh} kWh requested).");
+            }
+        }
+
         public async Task<EnergyReservation> CreateReservationAsync(CreateReservationDto dto)
         {
             // Method: CreateReservationAsync - Validates 7-day scheduling constraint, verifies prosumer/station state, and creates booking.
@@ -166,6 +188,9 @@ namespace SolarMicrogridApi.Services
             {
                 throw new ArgumentException($"Requested energy quota ({dto.EnergyAmountKwh} kWh) exceeds station total capacity ({station.CapacityKwh} kWh).");
             }
+
+            // Business Rule: a drop-off cannot exceed what the prosumer's panels produce in a day
+            EnsureWithinSolarCapacity(prosumer, dto.TradeType, dto.EnergyAmountKwh);
 
             var slotReserved = false;
             var slotId = dto.SlotId?.Trim() ?? string.Empty;
@@ -326,6 +351,13 @@ namespace SolarMicrogridApi.Services
             if (dto.EnergyAmountKwh > station.CapacityKwh)
             {
                 throw new ArgumentException($"Requested energy quota ({dto.EnergyAmountKwh} kWh) exceeds station total capacity ({station.CapacityKwh} kWh).");
+            }
+
+            // Business Rule: a drop-off cannot exceed what the prosumer's panels produce in a day
+            var prosumer = await _context.Users.Find(u => u.Nic == reservation.ProsumerNic).FirstOrDefaultAsync();
+            if (prosumer != null)
+            {
+                EnsureWithinSolarCapacity(prosumer, dto.TradeType, dto.EnergyAmountKwh);
             }
 
             // Switching to a drop-off needs a free battery slot (an approved booking must also respect slots promised to others)
