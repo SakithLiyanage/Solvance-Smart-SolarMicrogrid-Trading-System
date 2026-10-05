@@ -16,13 +16,11 @@ import {
   Activity, CheckCircle2, ChevronRight, ExternalLink, Smartphone, AlertCircle
 } from 'lucide-react';
 import api from '../api/client';
-import Modal from '../components/Modal';
 
 export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
   const [stations, setStations] = useState([]);
   const [loadingStations, setLoadingStations] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [showMobileModal, setShowMobileModal] = useState(false);
 
   const isDark = theme === 'dark';
 
@@ -113,14 +111,6 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
             </button>
 
             <button
-              onClick={() => setShowMobileModal(true)}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition cursor-pointer"
-            >
-              <Smartphone className="h-3.5 w-3.5 text-emerald-500" />
-              <span>Get the app</span>
-            </button>
-
-            <button
               onClick={onGoToLogin}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer whitespace-nowrap"
             >
@@ -163,7 +153,7 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
             <span>View hubs</span>
           </button>
           <button
-            onClick={() => setShowMobileModal(true)}
+            onClick={() => scrollToSection('mobile-app')}
             className="px-5 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-900/60 hover:bg-slate-200 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800/80 font-display font-bold text-sm transition active:scale-95 flex items-center gap-2 cursor-pointer"
           >
             <Smartphone className="h-4 w-4 text-amber-500" />
@@ -424,10 +414,10 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
             </div>
 
             <button
-              onClick={() => setShowMobileModal(true)}
+              onClick={() => scrollToSection('mobile-app')}
               className="mt-8 self-start inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition active:scale-95 cursor-pointer"
             >
-              <span>About the Android app</span>
+              <span>Explore mobile client</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -482,14 +472,11 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
             <p className="text-sm text-slate-300 leading-relaxed">
               Manage your profile, find hubs on Google Maps, reserve drop-offs and pick-ups, and show your reservation's QR code at the hub.
             </p>
-            <div className="pt-2 flex flex-wrap gap-4">
-              <button
-                onClick={() => setShowMobileModal(true)}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 transition active:scale-95 flex items-center gap-2 cursor-pointer"
-              >
-                <Smartphone className="h-4 w-4" />
-                <span>How to get the app</span>
-              </button>
+            <div className="pt-2">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-slate-300">
+                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span>Built from <code className="px-1.5 py-0.5 rounded bg-slate-900 text-amber-400 font-mono text-[11px]">mobile-client/</code> with Android Studio</span>
+              </div>
             </div>
           </div>
 
@@ -540,39 +527,6 @@ export default function LandingPage({ onGoToLogin, theme, onToggleTheme }) {
           </div>
         </div>
       </footer>
-
-      {/* Android app information (shared Modal: Escape/backdrop close and scroll lock) */}
-      <Modal
-        isOpen={showMobileModal}
-        onClose={() => setShowMobileModal(false)}
-        title="Solvance Android app"
-        maxWidth="max-w-md"
-      >
-        <div className="space-y-5 text-xs">
-          <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-            The Prosumer app is not on Google Play. It is built from the{' '}
-            <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 tabular-nums text-amber-600 dark:text-amber-400">mobile-client/</code>{' '}
-            folder of the project with Android Studio, and runs on an Android phone or emulator.
-          </p>
-
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2 text-slate-700 dark:text-slate-300">
-            <p className="font-semibold text-slate-900 dark:text-white">With the app you can:</p>
-            <ul className="space-y-1.5">
-              <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" /><span>Register and track your account approval</span></li>
-              <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" /><span>Find hubs on Google Maps</span></li>
-              <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" /><span>Reserve, change or cancel slots</span></li>
-              <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" /><span>Show the QR code for an approved reservation</span></li>
-            </ul>
-          </div>
-
-          <button
-            onClick={() => setShowMobileModal(false)}
-            className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md transition active:scale-95 cursor-pointer"
-          >
-            Close
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 }

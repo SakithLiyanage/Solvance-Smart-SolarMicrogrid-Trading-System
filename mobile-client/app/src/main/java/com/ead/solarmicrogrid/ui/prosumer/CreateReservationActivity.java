@@ -20,6 +20,7 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -59,7 +60,8 @@ public class CreateReservationActivity extends AppCompatActivity {
     private TextInputEditText etEnergyAmount;
     private TextView chipKwh10, chipKwh15, chipKwh25, chipKwh50;
     private Button btnPickDate, btnPickTime, btnConfirmBooking;
-    private TextView tvSelectedDateTime;
+    private TextView tvSelectedDateTime, tvHorizonDateRange;
+    private LinearLayout layoutDayChips;
     private ProgressBar progressBar;
 
     private DatabaseHelper dbHelper;
@@ -68,6 +70,7 @@ public class CreateReservationActivity extends AppCompatActivity {
     private Calendar selectedCalendar = Calendar.getInstance();
     private boolean isDateSelected = false;
     private boolean isTimeSelected = false;
+    private final List<TextView> dayChipViews = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,6 +82,7 @@ public class CreateReservationActivity extends AppCompatActivity {
 
         initViews();
         loadStations();
+        setupDayChips();
         setupDateTimePickers();
         setupKwhChips();
         setupSubmitListener();
@@ -104,7 +108,69 @@ public class CreateReservationActivity extends AppCompatActivity {
         btnPickTime = findViewById(R.id.btnPickTime);
         btnConfirmBooking = findViewById(R.id.btnConfirmBooking);
         tvSelectedDateTime = findViewById(R.id.tvSelectedDateTime);
+        tvHorizonDateRange = findViewById(R.id.tvHorizonDateRange);
+        layoutDayChips = findViewById(R.id.layoutDayChips);
         progressBar = findViewById(R.id.progressBar);
+    }
+
+    private void setupDayChips() {
+        if (layoutDayChips == null) return;
+        layoutDayChips.removeAllViews();
+        dayChipViews.clear();
+
+        final Calendar baseCal = Calendar.getInstance();
+        SimpleDateFormat dayNameFormat = new SimpleDateFormat("EEE", Locale.getDefault());
+        SimpleDateFormat dayNumFormat = new SimpleDateFormat("MMM d", Locale.getDefault());
+        SimpleDateFormat fullRangeFormat = new SimpleDateFormat("MMM d", Locale.getDefault());
+
+        Calendar endRangeCal = Calendar.getInstance();
+        endRangeCal.add(Calendar.DAY_OF_YEAR, 7);
+        if (tvHorizonDateRange != null) {
+            tvHorizonDateRange.setText("Allowed Booking Window: " + fullRangeFormat.format(baseCal.getTime()) +
+                    " – " + fullRangeFormat.format(endRangeCal.getTime()) + " (Strict 7-Day Limit)");
+        }
+
+        for (int i = 0; i <= 7; i++) {
+            final int dayOffset = i;
+            final Calendar chipDate = Calendar.getInstance();
+            chipDate.add(Calendar.DAY_OF_YEAR, dayOffset);
+
+            TextView chip = new TextView(this);
+            String title = (dayOffset == 0) ? "Today" : ((dayOffset == 1) ? "Tomorrow" : dayNameFormat.format(chipDate.getTime()));
+            String subtitle = (dayOffset == 7) ? dayNumFormat.format(chipDate.getTime()) + " (Max)" : dayNumFormat.format(chipDate.getTime());
+            chip.setText(title + "\n" + subtitle);
+            chip.setTextSize(11);
+            chip.setGravity(android.view.Gravity.CENTER);
+            chip.setPadding(28, 14, 28, 14);
+            chip.setBackground(ContextCompat.getDrawable(this, R.drawable.bg_pill_chip));
+            chip.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
+
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            lp.setMargins(0, 0, 14, 0);
+            chip.setLayoutParams(lp);
+
+            chip.setOnClickListener(v -> {
+                selectedCalendar.set(Calendar.YEAR, chipDate.get(Calendar.YEAR));
+                selectedCalendar.set(Calendar.MONTH, chipDate.get(Calendar.MONTH));
+                selectedCalendar.set(Calendar.DAY_OF_MONTH, chipDate.get(Calendar.DAY_OF_MONTH));
+                isDateSelected = true;
+
+                for (TextView c : dayChipViews) {
+                    c.setBackground(ContextCompat.getDrawable(this, R.drawable.bg_pill_chip));
+                    c.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
+                }
+                chip.setBackground(ContextCompat.getDrawable(this, R.drawable.bg_pill_chip_active));
+                chip.setTextColor(ContextCompat.getColor(this, R.color.primary));
+
+                updateDateTimeText();
+            });
+
+            dayChipViews.add(chip);
+            layoutDayChips.addView(chip);
+        }
     }
 
     private void setupKwhChips() {
@@ -180,10 +246,61 @@ public class CreateReservationActivity extends AppCompatActivity {
             DatePickerDialog dialog = new DatePickerDialog(
                     CreateReservationActivity.this,
                     (view, year, month, dayOfMonth) -> {
+                        Calendar picked = Calendar.getInstance();
+                        picked.set(year, month, dayOfMonth, 0, 0, 0);
+                        picked.set(Calendar.MILLISECOND, 0);
+
+                        Calendar minCal = Calendar.getInstance();
+                        minCal.set(Calendar.HOUR_OF_DAY, 0);
+                        minCal.set(Calendar.MINUTE, 0);
+                        minCal.set(Calendar.SECOND, 0);
+                        minCal.set(Calendar.MILLISECOND, 0);
+
+                        if (picked.before(minCal)) {
+                            com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                                    this,
+                                    "Past Date Blocked",
+                                    "SCHEDULE POLICY",
+                                    "Cannot schedule bookings in the past. Please select today or an upcoming day within 7 days.",
+                                    "Adjust Date",
+                                    null
+                            );
+                            isDateSelected = false;
+                            updateDateTimeText();
+                            return;
+                        }
+
+                        if (picked.after(maxDate)) {
+                            SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                            com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                                    this,
+                                    "7-Day Policy Violation",
+                                    "SCHEDULE LIMIT EXCEEDED",
+                                    "Trading reservations must be scheduled within 7 days from today (up to " + df.format(maxDate.getTime()) + ").",
+                                    "Adjust Date",
+                                    null
+                            );
+                            isDateSelected = false;
+                            updateDateTimeText();
+                            return;
+                        }
+
                         selectedCalendar.set(Calendar.YEAR, year);
                         selectedCalendar.set(Calendar.MONTH, month);
                         selectedCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
                         isDateSelected = true;
+
+                        // Sync chip state
+                        for (int i = 0; i < dayChipViews.size(); i++) {
+                            Calendar chipCal = Calendar.getInstance();
+                            chipCal.add(Calendar.DAY_OF_YEAR, i);
+                            boolean matches = chipCal.get(Calendar.YEAR) == year &&
+                                    chipCal.get(Calendar.DAY_OF_YEAR) == picked.get(Calendar.DAY_OF_YEAR);
+                            TextView chip = dayChipViews.get(i);
+                            chip.setBackground(ContextCompat.getDrawable(this, matches ? R.drawable.bg_pill_chip_active : R.drawable.bg_pill_chip));
+                            chip.setTextColor(ContextCompat.getColor(this, matches ? R.color.primary : R.color.text_secondary));
+                        }
+
                         updateDateTimeText();
                     },
                     selectedCalendar.get(Calendar.YEAR),
@@ -199,6 +316,26 @@ public class CreateReservationActivity extends AppCompatActivity {
             TimePickerDialog dialog = new TimePickerDialog(
                     CreateReservationActivity.this,
                     (view, hourOfDay, minute) -> {
+                        Calendar testCal = (Calendar) selectedCalendar.clone();
+                        testCal.set(Calendar.HOUR_OF_DAY, hourOfDay);
+                        testCal.set(Calendar.MINUTE, minute);
+                        testCal.set(Calendar.SECOND, 0);
+
+                        Calendar now = Calendar.getInstance();
+                        if (isDateSelected && testCal.getTimeInMillis() < now.getTimeInMillis() - 600000) {
+                            com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                                    this,
+                                    "Past Time Slot",
+                                    "SCHEDULE POLICY",
+                                    "The selected time has already passed for today. Please select a future time.",
+                                    "Adjust Time",
+                                    null
+                            );
+                            isTimeSelected = false;
+                            updateDateTimeText();
+                            return;
+                        }
+
                         selectedCalendar.set(Calendar.HOUR_OF_DAY, hourOfDay);
                         selectedCalendar.set(Calendar.MINUTE, minute);
                         selectedCalendar.set(Calendar.SECOND, 0);
@@ -215,7 +352,32 @@ public class CreateReservationActivity extends AppCompatActivity {
 
     private void updateDateTimeText() {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm (EEE)", Locale.getDefault());
-        tvSelectedDateTime.setText("Selected Slot: " + sdf.format(selectedCalendar.getTime()));
+        if (isDateSelected && isTimeSelected) {
+            Calendar maxCal = Calendar.getInstance();
+            maxCal.add(Calendar.DAY_OF_YEAR, 7);
+            maxCal.set(Calendar.HOUR_OF_DAY, 23);
+            maxCal.set(Calendar.MINUTE, 59);
+            maxCal.set(Calendar.SECOND, 59);
+            maxCal.set(Calendar.MILLISECOND, 999);
+
+            if (selectedCalendar.after(maxCal)) {
+                tvSelectedDateTime.setText("⚠ Invalid: Beyond 7-day horizon limit");
+                tvSelectedDateTime.setTextColor(ContextCompat.getColor(this, R.color.danger));
+            } else if (selectedCalendar.getTimeInMillis() < System.currentTimeMillis() - 600000) {
+                tvSelectedDateTime.setText("⚠ Invalid: Time is in the past");
+                tvSelectedDateTime.setTextColor(ContextCompat.getColor(this, R.color.danger));
+            } else {
+                tvSelectedDateTime.setText("✓ Valid Slot: " + sdf.format(selectedCalendar.getTime()) + " (Within 7 Days)");
+                tvSelectedDateTime.setTextColor(ContextCompat.getColor(this, R.color.primary));
+            }
+        } else if (isDateSelected) {
+            SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd (EEE)", Locale.getDefault());
+            tvSelectedDateTime.setText("Date: " + df.format(selectedCalendar.getTime()) + " • Please choose a time");
+            tvSelectedDateTime.setTextColor(ContextCompat.getColor(this, R.color.accent));
+        } else {
+            tvSelectedDateTime.setText("Scheduled: Tap a day chip or 'Select Date' & 'Select Time'");
+            tvSelectedDateTime.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+        }
     }
 
     private void setupSubmitListener() {
@@ -233,6 +395,25 @@ public class CreateReservationActivity extends AppCompatActivity {
                         "SCHEDULE POLICY",
                         "Cannot schedule bookings in the past. Please select a future time slot within 7 days.",
                         "Adjust Time",
+                        null
+                );
+                return;
+            }
+
+            Calendar maxAllowed = Calendar.getInstance();
+            maxAllowed.add(Calendar.DAY_OF_YEAR, 7);
+            maxAllowed.set(Calendar.HOUR_OF_DAY, 23);
+            maxAllowed.set(Calendar.MINUTE, 59);
+            maxAllowed.set(Calendar.SECOND, 59);
+            maxAllowed.set(Calendar.MILLISECOND, 999);
+
+            if (selectedCalendar.after(maxAllowed)) {
+                com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                        this,
+                        "7-Day Policy Violation",
+                        "SCHEDULE LIMIT EXCEEDED",
+                        "Trading reservations must be scheduled within 7 days from today. Please pick an appointment date within the next 7 days.",
+                        "Adjust Date",
                         null
                 );
                 return;
@@ -261,6 +442,30 @@ public class CreateReservationActivity extends AppCompatActivity {
 
             SolarStation selectedStation = stationList.get(spStations.getSelectedItemPosition());
             String tradeType = rbDropOff.isChecked() ? "DropOff" : "Charging";
+
+            if (selectedStation.getCapacityKwh() > 0 && energy > selectedStation.getCapacityKwh()) {
+                com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                        this,
+                        "Capacity Limit Exceeded",
+                        "STATION RATING",
+                        "Requested energy quota (" + energy + " kWh) exceeds solar hub capacity (" + selectedStation.getCapacityKwh() + " kWh).",
+                        "Reduce Quota",
+                        null
+                );
+                return;
+            }
+
+            if ("DropOff".equals(tradeType) && selectedStation.getAvailableBatterySlots() <= 0) {
+                com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                        this,
+                        "Station Battery Slots Full",
+                        "PHYSICAL CAPACITY",
+                        "Selected solar hub currently has 0 available battery slots for drop-off. Please choose Charging mode or select another station hub.",
+                        "Change Hub / Mode",
+                        null
+                );
+                return;
+            }
 
             SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
             isoFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));

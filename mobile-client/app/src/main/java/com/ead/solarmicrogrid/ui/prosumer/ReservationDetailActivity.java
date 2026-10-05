@@ -379,6 +379,41 @@ public class ReservationDetailActivity extends AppCompatActivity {
             android.app.DatePickerDialog dateDialog = new android.app.DatePickerDialog(
                     this,
                     (view, year, month, dayOfMonth) -> {
+                        java.util.Calendar pickedCal = java.util.Calendar.getInstance();
+                        pickedCal.set(year, month, dayOfMonth, 0, 0, 0);
+                        pickedCal.set(java.util.Calendar.MILLISECOND, 0);
+
+                        java.util.Calendar minCal = java.util.Calendar.getInstance();
+                        minCal.set(java.util.Calendar.HOUR_OF_DAY, 0);
+                        minCal.set(java.util.Calendar.MINUTE, 0);
+                        minCal.set(java.util.Calendar.SECOND, 0);
+                        minCal.set(java.util.Calendar.MILLISECOND, 0);
+
+                        if (pickedCal.before(minCal)) {
+                            com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                                    this,
+                                    "Past Date Blocked",
+                                    "SCHEDULE POLICY",
+                                    "Cannot reschedule bookings to a date in the past.",
+                                    "Adjust Date",
+                                    null
+                            );
+                            return;
+                        }
+
+                        if (pickedCal.after(maxCal)) {
+                            java.text.SimpleDateFormat df = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
+                            com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                                    this,
+                                    "7-Day Policy Violation",
+                                    "SCHEDULE LIMIT EXCEEDED",
+                                    "Reservations must be rescheduled within 7 days from today (up to " + df.format(maxCal.getTime()) + ").",
+                                    "Adjust Date",
+                                    null
+                            );
+                            return;
+                        }
+
                         editCalendar.set(java.util.Calendar.YEAR, year);
                         editCalendar.set(java.util.Calendar.MONTH, month);
                         editCalendar.set(java.util.Calendar.DAY_OF_MONTH, dayOfMonth);
@@ -386,6 +421,24 @@ public class ReservationDetailActivity extends AppCompatActivity {
                         android.app.TimePickerDialog timeDialog = new android.app.TimePickerDialog(
                                 this,
                                 (tView, hourOfDay, minute) -> {
+                                    java.util.Calendar testTimeCal = (java.util.Calendar) editCalendar.clone();
+                                    testTimeCal.set(java.util.Calendar.HOUR_OF_DAY, hourOfDay);
+                                    testTimeCal.set(java.util.Calendar.MINUTE, minute);
+                                    testTimeCal.set(java.util.Calendar.SECOND, 0);
+
+                                    java.util.Calendar now = java.util.Calendar.getInstance();
+                                    if (testTimeCal.getTimeInMillis() < now.getTimeInMillis() - 600000) {
+                                        com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                                                this,
+                                                "Past Time Slot",
+                                                "SCHEDULE POLICY",
+                                                "The selected time has already passed for today. Please select a future time slot.",
+                                                "Adjust Time",
+                                                null
+                                        );
+                                        return;
+                                    }
+
                                     editCalendar.set(java.util.Calendar.HOUR_OF_DAY, hourOfDay);
                                     editCalendar.set(java.util.Calendar.MINUTE, minute);
                                     editCalendar.set(java.util.Calendar.SECOND, 0);
@@ -415,6 +468,58 @@ public class ReservationDetailActivity extends AppCompatActivity {
                     if (energyStr.isEmpty()) return;
                     try {
                         double newKwh = Double.parseDouble(energyStr);
+                        if (newKwh <= 0) {
+                            Toast.makeText(this, "Energy quota must be greater than 0 kWh.", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        // Validate not scheduled in past
+                        java.util.Calendar nowCal = java.util.Calendar.getInstance();
+                        if (editCalendar.getTimeInMillis() < nowCal.getTimeInMillis() - 600000) {
+                            com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                                    this,
+                                    "Invalid Reschedule Time",
+                                    "SCHEDULE POLICY",
+                                    "Cannot reschedule appointment to a time in the past.",
+                                    "OK",
+                                    null
+                            );
+                            return;
+                        }
+
+                        // Validate 7-day window rule
+                        java.util.Calendar maxCal = java.util.Calendar.getInstance();
+                        maxCal.add(java.util.Calendar.DAY_OF_YEAR, 7);
+                        maxCal.set(java.util.Calendar.HOUR_OF_DAY, 23);
+                        maxCal.set(java.util.Calendar.MINUTE, 59);
+                        maxCal.set(java.util.Calendar.SECOND, 59);
+                        maxCal.set(java.util.Calendar.MILLISECOND, 999);
+                        if (editCalendar.after(maxCal)) {
+                            com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                                    this,
+                                    "7-Day Policy Violation",
+                                    "SCHEDULE LIMIT EXCEEDED",
+                                    "Reservations must be scheduled within 7 days from today.",
+                                    "OK",
+                                    null
+                            );
+                            return;
+                        }
+
+                        // Validate 12-hour notice prior to original reservation
+                        double remainingHours = getHoursRemainingUntilBooking();
+                        if (remainingHours < 12.0) {
+                            com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                                    this,
+                                    "Modification Deadline Passed",
+                                    "12-HOUR NOTICE REQUIRED",
+                                    String.format(java.util.Locale.US, "Modifications require at least 12 hours' notice before scheduled appointment. Only %.1f hours remain.", remainingHours),
+                                    "Understood",
+                                    null
+                            );
+                            return;
+                        }
+
                         String newTrade = spTrade.getSelectedItem().toString();
 
                         java.text.SimpleDateFormat isoFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US);
