@@ -106,13 +106,6 @@ public class LoginActivity extends AppCompatActivity {
             btnThemeToggle.setOnClickListener(v -> ThemeManager.toggleTheme(this));
         }
 
-        if (ivBrandLogo != null) {
-            ivBrandLogo.setOnLongClickListener(v -> {
-                showServerConfigDialog();
-                return true;
-            });
-        }
-
         btnLogin.setOnClickListener(v -> performLogin());
 
         if (tvForgotPassword != null) {
@@ -236,14 +229,13 @@ public class LoginActivity extends AppCompatActivity {
             public void onFailure(Call<AuthDtos.AuthResponse> call, Throwable t) {
                 progressBar.setVisibility(View.GONE);
                 btnLogin.setEnabled(true);
-                String currentEndpoint = ApiClient.getBaseUrl(LoginActivity.this);
-                new AlertDialog.Builder(LoginActivity.this)
-                        .setTitle("Server Connection Notice")
-                        .setMessage("Unable to reach Solvance Web API at:\n" + currentEndpoint + "\n\nError: " + (t != null ? t.getMessage() : "Network timeout") + "\n\nTip: Long-press the Solvance Logo at top to switch endpoint anytime.")
-                        .setPositiveButton("Switch Server", (dialog, which) -> showServerConfigDialog())
-                        .setNegativeButton("Retry", (dialog, which) -> performLogin())
-                        .setNeutralButton("Dismiss", null)
-                        .show();
+                com.ead.solarmicrogrid.util.SolvanceDialog.showError(
+                        LoginActivity.this,
+                        "Connection Error",
+                        "Unable to reach the Solvance Smart Microgrid Server.\n\nPlease ensure your device is connected to Wi-Fi and tap Retry.",
+                        "Retry",
+                        () -> performLogin()
+                );
             }
         });
     }
@@ -428,57 +420,7 @@ public class LoginActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    private void showServerConfigDialog() {
-        String[] options = {
-                "Host PC Wi-Fi LAN (192.168.1.105:5000) [Recommended]",
-                "USB Cable Reverse (127.0.0.1:5000) [ADB]",
-                "Android Emulator (10.0.2.2:5000)",
-                "Custom URL..."
-        };
 
-        new AlertDialog.Builder(this)
-                .setTitle("Solvance Server API Endpoint")
-                .setItems(options, (dialog, which) -> {
-                    switch (which) {
-                        case 0:
-                            ApiClient.setBaseUrl(this, "http://192.168.1.105:5000/api/");
-                            Toast.makeText(this, "Server set to PC Wi-Fi LAN (192.168.1.105:5000)", Toast.LENGTH_SHORT).show();
-                            break;
-                        case 1:
-                            ApiClient.setBaseUrl(this, "http://127.0.0.1:5000/api/");
-                            Toast.makeText(this, "Server set to USB Reverse (127.0.0.1:5000)", Toast.LENGTH_SHORT).show();
-                            break;
-                        case 2:
-                            ApiClient.setBaseUrl(this, "http://10.0.2.2:5000/api/");
-                            Toast.makeText(this, "Server set to Emulator (10.0.2.2:5000)", Toast.LENGTH_SHORT).show();
-                            break;
-                        case 3:
-                            showCustomUrlDialog();
-                            break;
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void showCustomUrlDialog() {
-        final EditText input = new EditText(this);
-        input.setText(ApiClient.getBaseUrl(this));
-        input.setPadding(32, 24, 32, 24);
-
-        new AlertDialog.Builder(this)
-                .setTitle("Enter Web API URL")
-                .setView(input)
-                .setPositiveButton("Save", (dialog, which) -> {
-                    String url = input.getText().toString().trim();
-                    if (!url.isEmpty()) {
-                        ApiClient.setBaseUrl(this, url);
-                        Toast.makeText(this, "Server updated to: " + url, Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
 
     private void navigateForRole(String role) {
         if ("GridOperator".equalsIgnoreCase(role)) {

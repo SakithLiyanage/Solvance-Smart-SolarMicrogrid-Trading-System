@@ -22,6 +22,9 @@ android {
 
         resValue "string", "google_maps_key", mapsApiKey
 
+        buildConfigField "String", "API_BASE_URL", '"http://192.168.1.105:5000/api/"'
+        buildConfigField "String", "EMULATOR_BASE_URL", '"http://10.0.2.2:5000/api/"'
+
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 

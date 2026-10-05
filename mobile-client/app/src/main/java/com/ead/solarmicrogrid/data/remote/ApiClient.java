@@ -7,10 +7,16 @@ import android.util.Log;
 
 import com.ead.solarmicrogrid.data.local.DatabaseHelper;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.net.ConnectException;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -73,29 +79,23 @@ public class ApiClient {
     }
 
     public static String getBaseUrl(Context context) {
-        SharedPreferences prefs = context.getSharedPreferences("api_settings", Context.MODE_PRIVATE);
-        String customUrl = prefs.getString("server_url", null);
-        if (customUrl != null && !customUrl.trim().isEmpty()) {
-            String url = customUrl.trim();
-            return url.endsWith("/") ? url : url + "/";
-        }
-
         if (activeHost != null && !activeHost.isEmpty()) {
             return "http://" + activeHost + ":" + activePort + "/api/";
         }
 
+        SharedPreferences prefs = context.getSharedPreferences("api_settings", Context.MODE_PRIVATE);
         String lastWorkingHost = prefs.getString("last_working_host", null);
         if (lastWorkingHost != null && !lastWorkingHost.isEmpty()) {
             activeHost = lastWorkingHost;
             return "http://" + activeHost + ":" + activePort + "/api/";
         }
 
-        // Default initial candidate:
+        // Standard Universal Configuration:
         if (isEmulator()) {
             activeHost = "10.0.2.2";
         } else {
-            // Default to USB reverse, with Wi-Fi fallback
-            activeHost = "127.0.0.1";
+            // Default directly to hosted API on Wi-Fi LAN
+            activeHost = "192.168.1.105";
         }
         activePort = 5000;
         return "http://" + activeHost + ":" + activePort + "/api/";
@@ -126,8 +126,8 @@ public class ApiClient {
                     : HttpLoggingInterceptor.Level.BASIC);
 
             OkHttpClient client = new OkHttpClient.Builder()
-                    .connectTimeout(2500, TimeUnit.MILLISECONDS)
-                    .readTimeout(8, TimeUnit.SECONDS)
+                    .connectTimeout(3000, TimeUnit.MILLISECONDS)
+                    .readTimeout(10, TimeUnit.SECONDS)
                     .addInterceptor(logging)
                     .addInterceptor(new AutoDetectHostInterceptor(context.getApplicationContext()))
                     .addInterceptor(chain -> {
@@ -156,7 +156,8 @@ public class ApiClient {
     }
 
     /**
-     * Interceptor that transparently tries alternate localhost/LAN/emulator IP candidates if connection fails.
+     * Universal Host Interceptor that transparently auto-discovers and connects
+     * to the Solvance backend host without requiring manual configuration.
      */
     private static class AutoDetectHostInterceptor implements Interceptor {
         private final Context context;
@@ -175,25 +176,61 @@ public class ApiClient {
                     throw originalException;
                 }
 
-                // If user specified custom URL manually, do not override
                 SharedPreferences prefs = context.getSharedPreferences("api_settings", Context.MODE_PRIVATE);
-                if (prefs.getString("server_url", null) != null) {
-                    throw originalException;
-                }
 
                 List<String> candidates = new ArrayList<>();
                 if (isEmulator()) {
                     candidates.add("10.0.2.2");
-                    candidates.add("127.0.0.1");
                     candidates.add("192.168.1.105");
+                    candidates.add("127.0.0.1");
                     candidates.add("10.0.3.2");
                 } else {
-                    candidates.add("127.0.0.1"); // ADB reverse USB cable (instant 2ms)
-                    candidates.add("192.168.1.105"); // Host PC Wi-Fi LAN
-                    candidates.add("192.168.1.100");
+                    candidates.add("192.168.1.105"); // Host PC Wi-Fi LAN (Primary)
+                    candidates.add("127.0.0.1");     // ADB reverse USB cable fallback
+                    candidates.add("10.0.2.2");      // Emulator fallback
                 }
 
-                // Dynamic Wi-Fi gateway subnet discovery
+                // 1. If phone runs a Wi-Fi Hotspot, parse connected PC IP directly from Linux ARP table
+                try {
+                    BufferedReader br = new BufferedReader(new FileReader("/proc/net/arp"));
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        String[] tokens = line.split("\\s+");
+                        if (tokens.length >= 4 && tokens[0].matches("\\d+\\.\\d+\\.\\d+\\.\\d+")) {
+                            String arpIp = tokens[0];
+                            if (!candidates.contains(arpIp) && !arpIp.endsWith(".255")) {
+                                candidates.add(0, arpIp); // Direct connected hotspot device tested first
+                            }
+                        }
+                    }
+                    br.close();
+                } catch (Exception ignored) {}
+
+                // 2. Discover local subnet from all active network interfaces (Wi-Fi, Hotspot, USB Tethering)
+                try {
+                    Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces();
+                    while (ifaces != null && ifaces.hasMoreElements()) {
+                        NetworkInterface iface = ifaces.nextElement();
+                        if (iface.isLoopback() || !iface.isUp()) continue;
+                        Enumeration<InetAddress> addrs = iface.getInetAddresses();
+                        while (addrs.hasMoreElements()) {
+                            InetAddress addr = addrs.nextElement();
+                            if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
+                                String hostIp = addr.getHostAddress();
+                                if (hostIp != null && hostIp.contains(".")) {
+                                    String prefix = hostIp.substring(0, hostIp.lastIndexOf('.') + 1);
+                                    // Common host IPs on mobile hotspot and home networks
+                                    if (!candidates.contains(prefix + "1")) candidates.add(prefix + "1");
+                                    if (!candidates.contains(prefix + "105")) candidates.add(prefix + "105");
+                                    if (!candidates.contains(prefix + "100")) candidates.add(prefix + "100");
+                                    if (!candidates.contains(prefix + "2")) candidates.add(prefix + "2");
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {}
+
+                // 3. Dynamic Wi-Fi gateway subnet discovery via WifiManager
                 try {
                     android.net.wifi.WifiManager wm = (android.net.wifi.WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
                     if (wm != null && wm.getDhcpInfo() != null) {
@@ -206,7 +243,7 @@ public class ApiClient {
                                     (gateway >> 24 & 0xff));
                             String prefix = gatewayIp.substring(0, gatewayIp.lastIndexOf('.') + 1);
                             String host105 = prefix + "105";
-                            if (!candidates.contains(host105)) candidates.add(1, host105);
+                            if (!candidates.contains(host105)) candidates.add(0, host105);
                             if (!candidates.contains(gatewayIp)) candidates.add(gatewayIp);
                         }
                     }
@@ -214,32 +251,45 @@ public class ApiClient {
 
                 String failedHost = request.url().host();
 
-                // Ultra-fast probe client with 800ms connect timeout
+                // Lightweight non-blocking probe client for health checking
                 OkHttpClient probeClient = new OkHttpClient.Builder()
-                        .connectTimeout(800, TimeUnit.MILLISECONDS)
-                        .readTimeout(1200, TimeUnit.MILLISECONDS)
+                        .connectTimeout(1500, TimeUnit.MILLISECONDS)
+                        .readTimeout(1500, TimeUnit.MILLISECONDS)
                         .build();
 
                 for (String candidate : candidates) {
                     if (candidate.equalsIgnoreCase(failedHost)) continue;
 
-                    HttpUrl probeUrl = request.url().newBuilder()
+                    HttpUrl probeUrl = new HttpUrl.Builder()
+                            .scheme("http")
                             .host(candidate)
-                            .port(5000)
+                            .port(activePort)
+                            .addPathSegment("api")
+                            .addPathSegment("stations")
                             .build();
 
-                    Request probeRequest = request.newBuilder()
+                    Request probeRequest = new Request.Builder()
                             .url(probeUrl)
+                            .get()
                             .build();
 
-                    try {
-                        Response response = probeClient.newCall(probeRequest).execute();
-                        if (response.isSuccessful() || response.code() < 500) {
-                            Log.i(TAG, "Successfully auto-switched backend host to: " + candidate);
+                    try (Response probeResponse = probeClient.newCall(probeRequest).execute()) {
+                        if (probeResponse.isSuccessful() || probeResponse.code() < 500) {
+                            Log.i(TAG, "Successfully auto-detected Solvance backend host: " + candidate);
                             activeHost = candidate;
-                            activePort = 5000;
                             prefs.edit().putString("last_working_host", candidate).apply();
-                            return response;
+
+                            // Seamlessly rewrite original request and proceed
+                            HttpUrl newUrl = request.url().newBuilder()
+                                    .host(candidate)
+                                    .port(activePort)
+                                    .build();
+
+                            Request redirectedRequest = request.newBuilder()
+                                    .url(newUrl)
+                                    .build();
+
+                            return chain.proceed(redirectedRequest);
                         }
                     } catch (IOException ignored) {
                         // Continue to next candidate
