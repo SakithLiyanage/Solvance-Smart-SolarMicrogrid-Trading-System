@@ -13,12 +13,18 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import okhttp3.HttpUrl;
 import okhttp3.Interceptor;
@@ -79,11 +85,16 @@ public class ApiClient {
     }
 
     public static String getBaseUrl(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences("api_settings", Context.MODE_PRIVATE);
+        String savedUrl = prefs.getString("server_url", null);
+        if (savedUrl != null && !savedUrl.trim().isEmpty()) {
+            return savedUrl.trim();
+        }
+
         if (activeHost != null && !activeHost.isEmpty()) {
             return "http://" + activeHost + ":" + activePort + "/api/";
         }
 
-        SharedPreferences prefs = context.getSharedPreferences("api_settings", Context.MODE_PRIVATE);
         String lastWorkingHost = prefs.getString("last_working_host", null);
         if (lastWorkingHost != null && !lastWorkingHost.isEmpty()) {
             activeHost = lastWorkingHost;
@@ -109,9 +120,94 @@ public class ApiClient {
         }
         SharedPreferences prefs = context.getSharedPreferences("api_settings", Context.MODE_PRIVATE);
         prefs.edit().putString("server_url", url).apply();
+
+        try {
+            android.net.Uri uri = android.net.Uri.parse(url);
+            if (uri.getHost() != null) {
+                activeHost = uri.getHost();
+                if (uri.getPort() > 0) activePort = uri.getPort();
+                prefs.edit().putString("last_working_host", activeHost).apply();
+            }
+        } catch (Exception ignored) {}
+
         retrofit = null;
         cachedBaseUrl = null;
-        activeHost = null;
+    }
+
+    public static void setServerIp(Context context, String input) {
+        if (input == null || input.trim().isEmpty()) return;
+        String raw = input.trim();
+        String host = raw;
+        int port = 5000;
+
+        if (raw.startsWith("http://") || raw.startsWith("https://")) {
+            setBaseUrl(context, raw);
+            return;
+        }
+
+        if (raw.contains(":")) {
+            String[] parts = raw.split(":");
+            host = parts[0];
+            try {
+                port = Integer.parseInt(parts[1]);
+            } catch (Exception ignored) {}
+        }
+
+        activeHost = host;
+        activePort = port;
+        String url = "http://" + host + ":" + port + "/api/";
+        setBaseUrl(context, url);
+    }
+
+    /**
+     * Fast TCP ping to verify if a remote host has port open within timeoutMs.
+     */
+    public static boolean isPortReachable(String host, int port, int timeoutMs) {
+        if (host == null || host.isEmpty()) return false;
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(host, port), timeoutMs);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Concurrently scans a /24 subnet for any host listening on port 5000.
+     * Uses 48 lightweight TCP socket workers with 200ms connect timeout.
+     */
+    public static String scanSubnetForPort5000(String prefix, int port) {
+        if (prefix == null || prefix.isEmpty()) return null;
+        int threads = 48;
+        ExecutorService executor = Executors.newFixedThreadPool(threads);
+        final AtomicReference<String> foundIp = new AtomicReference<>(null);
+        final CountDownLatch latch = new CountDownLatch(254);
+
+        for (int i = 1; i <= 254; i++) {
+            final String targetIp = prefix + i;
+            executor.execute(() -> {
+                if (foundIp.get() != null) {
+                    latch.countDown();
+                    return;
+                }
+                try (Socket socket = new Socket()) {
+                    socket.connect(new InetSocketAddress(targetIp, port), 200);
+                    if (foundIp.compareAndSet(null, targetIp)) {
+                        Log.i(TAG, "Subnet scan found active Solvance host on: " + targetIp);
+                    }
+                } catch (Exception ignored) {
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        try {
+            latch.await(2000, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException ignored) {}
+        executor.shutdownNow();
+
+        return foundIp.get();
     }
 
     public static SolarApiService getService(Context context) {
@@ -179,6 +275,8 @@ public class ApiClient {
                 SharedPreferences prefs = context.getSharedPreferences("api_settings", Context.MODE_PRIVATE);
 
                 List<String> candidates = new ArrayList<>();
+                List<String> detectedPrefixes = new ArrayList<>();
+
                 if (isEmulator()) {
                     candidates.add("10.0.2.2");
                     candidates.add("192.168.1.105");
@@ -219,7 +317,7 @@ public class ApiClient {
                                 String hostIp = addr.getHostAddress();
                                 if (hostIp != null && hostIp.contains(".")) {
                                     String prefix = hostIp.substring(0, hostIp.lastIndexOf('.') + 1);
-                                    // Common host IPs on mobile hotspot and home networks
+                                    if (!detectedPrefixes.contains(prefix)) detectedPrefixes.add(prefix);
                                     if (!candidates.contains(prefix + "1")) candidates.add(prefix + "1");
                                     if (!candidates.contains(prefix + "105")) candidates.add(prefix + "105");
                                     if (!candidates.contains(prefix + "100")) candidates.add(prefix + "100");
@@ -242,6 +340,7 @@ public class ApiClient {
                                     (gateway >> 16 & 0xff),
                                     (gateway >> 24 & 0xff));
                             String prefix = gatewayIp.substring(0, gatewayIp.lastIndexOf('.') + 1);
+                            if (!detectedPrefixes.contains(prefix)) detectedPrefixes.add(prefix);
                             String host105 = prefix + "105";
                             if (!candidates.contains(host105)) candidates.add(0, host105);
                             if (!candidates.contains(gatewayIp)) candidates.add(gatewayIp);
@@ -260,6 +359,11 @@ public class ApiClient {
                 for (String candidate : candidates) {
                     if (candidate.equalsIgnoreCase(failedHost)) continue;
 
+                    // Fast TCP reachability check (200ms) before attempting HTTP call
+                    if (!isPortReachable(candidate, activePort, 200)) {
+                        continue;
+                    }
+
                     HttpUrl probeUrl = new HttpUrl.Builder()
                             .scheme("http")
                             .host(candidate)
@@ -277,7 +381,9 @@ public class ApiClient {
                         if (probeResponse.isSuccessful() || probeResponse.code() < 500) {
                             Log.i(TAG, "Successfully auto-detected Solvance backend host: " + candidate);
                             activeHost = candidate;
-                            prefs.edit().putString("last_working_host", candidate).apply();
+                            prefs.edit().putString("last_working_host", candidate)
+                                    .putString("server_url", "http://" + candidate + ":" + activePort + "/api/")
+                                    .apply();
 
                             // Seamlessly rewrite original request and proceed
                             HttpUrl newUrl = request.url().newBuilder()
@@ -293,6 +399,29 @@ public class ApiClient {
                         }
                     } catch (IOException ignored) {
                         // Continue to next candidate
+                    }
+                }
+
+                // 4. If direct candidates did not respond, perform concurrent subnet scan on active network prefixes
+                for (String prefix : detectedPrefixes) {
+                    String discoveredHost = scanSubnetForPort5000(prefix, activePort);
+                    if (discoveredHost != null) {
+                        Log.i(TAG, "Subnet scan successfully connected to Solvance host: " + discoveredHost);
+                        activeHost = discoveredHost;
+                        prefs.edit().putString("last_working_host", discoveredHost)
+                                .putString("server_url", "http://" + discoveredHost + ":" + activePort + "/api/")
+                                .apply();
+
+                        HttpUrl newUrl = request.url().newBuilder()
+                                .host(discoveredHost)
+                                .port(activePort)
+                                .build();
+
+                        Request redirectedRequest = request.newBuilder()
+                                .url(newUrl)
+                                .build();
+
+                        return chain.proceed(redirectedRequest);
                     }
                 }
 
