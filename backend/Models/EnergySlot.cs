@@ -1,8 +1,14 @@
 // ============================================================================
 // File: EnergySlot.cs
-// Project: Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Authors:
+//   - G.L.S. Chanlaka (IT23151260) - Slot entity design & capacity attributes
+//   - L.T. Jayawardhana (IT23156760) - Booking window & station relationship
+// Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Model representing time/energy windows in "EnergyBookingSlots" collection.
+// References & Citations:
+//   - MongoDB C# Driver POCO Serialization & Custom Attribute Mapping:
+//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/serialization/poco/
 // ============================================================================
 
 using System;

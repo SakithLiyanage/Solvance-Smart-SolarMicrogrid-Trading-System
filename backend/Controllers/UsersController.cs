@@ -5,8 +5,12 @@
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: API controller for user administration, prosumer approval, and account status updates.
 // References & Citations:
-//   - Microsoft ASP.NET Core Authorization & Security Policies:
-//     https://learn.microsoft.com/en-us/aspnet/core/security/authorization/
+//   - Microsoft ASP.NET Core Role-Based Authorization ([Authorize(Roles = ...)]):
+//     https://learn.microsoft.com/en-us/aspnet/core/security/authorization/roles
+//   - Microsoft ASP.NET Core Web API Action Return Types & Model Validation:
+//     https://learn.microsoft.com/en-us/aspnet/core/web-api/action-return-types
+//   - System.Security.Claims.ClaimsPrincipal (User Context Extraction):
+//     https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal
 // ============================================================================
 
 using System.Security.Claims;

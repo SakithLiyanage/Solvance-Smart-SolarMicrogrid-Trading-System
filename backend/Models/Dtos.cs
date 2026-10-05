@@ -1,8 +1,18 @@
 // ============================================================================
 // File: Dtos.cs
 // Project: Solvance — Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Authors:
+//   - M.L. Booso (IT23452916) - Auth & user DTOs
+//   - G.L.S. Chanlaka (IT23151260) - Station DTOs
+//   - L.T. Jayawardhana (IT23156760) - Slot & reservation DTOs
+//   - H.N. Madubashini (IT23192300) - Operator & QR DTOs
+// Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Data Transfer Objects (DTOs) for API request validation and response mapping.
+// References & Citations:
+//   - System.ComponentModel.DataAnnotations (Required, StringLength, Range):
+//     https://learn.microsoft.com/en-us/dotnet/api/system.componentmodel.dataannotations
+//   - ASP.NET Core Model Validation with Data Annotations:
+//     https://learn.microsoft.com/en-us/aspnet/core/mvc/models/validation
 // ============================================================================
 
 using System.ComponentModel.DataAnnotations;

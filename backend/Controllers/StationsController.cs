@@ -5,8 +5,12 @@
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: API controller for microgrid hubs, GPS positioning, battery slot updates, and deactivation blocker.
 // References & Citations:
-//   - Microsoft ASP.NET Core Routing & Controller Conventions:
-//     https://learn.microsoft.com/en-us/aspnet/core/web-api/
+//   - Microsoft ASP.NET Core Routing to Controller Actions ([Route], [HttpGet], [HttpPost]):
+//     https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/routing
+//   - Microsoft ASP.NET Core Action Return Types (Ok, BadRequest, NotFound):
+//     https://learn.microsoft.com/en-us/aspnet/core/web-api/action-return-types
+//   - Microsoft.AspNetCore.Authorization Role-Based Authorization:
+//     https://learn.microsoft.com/en-us/aspnet/core/security/authorization/roles
 // ============================================================================
 
 using Microsoft.AspNetCore.Authorization;
@@ -58,6 +62,7 @@ namespace SolarMicrogridApi.Controllers
         [Authorize(Roles = "Backoffice,GridOperator")]
         public async Task<IActionResult> GetTelemetry(string id)
         {
+            // Method: GetTelemetry - Retrieves real-time battery and power metrics for the specified solar station.
             var telemetry = await _stationService.GetTelemetryAsync(id);
             return telemetry == null
                 ? NotFound(new { message = "Station not found." })
@@ -175,6 +180,7 @@ namespace SolarMicrogridApi.Controllers
         [Authorize(Roles = "Backoffice")]
         public async Task<IActionResult> GenerateSlots(string id, [FromQuery] int days = 7)
         {
+            // Method: GenerateSlots - Generates operational hourly energy slots for specified station over given day range.
             try
             {
                 var count = await _stationService.GenerateHourlySlotsAsync(id, days);

@@ -4,6 +4,9 @@
 // Author: M.L. Booso (IT23452916)
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Contract for user authentication, account control, and lifecycle operations.
+// References & Citations:
+//   - Microsoft .NET Task-based Asynchronous Pattern (TAP):
+//     https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/task-based-asynchronous-pattern-tap
 // ============================================================================
 
 using SolarMicrogridApi.Models;

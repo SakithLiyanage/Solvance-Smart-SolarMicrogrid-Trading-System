@@ -4,6 +4,9 @@
 // Author: M.L. Booso (IT23452916)
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Model representing a system user stored in "User's detail" collection.
+// References & Citations:
+//   - MongoDB C# Driver POCO Class Mapping & BsonRepresentation:
+//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/serialization/poco/
 // ============================================================================
 
 using MongoDB.Bson;

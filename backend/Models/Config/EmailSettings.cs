@@ -4,6 +4,9 @@
 // Author: M.L. Booso (IT23452916)
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Strongly-typed configuration options for SMTP email dispatch.
+// References & Citations:
+//   - Microsoft ASP.NET Core Options Pattern Configuration:
+//     https://learn.microsoft.com/en-us/aspnet/core/fundamentals/configuration/options
 // ============================================================================
 
 namespace SolarMicrogridApi.Models.Config

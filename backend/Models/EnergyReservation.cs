@@ -1,8 +1,14 @@
 // ============================================================================
 // File: EnergyReservation.cs
-// Project: Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Authors:
+//   - L.T. Jayawardhana (IT23156760) - Reservation model & lifecycle attributes
+//   - H.N. Madubashini (IT23192300) - QR code, telemetry & verification properties
+// Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Model representing power trade requests in "Energy Reservation" collection.
+// References & Citations:
+//   - MongoDB C# Driver POCO Serialization Attributes ([BsonId], [BsonElement], [BsonRepresentation]):
+//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/serialization/poco/
 // ============================================================================
 
 using System;

@@ -5,8 +5,10 @@
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Implements slot queries, creation, and availability tracking.
 // References & Citations:
-//   - MongoDB.Driver .NET CRUD Operations:
-//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/crud/
+//   - MongoDB C# Driver Read Operations (Find, FilterDefinition):
+//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/crud/read-operations/
+//   - MongoDB C# Driver Write Operations (InsertOne, ReplaceOne, DeleteOne):
+//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/crud/write-operations/
 // ============================================================================
 
 using MongoDB.Driver;

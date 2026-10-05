@@ -1,8 +1,12 @@
 // ============================================================================
 // File: IStationService.cs
-// Project: Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: G.L.S. Chanlaka (IT23151260)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Contract for solar microgrid station (hub) management and deactivation rules.
+// References & Citations:
+//   - Microsoft .NET Task-based Asynchronous Pattern (TAP):
+//     https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/task-based-asynchronous-pattern-tap
 // ============================================================================
 
 using SolarMicrogridApi.Models;

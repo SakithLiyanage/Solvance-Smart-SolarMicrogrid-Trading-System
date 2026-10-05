@@ -5,8 +5,12 @@
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: API controller managing battery swapping/charging slots within solar hubs.
 // References & Citations:
-//   - Microsoft ASP.NET Core Routing & Controller Conventions:
-//     https://learn.microsoft.com/en-us/aspnet/core/web-api/
+//   - Microsoft ASP.NET Core Routing to Controller Actions ([HttpGet], [HttpPost], [HttpPut], [HttpDelete]):
+//     https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/routing
+//   - Microsoft ASP.NET Core Action Return Types & Status Codes:
+//     https://learn.microsoft.com/en-us/aspnet/core/web-api/action-return-types
+//   - Microsoft.AspNetCore.Authorization (Role-based access control):
+//     https://learn.microsoft.com/en-us/aspnet/core/security/authorization/roles
 // ============================================================================
 
 using Microsoft.AspNetCore.Authorization;

@@ -1,8 +1,12 @@
 // ============================================================================
 // File: SolarStation.cs
-// Project: Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Project: Solvance — Smart Solar Microgrid Trading System
+// Author: G.L.S. Chanlaka (IT23151260)
+// Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Model representing a microgrid hub stored in "SolarStationInfo" collection.
+// References & Citations:
+//   - MongoDB C# Driver POCO Serialization & Embedded Document Mapping:
+//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/serialization/poco/
 // ============================================================================
 
 using MongoDB.Bson;

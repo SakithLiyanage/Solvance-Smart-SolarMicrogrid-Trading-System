@@ -9,10 +9,16 @@
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Application entry point configuring dependency injection, JWT auth, and CORS.
 // References & Citations:
-//   - Microsoft ASP.NET Core 8 Web API & Security (JWT Bearer Authentication):
-//     https://learn.microsoft.com/en-us/aspnet/core/security/authentication/
-//   - MongoDB.Driver .NET API (Official Mongo Driver):
-//     https://www.mongodb.com/docs/drivers/csharp/
+//   - Microsoft ASP.NET Core Dependency Injection:
+//     https://learn.microsoft.com/en-us/aspnet/core/fundamentals/dependency-injection
+//   - Microsoft ASP.NET Core JWT Bearer Authentication & Token Validation:
+//     https://learn.microsoft.com/en-us/aspnet/core/security/authentication/jwt-authn
+//   - Microsoft ASP.NET Core CORS Middleware Configuration:
+//     https://learn.microsoft.com/en-us/aspnet/core/security/cors
+//   - Swashbuckle ASP.NET Core OpenAPI / Swagger Integration:
+//     https://github.com/domaindrivendev/Swashbuckle.AspNetCore
+//   - MongoDB C# Driver MongoClient & Connection Lifecycle:
+//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/connection/
 // ============================================================================
 
 using System.Text;

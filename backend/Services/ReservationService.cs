@@ -5,10 +5,12 @@
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Core FAT-service enterprise logic for 7-day rule, 12-hour notice, and QR verification.
 // References & Citations:
-//   - MongoDB.Driver LINQ & Filter Definition Builder:
+//   - MongoDB C# Driver CRUD & Linq Filter Definition Builder:
 //     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/crud/read-operations/
-//   - System.Security.Cryptography HMAC / SHA256 Token Signing:
-//     https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography
+//   - System.Security.Cryptography HMACSHA256 & SHA256 Signature Verification:
+//     https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.hmacsha256
+//   - MongoDB C# Driver FindOneAndUpdate & Concurrency Control:
+//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/crud/write-operations/modify/
 // ============================================================================
 
 using System;
@@ -50,6 +52,7 @@ namespace SolarMicrogridApi.Services
 
         private static TimeZoneInfo ResolveBookingTimeZone()
         {
+            // Method: ResolveBookingTimeZone - Resolves Sri Lanka standard time zone with fallback.
             foreach (var zoneId in new[] { "Asia/Colombo", "Sri Lanka Standard Time" })
             {
                 try
@@ -69,6 +72,7 @@ namespace SolarMicrogridApi.Services
         /// </summary>
         private static DateTime GetBookingWindowEndUtc(int maxDays)
         {
+            // Method: GetBookingWindowEndUtc - Calculates exclusive end boundary of the 7-day reservation window in UTC.
             var localToday = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, BookingTimeZone).Date;
             var localWindowEnd = DateTime.SpecifyKind(localToday.AddDays(maxDays + 1), DateTimeKind.Unspecified);
             return TimeZoneInfo.ConvertTimeToUtc(localWindowEnd, BookingTimeZone);
@@ -80,6 +84,7 @@ namespace SolarMicrogridApi.Services
         /// </summary>
         private async Task EnsureDropOffSlotAvailableAsync(SolarStation station, string? excludeReservationId)
         {
+            // Method: EnsureDropOffSlotAvailableAsync - Verifies that the hub has sufficient physical battery slot capacity for drop-off trade.
             var promisedSlots = await _context.Reservations.CountDocumentsAsync(r =>
                 r.StationId == station.Id &&
                 r.Status == "Approved" &&
@@ -604,6 +609,7 @@ namespace SolarMicrogridApi.Services
 
         private async Task ReleaseSlotAsync(EnergyReservation reservation)
         {
+            // Method: ReleaseSlotAsync - Reclaims slot capacity when a reservation is cancelled or rescheduled.
             if (string.IsNullOrEmpty(reservation.SlotId)) return;
             var slotFilter = Builders<EnergySlot>.Filter.And(
                 Builders<EnergySlot>.Filter.Eq(s => s.Id, reservation.SlotId),
@@ -730,6 +736,7 @@ namespace SolarMicrogridApi.Services
 
         private bool ValidateQrSignature(EnergyReservation reservation, string token)
         {
+            // Method: ValidateQrSignature - Authenticates QR payload cryptographic signature using constant-time equality check.
             if (!IsWellFormedQrToken(token))
             {
                 return false;
@@ -745,6 +752,7 @@ namespace SolarMicrogridApi.Services
 
         private static bool IsWellFormedQrToken(string token)
         {
+            // Method: IsWellFormedQrToken - Validates format structure of incoming QR scanned token string.
             var parts = token.Split(':');
             return parts.Length == 3 &&
                    parts[0] == "SOLAR-TX" &&

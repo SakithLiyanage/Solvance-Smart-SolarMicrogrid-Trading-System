@@ -9,6 +9,7 @@ Thumbs.db
 # Build & Dependencies
 **/bin/
 **/obj/
+**/publish/
 **/node_modules/
 **/dist/
 **/.gradle/

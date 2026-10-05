@@ -5,8 +5,12 @@
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: API controller handling authentication, prosumer registration, and staff onboarding.
 // References & Citations:
-//   - Microsoft ASP.NET Core Identity & JWT Authentication:
-//     https://learn.microsoft.com/en-us/aspnet/core/security/authentication/
+//   - Microsoft ASP.NET Core Web API Controllers & Action Return Types:
+//     https://learn.microsoft.com/en-us/aspnet/core/web-api/action-return-types
+//   - Microsoft ASP.NET Core JWT Bearer Claims & ClaimsPrincipal:
+//     https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal
+//   - Microsoft ASP.NET Core Authorization Attributes ([AllowAnonymous], [Authorize]):
+//     https://learn.microsoft.com/en-us/aspnet/core/security/authorization/simple
 // ============================================================================
 
 using System.Security.Claims;
@@ -153,6 +157,7 @@ namespace SolarMicrogridApi.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> BootstrapAdmin([FromBody] BootstrapAdminDto dto)
         {
+            // Method: BootstrapAdmin - Seeds the initial Backoffice administrator using a pre-shared master key.
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -259,6 +264,7 @@ namespace SolarMicrogridApi.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> RequestPasswordReset([FromBody] PasswordResetRequestDto dto)
         {
+            // Method: RequestPasswordReset - Dispatches a secure 6-digit OTP code to user's registered email.
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -287,6 +293,7 @@ namespace SolarMicrogridApi.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> VerifyPasswordReset([FromBody] PasswordResetVerifyDto dto)
         {
+            // Method: VerifyPasswordReset - Validates OTP code and resets user password.
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);

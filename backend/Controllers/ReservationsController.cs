@@ -5,10 +5,12 @@
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: API controller executing 7-day and 12-hour business rules, QR generation and scanner verification.
 // References & Citations:
-//   - Microsoft ASP.NET Core Controllers & Action Results:
-//     https://learn.microsoft.com/en-us/aspnet/core/web-api/
-//   - Microsoft.AspNetCore.Authorization (Role-based policies):
+//   - Microsoft ASP.NET Core Web API Action Return Types (ActionResult, CreatedAtAction):
+//     https://learn.microsoft.com/en-us/aspnet/core/web-api/action-return-types
+//   - Microsoft.AspNetCore.Authorization Role-Based Policies:
 //     https://learn.microsoft.com/en-us/aspnet/core/security/authorization/roles
+//   - System.Security.Claims.ClaimTypes (Claim Retrieval via User.FindFirst):
+//     https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimtypes
 // ============================================================================
 
 using System.Security.Claims;

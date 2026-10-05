@@ -1,11 +1,13 @@
 // ============================================================================
 // File: Exceptions.cs
 // Project: Solvance — Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Authors:
+//   - M.L. Booso (IT23452916) - Authentication & authorization exception types
+//   - L.T. Jayawardhana (IT23156760) - Reservation lifecycle & booking violation exceptions
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Domain-specific exceptions for authentication guards and lifecycle business rules.
 // References & Citations:
-//   - Microsoft C# Standard Exception Design Guidelines:
+//   - Microsoft .NET Standard Exception Design Guidelines & Custom Exception Best Practices:
 //     https://learn.microsoft.com/en-us/dotnet/standard/design-guidelines/exceptions-and-performance
 // ============================================================================
 

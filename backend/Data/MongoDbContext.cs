@@ -1,12 +1,16 @@
 // ============================================================================
 // File: MongoDbContext.cs
 // Project: Solvance — Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Authors:
+//   - G.L.S. Chanlaka (IT23151260) - Database connection & collection setup
+//   - M.L. Booso (IT23452916) - Indexing & schema integration
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: MongoDB database context establishing resilient connection to 4 required collections.
 // References & Citations:
-//   - MongoDB.Driver MongoClient & IMongoDatabase:
-//     https://www.mongodb.com/docs/drivers/csharp/
+//   - MongoDB C# Driver MongoClient & Connection Lifecycle:
+//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/connection/
+//   - MongoDB C# Driver IMongoCollection & Index Management:
+//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/indexes/
 // ============================================================================
 
 using System;

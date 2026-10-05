@@ -5,10 +5,12 @@
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Implements user authentication, JWT generation, and account role verification.
 // References & Citations:
-//   - System.IdentityModel.Tokens.Jwt (Microsoft JSON Web Token Handler):
-//     https://learn.microsoft.com/en-us/dotnet/api/system.identitymodel.tokens.jwt
-//   - BCrypt.Net Cryptographic Password Hashing:
+//   - System.IdentityModel.Tokens.Jwt (JwtSecurityTokenHandler & JwtSecurityToken):
+//     https://learn.microsoft.com/en-us/dotnet/api/system.identitymodel.tokens.jwt.jwtsecuritytokenhandler
+//   - BCrypt.Net Password Hashing & Verification (Salted One-Way Hashing):
 //     https://github.com/BcryptNet/bcrypt.net
+//   - Microsoft.IdentityModel.Tokens (SymmetricSecurityKey & SigningCredentials):
+//     https://learn.microsoft.com/en-us/dotnet/api/microsoft.identitymodel.tokens.symmetricsecuritykey
 // ============================================================================
 
 using System.IdentityModel.Tokens.Jwt;
@@ -578,6 +580,7 @@ namespace SolarMicrogridApi.Services
 
         public async Task<PasswordResetRequestResponseDto> RequestPasswordResetOtpAsync(PasswordResetRequestDto dto)
         {
+            // Method: RequestPasswordResetOtpAsync - Generates cryptographically secure 6-digit OTP and initiates email dispatch.
             var raw = dto.Identifier.Trim();
             var cleanUpper = raw.ToUpperInvariant();
             var cleanLower = raw.ToLowerInvariant();
@@ -646,6 +649,7 @@ namespace SolarMicrogridApi.Services
 
         private static string MaskEmail(string email)
         {
+            // Method: MaskEmail - Obfuscates email address for privacy in API response.
             if (string.IsNullOrWhiteSpace(email) || !email.Contains('@')) return "registered email";
             var parts = email.Split('@');
             var name = parts[0];
@@ -658,6 +662,7 @@ namespace SolarMicrogridApi.Services
 
         public async Task<bool> VerifyPasswordResetOtpAsync(PasswordResetVerifyDto dto)
         {
+            // Method: VerifyPasswordResetOtpAsync - Validates OTP code, enforces brute-force attempt limits, and updates password hash.
             var raw = dto.Identifier.Trim();
             var cleanUpper = raw.ToUpperInvariant();
             var cleanLower = raw.ToLowerInvariant();

@@ -1,12 +1,16 @@
 // ============================================================================
 // File: StringOrObjectIdSerializer.cs
 // Project: Solvance — Smart Solar Microgrid Trading System
-// Author: Enterprise Application Development Team
+// Authors:
+//   - G.L.S. Chanlaka (IT23151260) - Custom BSON serializer design
+//   - L.T. Jayawardhana (IT23156760) - Station ID polyglot deserialization
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Custom BSON serializer deserializing both BsonType.ObjectId and BsonType.String to C# string.
 // References & Citations:
-//   - MongoDB.Bson.Serialization.Serializers API:
-//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/serialization/
+//   - MongoDB C# Driver Custom Serializer Implementation (SerializerBase<T>):
+//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/serialization/custom-serialization/
+//   - MongoDB BSON Types & ObjectId Representation:
+//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/bsontypes/
 // ============================================================================
 
 using System;

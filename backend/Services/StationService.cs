@@ -5,8 +5,12 @@
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Implements microgrid node CRUD, GPS locations, and active reservation deactivation blocker.
 // References & Citations:
-//   - MongoDB.Driver .NET CRUD Operations:
-//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/crud/
+//   - MongoDB C# Driver Read Operations (Find, FilterDefinition):
+//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/crud/read-operations/
+//   - MongoDB C# Driver Write Operations (UpdateOne, ReplaceOne, DeleteOne):
+//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/crud/write-operations/
+//   - MongoDB C# Driver Update Builders & Field Definitions:
+//     https://www.mongodb.com/docs/drivers/csharp/current/fundamentals/crud/write-operations/modify/
 // ============================================================================
 
 using MongoDB.Driver;
@@ -118,6 +122,7 @@ namespace SolarMicrogridApi.Services
 
         public async Task<StationTelemetryDto?> GetTelemetryAsync(string id)
         {
+            // Method: GetTelemetryAsync - Aggregates live station battery status, grid output, and reservation metrics.
             var station = await GetStationByIdAsync(id);
             if (station == null)
             {

@@ -5,8 +5,12 @@
 // Course: SE4040 - Enterprise Application Development (SLIIT)
 // Description: Automated SMTP email service for OTP verification codes and security dispatches.
 // References & Citations:
-//   - System.Net.Mail SmtpClient & MailMessage:
-//     https://learn.microsoft.com/en-us/dotnet/api/system.net.mail.smtpclient
+//   - System.Net.Mail.SmtpClient.SendMailAsync (async SMTP dispatch):
+//     https://learn.microsoft.com/en-us/dotnet/api/system.net.mail.smtpclient.sendmailasync
+//   - System.Net.Mail.MailMessage (RFC 2822 email composition):
+//     https://learn.microsoft.com/en-us/dotnet/api/system.net.mail.mailmessage
+//   - System.Net.NetworkCredential (SMTP authentication):
+//     https://learn.microsoft.com/en-us/dotnet/api/system.net.networkcredential
 // ============================================================================
 
 using System.Net;
@@ -27,8 +31,11 @@ namespace SolarMicrogridApi.Services
             _logger = logger;
         }
 
+        // Method: SendPasswordResetEmailAsync - Composes and dispatches an HTML OTP email via SMTP.
+        //   Falls back to drop-folder file write if SMTP is unavailable; logs OTP to console as last resort.
         public async Task<bool> SendPasswordResetEmailAsync(string recipientEmail, string recipientName, string otpCode, int expiryMinutes = 15)
         {
+            // Method: SendPasswordResetEmailAsync - Composes and dispatches an HTML OTP email via SMTP.
             if (string.IsNullOrWhiteSpace(recipientEmail))
             {
                 return false;
