@@ -229,38 +229,9 @@ public class LoginActivity extends AppCompatActivity {
             public void onFailure(Call<AuthDtos.AuthResponse> call, Throwable t) {
                 progressBar.setVisibility(View.GONE);
                 btnLogin.setEnabled(true);
-                String currentEndpoint = ApiClient.getBaseUrl(LoginActivity.this);
-                new androidx.appcompat.app.AlertDialog.Builder(LoginActivity.this)
-                        .setTitle("Connection Notice")
-                        .setMessage("Cannot connect to Solvance Server at:\n" + currentEndpoint + "\n\nEnsure phone and PC are on the same Wi-Fi or Hotspot.")
-                        .setPositiveButton("Retry", (dialog, which) -> performLogin())
-                        .setNeutralButton("Set Server IP", (dialog, which) -> promptServerIp())
-                        .setNegativeButton("Dismiss", null)
-                        .show();
+                Toast.makeText(LoginActivity.this, "Unable to connect to server. Please check connection.", Toast.LENGTH_SHORT).show();
             }
         });
-    }
-
-    private void promptServerIp() {
-        final android.widget.EditText input = new android.widget.EditText(this);
-        input.setHint("e.g. 192.168.43.15 or 192.168.1.105");
-        input.setText(ApiClient.getBaseUrl(this).replace("http://", "").replace("/api/", ""));
-        input.setPadding(48, 32, 48, 32);
-
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Configure Server IP")
-                .setMessage("Enter the PC IPv4 address (from 'ipconfig'):")
-                .setView(input)
-                .setPositiveButton("Save & Connect", (dialog, which) -> {
-                    String ip = input.getText().toString().trim();
-                    if (!ip.isEmpty()) {
-                        ApiClient.setServerIp(this, ip);
-                        Toast.makeText(this, "Target server updated: " + ip, Toast.LENGTH_SHORT).show();
-                        performLogin();
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
     }
 
     private void showForgotPasswordDialog() {

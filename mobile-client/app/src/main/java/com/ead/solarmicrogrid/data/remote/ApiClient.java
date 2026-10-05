@@ -84,6 +84,27 @@ public class ApiClient {
                 || (Build.MANUFACTURER != null && Build.MANUFACTURER.contains("Genymotion"));
     }
 
+    /**
+     * Resolves the current network gateway IP dynamically from WifiManager.
+     * When connected to a PC Mobile Hotspot, the PC itself is the gateway (e.g. 192.168.137.1).
+     */
+    public static String getGatewayIp(Context context) {
+        try {
+            android.net.wifi.WifiManager wm = (android.net.wifi.WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+            if (wm != null && wm.getDhcpInfo() != null) {
+                int gateway = wm.getDhcpInfo().gateway;
+                if (gateway != 0) {
+                    return String.format(java.util.Locale.US, "%d.%d.%d.%d",
+                            (gateway & 0xff),
+                            (gateway >> 8 & 0xff),
+                            (gateway >> 16 & 0xff),
+                            (gateway >> 24 & 0xff));
+                }
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
     public static String getBaseUrl(Context context) {
         SharedPreferences prefs = context.getSharedPreferences("api_settings", Context.MODE_PRIVATE);
         String savedUrl = prefs.getString("server_url", null);
@@ -174,11 +195,11 @@ public class ApiClient {
 
     /**
      * Concurrently scans a /24 subnet for any host listening on port 5000.
-     * Uses 48 lightweight TCP socket workers with 200ms connect timeout.
+     * Uses 64 lightweight TCP socket workers with 350ms connect timeout.
      */
     public static String scanSubnetForPort5000(String prefix, int port) {
         if (prefix == null || prefix.isEmpty()) return null;
-        int threads = 48;
+        int threads = 64;
         ExecutorService executor = Executors.newFixedThreadPool(threads);
         final AtomicReference<String> foundIp = new AtomicReference<>(null);
         final CountDownLatch latch = new CountDownLatch(254);
@@ -191,7 +212,7 @@ public class ApiClient {
                     return;
                 }
                 try (Socket socket = new Socket()) {
-                    socket.connect(new InetSocketAddress(targetIp, port), 200);
+                    socket.connect(new InetSocketAddress(targetIp, port), 350);
                     if (foundIp.compareAndSet(null, targetIp)) {
                         Log.i(TAG, "Subnet scan found active Solvance host on: " + targetIp);
                     }
@@ -203,7 +224,7 @@ public class ApiClient {
         }
 
         try {
-            latch.await(2000, TimeUnit.MILLISECONDS);
+            latch.await(3000, TimeUnit.MILLISECONDS);
         } catch (InterruptedException ignored) {}
         executor.shutdownNow();
 
@@ -268,24 +289,32 @@ public class ApiClient {
             try {
                 return chain.proceed(request);
             } catch (IOException originalException) {
-                if (!(originalException instanceof ConnectException || originalException instanceof SocketTimeoutException)) {
-                    throw originalException;
-                }
-
                 SharedPreferences prefs = context.getSharedPreferences("api_settings", Context.MODE_PRIVATE);
 
                 List<String> candidates = new ArrayList<>();
                 List<String> detectedPrefixes = new ArrayList<>();
 
+                // Prioritize last working host if cached
+                String lastHost = prefs.getString("last_working_host", null);
+                if (lastHost != null && !lastHost.isEmpty()) {
+                    candidates.add(lastHost);
+                }
+
                 if (isEmulator()) {
-                    candidates.add("10.0.2.2");
+                    if (!candidates.contains("10.0.2.2")) candidates.add("10.0.2.2");
                     candidates.add("192.168.1.105");
                     candidates.add("127.0.0.1");
                     candidates.add("10.0.3.2");
                 } else {
-                    candidates.add("192.168.1.105"); // Host PC Wi-Fi LAN (Primary)
+                    if (!candidates.contains("192.168.1.105")) candidates.add("192.168.1.105"); // Host PC Wi-Fi LAN
                     candidates.add("127.0.0.1");     // ADB reverse USB cable fallback
                     candidates.add("10.0.2.2");      // Emulator fallback
+                }
+
+                // Dynamic gateway prioritized (works on PC hotspot e.g. 192.168.137.1)
+                String dynamicGateway = getGatewayIp(context);
+                if (dynamicGateway != null && !dynamicGateway.isEmpty() && !candidates.contains(dynamicGateway)) {
+                    candidates.add(dynamicGateway);
                 }
 
                 // 1. If phone runs a Wi-Fi Hotspot, parse connected PC IP directly from Linux ARP table
@@ -304,24 +333,31 @@ public class ApiClient {
                     br.close();
                 } catch (Exception ignored) {}
 
-                // 2. Discover local subnet from all active network interfaces (Wi-Fi, Hotspot, USB Tethering)
+                // 2. Discover local subnet from active local interfaces (Wi-Fi, Hotspot, USB Tethering)
+                // Filter out mobile cellular data interfaces (rmnet, ccmni, pdp) to avoid wrong subnets
                 try {
                     Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces();
                     while (ifaces != null && ifaces.hasMoreElements()) {
                         NetworkInterface iface = ifaces.nextElement();
                         if (iface.isLoopback() || !iface.isUp()) continue;
+                        String ifName = iface.getName().toLowerCase();
+                        if (ifName.startsWith("rmnet") || ifName.startsWith("ccmni") || ifName.startsWith("pdp") 
+                                || ifName.startsWith("dummy") || ifName.startsWith("tun")) {
+                            continue;
+                        }
                         Enumeration<InetAddress> addrs = iface.getInetAddresses();
                         while (addrs.hasMoreElements()) {
                             InetAddress addr = addrs.nextElement();
                             if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
                                 String hostIp = addr.getHostAddress();
-                                if (hostIp != null && hostIp.contains(".")) {
+                                if (hostIp != null && !hostIp.equals("127.0.0.1") && (hostIp.startsWith("192.168.") || hostIp.startsWith("10.") || hostIp.startsWith("172."))) {
                                     String prefix = hostIp.substring(0, hostIp.lastIndexOf('.') + 1);
                                     if (!detectedPrefixes.contains(prefix)) detectedPrefixes.add(prefix);
-                                    if (!candidates.contains(prefix + "1")) candidates.add(prefix + "1");
+                                    if (!candidates.contains(prefix + "197")) candidates.add(prefix + "197");
                                     if (!candidates.contains(prefix + "105")) candidates.add(prefix + "105");
-                                    if (!candidates.contains(prefix + "100")) candidates.add(prefix + "100");
+                                    if (!candidates.contains(prefix + "1")) candidates.add(prefix + "1");
                                     if (!candidates.contains(prefix + "2")) candidates.add(prefix + "2");
+                                    if (!candidates.contains(prefix + "100")) candidates.add(prefix + "100");
                                 }
                             }
                         }
@@ -330,21 +366,11 @@ public class ApiClient {
 
                 // 3. Dynamic Wi-Fi gateway subnet discovery via WifiManager
                 try {
-                    android.net.wifi.WifiManager wm = (android.net.wifi.WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-                    if (wm != null && wm.getDhcpInfo() != null) {
-                        int gateway = wm.getDhcpInfo().gateway;
-                        if (gateway != 0) {
-                            String gatewayIp = String.format(java.util.Locale.US, "%d.%d.%d.%d",
-                                    (gateway & 0xff),
-                                    (gateway >> 8 & 0xff),
-                                    (gateway >> 16 & 0xff),
-                                    (gateway >> 24 & 0xff));
-                            String prefix = gatewayIp.substring(0, gatewayIp.lastIndexOf('.') + 1);
-                            if (!detectedPrefixes.contains(prefix)) detectedPrefixes.add(prefix);
-                            String host105 = prefix + "105";
-                            if (!candidates.contains(host105)) candidates.add(0, host105);
-                            if (!candidates.contains(gatewayIp)) candidates.add(gatewayIp);
-                        }
+                    if (dynamicGateway != null && dynamicGateway.contains(".") && (dynamicGateway.startsWith("192.168.") || dynamicGateway.startsWith("10.") || dynamicGateway.startsWith("172."))) {
+                        String prefix = dynamicGateway.substring(0, dynamicGateway.lastIndexOf('.') + 1);
+                        if (!detectedPrefixes.contains(prefix)) detectedPrefixes.add(prefix);
+                        if (!candidates.contains(prefix + "197")) candidates.add(prefix + "197");
+                        if (!candidates.contains(prefix + "105")) candidates.add(prefix + "105");
                     }
                 } catch (Exception ignored) {}
 
@@ -359,8 +385,8 @@ public class ApiClient {
                 for (String candidate : candidates) {
                     if (candidate.equalsIgnoreCase(failedHost)) continue;
 
-                    // Fast TCP reachability check (200ms) before attempting HTTP call
-                    if (!isPortReachable(candidate, activePort, 200)) {
+                    // Fast TCP reachability check (350ms) before attempting HTTP call
+                    if (!isPortReachable(candidate, activePort, 350)) {
                         continue;
                     }
 
