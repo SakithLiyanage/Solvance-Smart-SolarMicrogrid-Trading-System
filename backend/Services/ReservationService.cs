@@ -125,6 +125,21 @@ namespace SolarMicrogridApi.Services
                 throw new InvalidOperationException($"Cannot create reservation. Account status is '{prosumer.Status}'. Only Active accounts can book.");
             }
 
+            // Business Rule: a prosumer may hold only a limited number of upcoming reservations (default: 3).
+            // Bookings whose time has already passed are not counted, so a missed booking can't lock the account out.
+            var maxActive = _settings.MaxActiveReservationsPerProsumer > 0 ? _settings.MaxActiveReservationsPerProsumer : 3;
+            var upcomingFromUtc = now.AddMinutes(-graceMinutes);
+            var activeCount = await _context.Reservations.CountDocumentsAsync(r =>
+                r.ProsumerNic == prosumer.Nic &&
+                (r.Status == "Pending" || r.Status == "Approved") &&
+                r.ScheduledDateTime >= upcomingFromUtc);
+            if (activeCount >= maxActive)
+            {
+                throw new InvalidOperationException(
+                    $"Booking limit reached: this account already has {activeCount} upcoming reservations (maximum {maxActive}). " +
+                    "Complete or cancel one before booking another.");
+            }
+
             // Verify solar hub is active
             var station = await _context.Stations.Find(s => s.Id == dto.StationId).FirstOrDefaultAsync();
             if (station == null)
