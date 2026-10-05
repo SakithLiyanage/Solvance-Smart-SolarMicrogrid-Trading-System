@@ -8,7 +8,7 @@
 ## 1. Project Links
 
 * **Git Repository Link**: https://github.com/SakithLiyanage/Solvance-Smart-SolarMicrogrid-Trading-System.git
-* **Video Demonstration Link (< 5 Minutes)**: [YouTube / OneDrive Video Link Placeholder - Paste URL Here]
+* **Video Demonstration Link**: https://youtu.be/ESs88kLkrvk
 
 ---
 
