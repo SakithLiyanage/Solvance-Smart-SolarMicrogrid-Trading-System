@@ -36,7 +36,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.ead.solarmicrogrid.R;
+import com.ead.solarmicrogrid.data.local.DatabaseHelper;
 import com.ead.solarmicrogrid.data.models.AuthDtos;
+import com.ead.solarmicrogrid.data.models.User;
 import com.ead.solarmicrogrid.data.remote.ApiClient;
 import com.google.android.material.card.MaterialCardView;
 import com.google.zxing.BarcodeFormat;
@@ -521,6 +523,23 @@ public class ReservationDetailActivity extends AppCompatActivity {
                         }
 
                         String newTrade = spTrade.getSelectedItem().toString();
+
+                        // Panel-size cap: a drop-off can't exceed one day of generation (solar capacity kW x 5 peak sun hours)
+                        User loggedInUser = new DatabaseHelper(this).getLoggedInUser();
+                        double solarCapacityKw = loggedInUser != null ? loggedInUser.getSolarCapacityKw() : 0;
+                        double maxDropOffKwh = solarCapacityKw * 5.0;
+                        if ("DropOff".equals(newTrade) && solarCapacityKw > 0 && newKwh > maxDropOffKwh) {
+                            com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                                    this,
+                                    "Solar Capacity Limit",
+                                    "PANEL SIZE RULE",
+                                    String.format(java.util.Locale.US, "Your %s kW solar system produces about %.1f kWh per day, so a drop-off cannot exceed %.1f kWh.",
+                                            solarCapacityKw, maxDropOffKwh, maxDropOffKwh),
+                                    "Reduce Quota",
+                                    null
+                            );
+                            return;
+                        }
 
                         java.text.SimpleDateFormat isoFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US);
                         isoFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));

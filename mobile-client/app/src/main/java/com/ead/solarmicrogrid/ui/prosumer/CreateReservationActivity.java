@@ -3,7 +3,7 @@
 // Project: Solvance — Smart Solar Microgrid Trading System
 // Author: L.T. Jayawardhana (IT23156760)
 // Course: SE4040 - Enterprise Application Development (SLIIT)
-// Description: Prosumer energy slot booking activity implementing 7-day advance booking window validation and dynamic capacity check.
+// Description: Prosumer energy slot booking activity implementing 7-day advance booking window validation, dynamic capacity check, and panel-size cap.
 // References & Citations:
 //   - Android DatePicker & TimePicker Dialog Widgets:
 //     https://developer.android.com/reference/android/app/DatePickerDialog
@@ -52,6 +52,9 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class CreateReservationActivity extends AppCompatActivity {
+
+    // Mirrors ReservationSettings.PeakSunHoursPerDay on the server: one drop-off <= solar capacity (kW) x 5 hours
+    private static final double PEAK_SUN_HOURS = 5.0;
 
     private ImageButton btnBack;
     private Spinner spStations;
@@ -449,6 +452,22 @@ public class CreateReservationActivity extends AppCompatActivity {
                         "Capacity Limit Exceeded",
                         "STATION RATING",
                         "Requested energy quota (" + energy + " kWh) exceeds solar hub capacity (" + selectedStation.getCapacityKwh() + " kWh).",
+                        "Reduce Quota",
+                        null
+                );
+                return;
+            }
+
+            // Panel-size cap: a drop-off can't exceed one day of generation from the prosumer's panels
+            double solarCapacityKw = currentUser != null ? currentUser.getSolarCapacityKw() : 0;
+            double maxDropOffKwh = solarCapacityKw * PEAK_SUN_HOURS;
+            if ("DropOff".equals(tradeType) && solarCapacityKw > 0 && energy > maxDropOffKwh) {
+                com.ead.solarmicrogrid.util.SolvanceDialog.showWarning(
+                        this,
+                        "Solar Capacity Limit",
+                        "PANEL SIZE RULE",
+                        String.format(Locale.US, "Your %s kW solar system produces about %.1f kWh per day, so a drop-off cannot exceed %.1f kWh.",
+                                solarCapacityKw, maxDropOffKwh, maxDropOffKwh),
                         "Reduce Quota",
                         null
                 );
